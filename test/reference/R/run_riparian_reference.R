@@ -1,0 +1,23 @@
+suppressPackageStartupMessages({library(ggplot2); library(tidyr); library(dplyr)})
+variant <- Sys.getenv('VARIANT', 'seq')
+src <- readLines('riparian-model.R')[1:1107]
+src <- src[!grepl('^library\\(|^rm\\(list|^str\\(|^head\\(', src)]
+src <- sub('^replicates <- 100', 'replicates <- 1', src)
+if (variant == 'seq') src <- sub('^y = sample\\(nrow\\(flowdata\\), 1\\)', 'y = ((i - 1) %% nrow(flowdata)) + 1', src)
+src <- sub('^Coutput\\[i,1:6\\] <- log\\(NC \\+ 1\\)', 'Coutput[i,1:6] <- log(NC + 1); Nraw[i,] <- c(NC,NT,NW,NS,NM); yrec[i] <- y; Frec[i,] <- c(FC6,FT,FW,FS,FM)', src)
+Nraw <- matrix(0, 250, 30); yrec <- integer(250); Frec <- matrix(0, 250, 5)
+if (variant != 'seq') set.seed(42)
+writeLines(src, paste0('patched_', variant, '.R'))
+eval(parse(text = src))
+options(digits = 17)
+colnames(Nraw) <- paste0(rep(c('C','T','W','S','M'), each = 6), 1:6)
+colnames(Frec) <- c('FC6','FT','FW','FS','FM')
+out <- data.frame(i = 1:250, y = yrec, flood = floodoutput, drought = droughtoutput, Nraw, Frec,
+                  KC = Cspaceoutput, KT = Tspaceoutput, KW = Wspaceoutput, KS = Sspaceoutput, KM = Mspaceoutput)
+write.csv(format(out, digits = 17), paste0('rip_', variant, '_traj.csv'), row.names = FALSE, quote = FALSE)
+cat('K =', K, '\n'); cat('flood/drought/normal counts in record:', sum(bigflood), sum(drought), sum(bigflood==0 & drought==0), '\n')
+print(out[1:6, c('y','flood','drought','C1','C2','C5','C6','T1','T2','W1','S1','M1','FC6','FT','FW','FS','FM')])
+print(out[c(1:6,250), c('KC','KT','KW','KS','KM')])
+cat('final N (after step 250):\n'); print(rbind(C=c(NC),T=c(NT),W=c(NW),S=c(NS),M=c(NM)))
+cat('means burnin+1..count: ', Crep, Trep, Wrep, Srep, Mrep, '|', Crep_all, Trep_all, Wrep_all, Srep_all, Mrep_all, '|', DomCrep, DomTrep, '\n')
+print(range(cproportion)); print(range(tproportion)); print(range(decline)); print(range(tdecline)); print(sum(is.nan(decline)))

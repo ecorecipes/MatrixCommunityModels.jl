@@ -1,0 +1,33 @@
+name = "MatrixCommunityModels"
+uuid = "c9d7ffd9-8e9b-4c2f-8af4-9cd333236b7e"
+version = "0.1.0"
+authors = ["Simon Frost"]
+
+[deps]
+CategoricalPopulationDynamics = "04a5e6ed-5bdd-4eeb-ad4c-515b60df3359"
+Catlab = "134e5e36-593f-5add-ad60-77f754baafbe"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+MatrixProjectionModels = "521f12cc-5854-454d-93a2-8be28ae7cee2"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+StructuredPopulationCore = "33358fd2-7d60-4541-bded-caea801370e0"
+
+[sources]
+CategoricalPopulationDynamics = {url = "https://github.com/ecorecipes/CategoricalPopulationDynamics.jl"}
+MatrixProjectionModels = {url = "https://github.com/ecorecipes/MatrixProjectionModels.jl"}
+StructuredPopulationCore = {url = "https://github.com/ecorecipes/ProjectionModels.jl"}
+
+[compat]
+CategoricalPopulationDynamics = "0.1"
+Catlab = "0.17"
+LinearAlgebra = "1"
+MatrixProjectionModels = "0.1"
+Random = "1"
+StructuredPopulationCore = "0.1"
+Test = "1"
+julia = "1.11"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]

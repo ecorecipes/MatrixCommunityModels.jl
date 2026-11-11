@@ -1,0 +1,9 @@
+[deps]
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+MatrixCommunityModels = "c9d7ffd9-8e9b-4c2f-8af4-9cd333236b7e"
+
+[sources]
+MatrixCommunityModels = {path = ".."}
+
+[compat]
+Documenter = "1"
