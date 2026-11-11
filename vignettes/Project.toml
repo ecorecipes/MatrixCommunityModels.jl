@@ -1,5 +1,6 @@
 [deps]
 Catlab = "134e5e36-593f-5add-ad60-77f754baafbe"
+IntegralProjectionModels = "00376763-44f4-49c9-a075-cdcba60854bb"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MatrixCommunityModels = "c9d7ffd9-8e9b-4c2f-8af4-9cd333236b7e"
 MatrixProjectionModels = "521f12cc-5854-454d-93a2-8be28ae7cee2"
@@ -9,5 +10,6 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [sources]
+IntegralProjectionModels = {url = "https://github.com/ecorecipes/IntegralProjectionModels.jl"}
 MatrixCommunityModels = {path = ".."}
 MatrixProjectionModels = {url = "https://github.com/ecorecipes/MatrixProjectionModels.jl"}

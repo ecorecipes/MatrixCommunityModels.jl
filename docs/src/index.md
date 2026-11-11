@@ -18,6 +18,14 @@ on Catlab.jl.
   al. (2019), identical to the original R output.
 - [Riparian plant guilds](tutorials/03_riparian_guilds.md): the five-guild model of Lytle
   et al. (2017), the original and a corrected variant.
+- [Two orchids](tutorials/04_adapt3_cypripedium.md): the community projection of the
+  adapt3 R package, reproduced.
+- [Cross-species sensitivity](tutorials/05_cross_species_sensitivity.md): interactions
+  revealed by perturbing vital rates, and the resulting network.
+- [Composing IPMs](tutorials/06_composing_ipms.md): an integral projection model and a
+  matrix model sharing a pool.
+- [Metacommunity](tutorials/07_metacommunity.md): patches as nested communities, with
+  dispersal as a pool.
 
 Each tutorial is a Quarto vignette, also available as
 [HTML and PDF in the repository](https://github.com/ecorecipes/MatrixCommunityModels.jl/tree/main/vignettes).

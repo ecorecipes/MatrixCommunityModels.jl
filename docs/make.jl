@@ -27,6 +27,7 @@ makedocs(;
          format = Documenter.HTML(;
                                   prettyurls = get(ENV, "CI", "false") == "true",
                                   canonical = "https://ecorecipes.github.io/MatrixCommunityModels.jl",
+                                  edit_link = "main",
                                   size_threshold = 300 * 1024),
          pages = ["Home" => "index.md",
                   "Tutorials" => tutorial_pages(),

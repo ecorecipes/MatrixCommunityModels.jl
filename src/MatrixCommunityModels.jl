@@ -14,10 +14,11 @@ import StructuredPopulationCore
 using StructuredPopulationCore: StateBlockLayout
 import MatrixProjectionModels
 using MatrixProjectionModels: MatrixProjectionModel
+using CategoricalPopulationDynamics: ValuedProjectionNet
 
-export Context, Transition, Species, OpenCommunity, CommunityTrajectory
+export Context, Transition, AbstractSpecies, Species, MatrixSpecies, valued_net, OpenCommunity, CommunityTrajectory
 export survival, fecundity, vital_matrices, projection_matrix, lower
-export open_community, community, compose, pool_totals, step, project, community_matrix
+export open_community, community, compose, pool_totals, advance, project, community_matrix
 export species, species_names, stage_names, pool_names, diagram
 
 """
@@ -66,6 +67,14 @@ A reproduction [`Transition`](@ref) (an entry of `F`).
 """
 fecundity(name::Symbol, ft::Pair{Symbol,Symbol}, rate) = Transition(name, ft.first, ft.second, :fecundity, rate)
 
+"""
+    AbstractSpecies
+
+Supertype of the single-species building blocks: [`Species`](@ref), declared transition by
+transition, and [`MatrixSpecies`](@ref), declared by a function returning whole matrices.
+"""
+abstract type AbstractSpecies end
+
 _value(x::Number, ctx) = x
 _value(f, ctx) = f(ctx)
 
@@ -83,7 +92,7 @@ A stage-structured species whose vital rates may depend on shared pools and the 
 
 One step is `threshold(A(ctx) * n + r(ctx))` with `A = U + F`.
 """
-struct Species
+struct Species <: AbstractSpecies
     name::Symbol
     stages::Vector{Symbol}
     transitions::Vector{Transition}
@@ -111,7 +120,7 @@ function Species(name::Symbol, stages::AbstractVector{Symbol}, transitions::Abst
                    Pair{Symbol,Any}[p.first => p.second for p in recruitment], threshold)
 end
 
-_stage_index(sp::Species, s::Symbol) = findfirst(==(s), sp.stages)
+_stage_index(sp::AbstractSpecies, s::Symbol) = findfirst(==(s), sp.stages)
 
 """
     vital_matrices(species, ctx) -> (U, F)
@@ -132,11 +141,62 @@ function vital_matrices(sp::Species, ctx::Context)
 end
 
 """
+    MatrixSpecies(name, stages, matrices; occupancy = [], recruitment = [], threshold = nothing)
+
+A species whose survival and fecundity matrices are returned whole by
+`matrices(ctx) -> (U, F)`. Use it when the matrices come from elsewhere, for example a
+discretised integral projection model, and listing every entry as a named
+[`Transition`](@ref) would add nothing. The keyword arguments are those of
+[`Species`](@ref).
+"""
+struct MatrixSpecies <: AbstractSpecies
+    name::Symbol
+    stages::Vector{Symbol}
+    matrices::Any
+    occupancy::Vector{Pair{Symbol,Any}}
+    recruitment::Vector{Pair{Symbol,Any}}
+    threshold::Any
+end
+
+function MatrixSpecies(name::Symbol, stages::AbstractVector{Symbol}, matrices;
+                       occupancy = Pair{Symbol,Any}[], recruitment = Pair{Symbol,Any}[], threshold = nothing)
+    allunique(stages) || throw(ArgumentError("duplicate stage names in species :$name"))
+    for (pool, w) in occupancy
+        w isa AbstractVector && length(w) != length(stages) &&
+            throw(DimensionMismatch("occupancy of pool :$pool needs $(length(stages)) weights"))
+    end
+    return MatrixSpecies(name, collect(Symbol, stages), matrices,
+                         Pair{Symbol,Any}[p.first => p.second for p in occupancy],
+                         Pair{Symbol,Any}[p.first => p.second for p in recruitment], threshold)
+end
+
+function vital_matrices(sp::MatrixSpecies, ctx::Context)
+    U, F = sp.matrices(ctx)
+    k = length(sp.stages)
+    (size(U) == (k, k) && size(F) == (k, k)) ||
+        throw(DimensionMismatch("matrices of :$(sp.name) must be $k x $k"))
+    return U, F
+end
+
+"""
+    valued_net(species, ctx)
+
+Freeze a [`Species`](@ref) at a [`Context`](@ref) as a
+`CategoricalPopulationDynamics.ValuedProjectionNet` with two transitions, `:survival` and
+`:fecundity`, for use with that package's categorical tools.
+"""
+function valued_net(sp::Species, ctx::Context)
+    entries(kind) = [(t.from => t.to) => Float64(_value(t.rate, ctx)) for t in sp.transitions if t.kind === kind]
+    parts = [k => entries(k) for k in (:survival, :fecundity) if !isempty(entries(k))]
+    return ValuedProjectionNet(sp.stages, parts...)
+end
+
+"""
     projection_matrix(species, ctx)
 
 `U + F` for `species` at a [`Context`](@ref).
 """
-function projection_matrix(sp::Species, ctx::Context)
+function projection_matrix(sp::AbstractSpecies, ctx::Context)
     U, F = vital_matrices(sp, ctx)
     return U + F
 end
@@ -147,12 +207,12 @@ end
 Freeze `species` at a [`Context`](@ref) and return an ordinary
 `MatrixProjectionModels.MatrixProjectionModel` with the `U`/`F` split preserved.
 """
-function lower(sp::Species, ctx::Context)
+function lower(sp::AbstractSpecies, ctx::Context)
     U, F = vital_matrices(sp, ctx)
     return MatrixProjectionModel(U, F; stage_names = sp.stages)
 end
 
-function _species_step(sp::Species, n, pool, env)
+function _species_step(sp::AbstractSpecies, n, pool, env)
     ctx = Context(n, pool, env)
     n1 = projection_matrix(sp, ctx) * n
     for (stage, f) in sp.recruitment
@@ -223,7 +283,7 @@ end
 View a single [`Species`](@ref) as an [`OpenCommunity`](@ref) with one port per pool it
 occupies.
 """
-function open_community(sp::Species)
+function open_community(sp::AbstractSpecies)
     pools = Symbol[p.first for p in sp.occupancy]
     allunique(pools) || throw(ArgumentError("species :$(sp.name) lists a pool twice"))
     occ = Any[p.second for p in sp.occupancy]
@@ -344,11 +404,11 @@ function pool_totals(c::OpenCommunity, n::AbstractVector, env)
 end
 
 """
-    step(c, n, env)
+    advance(c, n, env)
 
 Advance a closed community one time step: pool totals are the community's own readouts.
 """
-step(c::OpenCommunity, n::AbstractVector, env) = c.update(n, c.readout(n, env), env)
+advance(c::OpenCommunity, n::AbstractVector, env) = c.update(n, c.readout(n, env), env)
 
 """
     CommunityTrajectory
@@ -397,13 +457,13 @@ function project(c::OpenCommunity, n0::AbstractVector{<:Pair}, envs)
     return project(c, reduce(vcat, [collect(Float64, d[s]) for s in species_names(c)]), envs)
 end
 
-_species(c::OpenCommunity) = reduce(vcat, [p isa Species ? Species[p] : _species(p) for p in c.parts])
+_species(c::OpenCommunity) = reduce(vcat, [p isa AbstractSpecies ? AbstractSpecies[p] : _species(p) for p in c.parts])
 
 """
     species(c)
     species(c, name)
 
-The [`Species`](@ref) definitions inside an [`OpenCommunity`](@ref), in state order, or
+The species definitions ([`AbstractSpecies`](@ref)) inside an [`OpenCommunity`](@ref), in state order, or
 the one called `name`.
 """
 species(c::OpenCommunity) = _species(c)
@@ -428,7 +488,9 @@ function community_matrix(c::OpenCommunity, n::AbstractVector, env)
     return A
 end
 
+include("analysis.jl")
 include("models.jl")
-export verde_fish_model, riparian_model, VERDE_SPECIES, RIPARIAN_GUILDS
+export verde_fish_model, riparian_model, cypripedium_model, with_rate, VERDE_SPECIES, RIPARIAN_GUILDS
+export equilibrium, jacobian, invasion_growth_rate, mean_abundance, abundance_sensitivity
 
 end # module MatrixCommunityModels

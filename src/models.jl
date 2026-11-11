@@ -114,8 +114,8 @@ function _riparian_environments(path)
     end
 end
 
-function _riparian_guild(name::Symbol, corrected::Bool)
-    g = RIPARIAN_GUILDS[name]
+function _riparian_guild(name::Symbol, corrected::Bool, guilds)
+    g = guilds[name]
     b = [g.den[i + 1] / g.den[i] for i in 1:5]                 # self-thinning
     G(i, env) = g.a[i] * b[i] * (1 - env.flood * g.S[i]) * (1 - env.drought * g.D[i])
     P(i, env) = (1 - g.a[i]) * (1 - env.flood * g.S[i]) * (1 - env.drought * g.D[i])
@@ -187,7 +187,7 @@ function _riparian_guild(name::Symbol, corrected::Bool)
 end
 
 """
-    riparian_model(; corrected = false, path = joinpath(DATA_DIR, "riparian", "maybell.csv"))
+    riparian_model(; corrected = false, guilds = RIPARIAN_GUILDS, path = ...)
 
 The five-guild riparian vegetation community of Lytle et al. (2017). Guilds are linked by
 one pool, `space`: the area occupied after the year's flood and drought mortality, in
@@ -201,12 +201,85 @@ lose the stage-5 individuals that do not mature. `corrected = true` gives meadow
 recruitment, gated on its own adults, and keeps those stage-5 individuals. Both variants
 keep the script's floor of 10 individuals per sagebrush stage.
 
+`guilds` supplies the parameters; pass a copy changed with [`with_rate`](@ref) to
+perturb a vital rate.
+
 Returns `(community, n0, envs, K)`; `envs` holds one environment per year of the
 1916-1998 Yampa River record at Maybell.
 """
-function riparian_model(; corrected::Bool = false, path = joinpath(DATA_DIR, "riparian", "maybell.csv"))
-    guilds = (:C, :T, :W, :S, :M)
-    com = community((_riparian_guild(g, corrected) for g in guilds)...)
-    n0 = [g => RIPARIAN_GUILDS[g].area .* RIPARIAN_GUILDS[g].den for g in guilds]
+function riparian_model(; corrected::Bool = false, guilds = RIPARIAN_GUILDS,
+                        path = joinpath(DATA_DIR, "riparian", "maybell.csv"))
+    names = (:C, :T, :W, :S, :M)
+    com = community((_riparian_guild(g, corrected, guilds) for g in names)...)
+    n0 = [g => guilds[g].area .* guilds[g].den for g in names]
     return (community = com, n0 = n0, envs = _riparian_environments(path), K = _RIP_K)
+end
+
+"""
+    with_rate(guilds, guild, field, stage, value)
+
+A copy of a guild parameter table such as [`RIPARIAN_GUILDS`](@ref) in which
+`guilds[guild][field][stage]` is `value`; for example
+`with_rate(RIPARIAN_GUILDS, :C, :S, 6, 0.05)` sets the flood mortality of stage-6
+cottonwood.
+"""
+function with_rate(guilds::NamedTuple, guild::Symbol, field::Symbol, stage::Integer, value::Real)
+    g = guilds[guild]
+    v = collect(Float64, g[field])
+    v[stage] = value
+    return merge(guilds, NamedTuple{(guild,)}((merge(g, NamedTuple{(field,)}((v,))),)))
+end
+
+# ---------------------------------------------------------------- Cypripedium (adapt3)
+
+"""
+    cypripedium_model(; equivalence = true, integeronly = false, dir = joinpath(DATA_DIR, "cypripedium"))
+
+The two-orchid community of the adapt3 community-projection vignette (Shefferson 2026):
+*Cypripedium candidum* (5 annual matrices) and *C. parviflorum* (17), nine stages each,
+cycled through in order. The species are linked by one pool, `density`, the number of
+individuals of both species, not counting dormant seed when `equivalence` is true.
+Reproduction into dormant seed (`SD`) and protocorms (`P1`) is multiplied by Ricker
+terms `0.5 exp(-density)` and `1.2 exp(-2 density)`. With `integeronly` the stage vectors
+are floored each step, as in adapt3.
+
+The annual matrices were estimated in R with lefko3 and are shipped as data. Returns
+`(community, n0, envs)`; the environment of step `t` is the integer `t - 1`, which selects
+each species' matrix for that year.
+"""
+function cypripedium_model(; equivalence::Bool = true, integeronly::Bool = false,
+                           dir = joinpath(DATA_DIR, "cypripedium"))
+    stages = Symbol.(readlines(joinpath(dir, "stages.txt")))
+    k = length(stages)
+    mats = Dict{Int,Dict{Int,Matrix{Float64}}}()
+    for row in _csv(joinpath(dir, "matrices.csv"))
+        sp, yr, i, j = parse(Int, row[1]), parse(Int, row[2]), parse(Int, row[4]), parse(Int, row[5])
+        M = get!(get!(mats, sp, Dict{Int,Matrix{Float64}}()), yr, zeros(k, k))
+        M[i, j] = parse(Float64, row[6])
+    end
+    weights = equivalence ? [0.0; ones(k - 1)] : ones(k)
+    reproductive = (:XSm, :Sm, :Md, :Lg, :XLg)
+    function orchid(name, annual)
+        year(ctx) = mod(ctx.env, length(annual)) + 1
+        transitions = Transition[]
+        for (j, from) in enumerate(stages), (i, to) in enumerate(stages)
+            any(M[i, j] != 0 for M in annual) || continue
+            label = Symbol(from, :_to_, to)
+            if to === :SD && from in reproductive
+                push!(transitions, fecundity(label, from => to,
+                      ctx -> annual[year(ctx)][i, j] * 0.5 * exp(-1.0 * ctx.pool.density)))
+            elseif to === :P1 && from in reproductive
+                push!(transitions, survival(label, from => to,
+                      ctx -> annual[year(ctx)][i, j] * 1.2 * exp(-2.0 * ctx.pool.density)))
+            else
+                push!(transitions, survival(label, from => to, ctx -> annual[year(ctx)][i, j]))
+            end
+        end
+        return Species(name, stages, transitions; occupancy = [:density => weights],
+                       threshold = integeronly ? (n -> floor.(n)) : nothing)
+    end
+    com = community(orchid(:candidum, [mats[1][y] for y in 1:length(mats[1])]),
+                    orchid(:parviflorum, [mats[2][y] for y in 1:length(mats[2])]))
+    n0 = [:candidum => [500.0; 100.0; 200.0; zeros(k - 3)], :parviflorum => [5000.0; 1000.0; 2000.0; zeros(k - 3)]]
+    return (community = com, n0 = n0, envs = 0:99)
 end

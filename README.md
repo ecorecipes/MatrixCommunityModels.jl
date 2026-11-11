@@ -20,6 +20,10 @@ simulation loop.
 - Projection through any sequence of environments (`project`).
 - Freezing a species or community at a state into an ordinary
   `MatrixProjectionModel` or block matrix (`lower`, `community_matrix`).
+- Species given as whole matrices (`MatrixSpecies`), so a discretised integral
+  projection model can share a pool with stage-structured species.
+- Analysis: `equilibrium`, `jacobian`, `invasion_growth_rate`, and the simulation-based
+  cross-species sensitivity of Lytle & Tonkin (`abundance_sensitivity`).
 - Published models rebuilt and checked against their original implementations:
   the Verde River fish model (identical output), the Yampa River riparian guild model
   (within 4e-16, plus a corrected variant), and the adapt3 Cypripedium community
@@ -52,11 +56,15 @@ sol[:CACL]                                  # biomass by year and stage
 | 1 | [Introduction](vignettes/01_introduction/01_introduction.md) ([PDF](vignettes/01_introduction/01_introduction.pdf)) | Species, pools, composition, projection |
 | 2 | [Verde River fish](vignettes/02_verde_fish/02_verde_fish.md) ([PDF](vignettes/02_verde_fish/02_verde_fish.pdf)) | Seven species linked by total biomass |
 | 3 | [Riparian guilds](vignettes/03_riparian_guilds/03_riparian_guilds.md) ([PDF](vignettes/03_riparian_guilds/03_riparian_guilds.pdf)) | Five guilds linked by space; original and corrected |
+| 4 | [Two orchids](vignettes/04_adapt3_cypripedium/04_adapt3_cypripedium.md) ([PDF](vignettes/04_adapt3_cypripedium/04_adapt3_cypripedium.pdf)) | An adapt3 community projection reproduced |
+| 5 | [Cross-species sensitivity](vignettes/05_cross_species_sensitivity/05_cross_species_sensitivity.md) ([PDF](vignettes/05_cross_species_sensitivity/05_cross_species_sensitivity.pdf)) | Interactions revealed by perturbing vital rates; the interaction network |
+| 6 | [Composing IPMs](vignettes/06_composing_ipms/06_composing_ipms.md) ([PDF](vignettes/06_composing_ipms/06_composing_ipms.pdf)) | An integral projection model and a matrix model sharing a pool |
+| 7 | [Metacommunity](vignettes/07_metacommunity/07_metacommunity.md) ([PDF](vignettes/07_metacommunity/07_metacommunity.pdf)) | Patches as nested communities, dispersal as a pool |
 
 ## Status
 
-Early development. Planned: cross-species sensitivity analysis, equilibria and invasion
-analysis, integral projection models as species, and metacommunities.
+Early development. The API may change. Not yet covered: demographic stochasticity,
+within-year (periodic) projection, and analytic sensitivities.
 
 ## Data and licences
 
