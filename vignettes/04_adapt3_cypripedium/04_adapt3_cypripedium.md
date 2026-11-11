@@ -55,15 +55,15 @@ sp = species(m.community, :candidum)
 
     10-element Vector{Tuple{Symbol, Symbol}}:
      (:XSm_to_SD, :fecundity)
-     (:XSm_to_P1, :survival)
+     (:XSm_to_P1, :fecundity)
      (:Sm_to_SD, :fecundity)
-     (:Sm_to_P1, :survival)
+     (:Sm_to_P1, :fecundity)
      (:Md_to_SD, :fecundity)
-     (:Md_to_P1, :survival)
+     (:Md_to_P1, :fecundity)
      (:Lg_to_SD, :fecundity)
-     (:Lg_to_P1, :survival)
+     (:Lg_to_P1, :fecundity)
      (:XLg_to_SD, :fecundity)
-     (:XLg_to_P1, :survival)
+     (:XLg_to_P1, :fecundity)
 
 ## Projection
 

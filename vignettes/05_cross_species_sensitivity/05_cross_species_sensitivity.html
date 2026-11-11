@@ -2390,12 +2390,43 @@ var requirejs,require,define;(function(global,setTimeout){var req,s,head,baseEle
 </div>
 </div>
 <p>Red links are positive effects, blue negative; node size reflects mean abundance.</p>
+<p><code>InteractionNetwork</code> holds the same network and gives the usual summary measures:</p>
+<div id="22" class="cell" data-execution_count="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>net <span class="op">=</span> <span class="fu">InteractionNetwork</span>(effect, labels; threshold <span class="op">=</span> <span class="fl">1</span>)</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>(links <span class="op">=</span> <span class="fu">count</span>(net.adjacency), connectance <span class="op">=</span> <span class="fu">round</span>(<span class="fu">connectance</span>(net); digits <span class="op">=</span> <span class="fl">3</span>),</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a> link_density <span class="op">=</span> <span class="fu">round</span>(<span class="fu">link_density</span>(net); digits <span class="op">=</span> <span class="fl">2</span>), reciprocity <span class="op">=</span> <span class="fu">round</span>(<span class="fu">reciprocity</span>(net); digits <span class="op">=</span> <span class="fl">2</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="1">
+<pre><code>(links = 91, connectance = 0.105, link_density = 3.03, reciprocity = 0.11)</code></pre>
+</div>
+</div>
+<div id="24" class="cell" data-execution_count="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">first</span>(<span class="fu">links</span>(net), <span class="fl">5</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="1">
+<pre><code>5-element Vector{@NamedTuple{from::String, to::String, effect::Float64}}:
+ (from = &quot;XS5&quot;, to = &quot;XS6&quot;, effect = -5.4343774594333025)
+ (from = &quot;XS4&quot;, to = &quot;XS5&quot;, effect = -3.8721332078786683)
+ (from = &quot;XS4&quot;, to = &quot;XS6&quot;, effect = -3.8568866264475323)
+ (from = &quot;MM5&quot;, to = &quot;MM6&quot;, effect = -2.446771597754121)
+ (from = &quot;HT5&quot;, to = &quot;HT6&quot;, effect = -2.3682103625999105)</code></pre>
+</div>
+</div>
+<div id="26" class="cell" data-execution_count="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sort</span>(<span class="fu">collect</span>(<span class="fu">zip</span>(labels, <span class="fu">out_degree</span>(net))); by <span class="op">=</span> last, rev <span class="op">=</span> <span class="cn">true</span>)[<span class="fl">1</span><span class="op">:</span><span class="fl">5</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="1">
+<pre><code>5-element Vector{Tuple{String, Int64}}:
+ (&quot;MM6&quot;, 29)
+ (&quot;HT6&quot;, 23)
+ (&quot;HS6&quot;, 6)
+ (&quot;HT1&quot;, 5)
+ (&quot;XS1&quot;, 5)</code></pre>
+</div>
+</div>
 </section>
 <section id="a-note-on-r²" class="level2">
 <h2 class="anchored" data-anchor-id="a-note-on-r²">A note on R²</h2>
 <p>The paper keeps only relationships with R² above 0.3. Here every relationship has an R² close to one:</p>
-<div id="22" class="cell" data-execution_count="1">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">quantile</span>(<span class="fu">vec</span>(r2), [<span class="fl">0.05</span>, <span class="fl">0.5</span>, <span class="fl">0.95</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="28" class="cell" data-execution_count="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">quantile</span>(<span class="fu">vec</span>(r2), [<span class="fl">0.05</span>, <span class="fl">0.5</span>, <span class="fl">0.95</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="1">
 <pre><code>3-element Vector{Float64}:
  0.9709487787766036
@@ -2404,11 +2435,11 @@ var requirejs,require,define;(function(global,setTimeout){var req,s,head,baseEle
 </div>
 </div>
 <p>That is a consequence of using the same flow sequences for every value of the vital rate. If each run draws its own sequence, as in the original analysis, sampling noise is added to every point and R² falls, most for the weakest effects:</p>
-<div id="24" class="cell" data-execution_count="1">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>rng2 <span class="op">=</span> <span class="fu">Xoshiro</span>(<span class="fl">2</span>)</span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>noisy, _ <span class="op">=</span> <span class="fu">flood_mortality_sensitivity</span>(<span class="op">:</span>C, <span class="fl">6</span>; envs <span class="op">=</span> r <span class="op">-&gt;</span> [<span class="fu">rand</span>(rng2, base.envs) for _ <span class="kw">in</span> <span class="fl">1</span><span class="op">:</span><span class="fl">300</span>])</span>
-<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>(common_sequences <span class="op">=</span> <span class="fu">round</span>.(s.r2[mature]; digits <span class="op">=</span> <span class="fl">2</span>), independent_sequences <span class="op">=</span> <span class="fu">round</span>.(noisy.r2[mature]; digits <span class="op">=</span> <span class="fl">2</span>),</span>
-<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a> slope_common <span class="op">=</span> <span class="fu">round</span>.(s.slope[mature]; digits <span class="op">=</span> <span class="fl">1</span>), slope_independent <span class="op">=</span> <span class="fu">round</span>.(noisy.slope[mature]; digits <span class="op">=</span> <span class="fl">1</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="30" class="cell" data-execution_count="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>rng2 <span class="op">=</span> <span class="fu">Xoshiro</span>(<span class="fl">2</span>)</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>noisy, _ <span class="op">=</span> <span class="fu">flood_mortality_sensitivity</span>(<span class="op">:</span>C, <span class="fl">6</span>; envs <span class="op">=</span> r <span class="op">-&gt;</span> [<span class="fu">rand</span>(rng2, base.envs) for _ <span class="kw">in</span> <span class="fl">1</span><span class="op">:</span><span class="fl">300</span>])</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>(common_sequences <span class="op">=</span> <span class="fu">round</span>.(s.r2[mature]; digits <span class="op">=</span> <span class="fl">2</span>), independent_sequences <span class="op">=</span> <span class="fu">round</span>.(noisy.r2[mature]; digits <span class="op">=</span> <span class="fl">2</span>),</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a> slope_common <span class="op">=</span> <span class="fu">round</span>.(s.slope[mature]; digits <span class="op">=</span> <span class="fl">1</span>), slope_independent <span class="op">=</span> <span class="fu">round</span>.(noisy.slope[mature]; digits <span class="op">=</span> <span class="fl">1</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="1">
 <pre><code>(common_sequences = [0.97, 0.97, 0.97, 0.97, 0.97], independent_sequences = [0.96, 0.5, 0.54, 0.01, 0.48], slope_common = [-15915.1, 10007.8, 16308.0, 145.8, 25639.2], slope_independent = [-16458.1, 8335.0, 26528.6, 93.4, 29739.2])</code></pre>
 </div>

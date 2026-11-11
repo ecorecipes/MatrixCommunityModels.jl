@@ -125,3 +125,141 @@ function abundance_sensitivity(build, values::AbstractVector{<:Real}, envs; burn
     end
     return (slope = slope, r2 = r2, means = means)
 end
+
+"""
+    equilibrium_sensitivity(build, θ, env; h = 1e-6, kwargs...)
+
+Derivative of the equilibrium of a community with respect to a parameter, without
+simulation over a range of values. `build(θ)` returns a model (a `NamedTuple` with
+`community` and `n0`) for parameter value `θ`. The equilibrium `n*` is found by
+[`equilibrium`](@ref) (which receives `kwargs`), and then
+
+    dn*/dθ = (I - J)⁻¹ ∂f/∂θ
+
+where `f` is one time step, `J` its [`jacobian`](@ref) at `n*`, and `∂f/∂θ` is a central
+difference with step `h * max(|θ|, 1)` holding the state at `n*`. Returns
+`(n, dn, converged)`.
+
+This applies to a constant environment and a stable equilibrium at which the step is
+differentiable; thresholds and `max(0, ...)` terms that are active at `n*` break it. For
+fluctuating environments use [`abundance_sensitivity`](@ref).
+"""
+function equilibrium_sensitivity(build, θ::Real, env; h::Real = 1e-6, kwargs...)
+    m = build(θ)
+    eq = equilibrium(m.community, m.n0, env; kwargs...)
+    J = jacobian(m.community, eq.n, env)
+    d = h * max(abs(θ), 1.0)
+    dfdθ = (advance(build(θ + d).community, eq.n, env) .- advance(build(θ - d).community, eq.n, env)) ./ (2d)
+    return (n = eq.n, dn = (I - J) \ dfdθ, converged = eq.converged)
+end
+
+"""
+    stochastic_invasion_rate(invader, resident, n0, envs; burnin = 0)
+
+Long-run growth rate of a rare `invader` in a fluctuating environment. The `resident`
+community is projected from `n0` through `envs`; at each step after `burnin` the invader's
+projection matrix is evaluated at the resident's pool totals and that step's environment,
+and applied to the invader's stage vector, which is renormalised. Returns the geometric
+mean growth factor per step, so a value above one means the invader increases when rare.
+In a constant environment at the resident's equilibrium it equals
+[`invasion_growth_rate`](@ref).
+"""
+function stochastic_invasion_rate(sp::AbstractSpecies, resident::OpenCommunity, n0, envs; burnin::Integer = 0)
+    sol = project(resident, n0, envs)
+    names = Tuple(p.first for p in sp.occupancy)
+    index = [findfirst(==(q), resident.ports) for q in names]
+    any(isnothing, index) &&
+        throw(ArgumentError("invader :$(sp.name) needs pools $(names), resident exposes $(Tuple(resident.ports))"))
+    k = length(sp.stages)
+    v = fill(1.0 / k, k)
+    total = 0.0
+    steps = 0
+    for (t, env) in enumerate(envs)
+        ctx = Context(zeros(k), NamedTuple{names}(Tuple(sol.pools[t, i] for i in index)), env)
+        v = projection_matrix(sp, ctx) * v
+        g = sum(v)
+        g > 0 || return 0.0
+        v ./= g
+        if t > burnin
+            total += log(g)
+            steps += 1
+        end
+    end
+    steps > 0 || throw(ArgumentError("burnin leaves no time steps"))
+    return exp(total / steps)
+end
+
+"""
+    InteractionNetwork(effect, labels; threshold)
+
+A directed network read off a matrix of net effects, such as the slopes from
+[`abundance_sensitivity`](@ref): `effect[i, j]` is the effect of perturbing node `j` on
+node `i`, and there is a link `j → i` when `|effect[i, j]| > threshold`. Self-effects are
+not links. Use [`links`](@ref), [`connectance`](@ref), [`link_density`](@ref),
+[`reciprocity`](@ref), [`out_degree`](@ref) and [`in_degree`](@ref).
+"""
+struct InteractionNetwork
+    labels::Vector{String}
+    effect::Matrix{Float64}
+    adjacency::BitMatrix
+end
+
+function InteractionNetwork(effect::AbstractMatrix{<:Real}, labels::AbstractVector; threshold::Real)
+    k = size(effect, 1)
+    (size(effect, 2) == k && length(labels) == k) ||
+        throw(DimensionMismatch("effect must be square with one label per node"))
+    adjacency = BitMatrix(i != j && abs(effect[i, j]) > threshold for i in 1:k, j in 1:k)
+    return InteractionNetwork(String.(string.(labels)), Matrix{Float64}(effect), adjacency)
+end
+
+Base.show(io::IO, net::InteractionNetwork) =
+    print(io, "InteractionNetwork(", length(net.labels), " nodes, ", count(net.adjacency), " links)")
+
+"""
+    links(net)
+
+The links of an [`InteractionNetwork`](@ref) as `(from, to, effect)` tuples, strongest first.
+"""
+function links(net::InteractionNetwork)
+    out = [(from = net.labels[j], to = net.labels[i], effect = net.effect[i, j])
+           for j in axes(net.adjacency, 2), i in axes(net.adjacency, 1) if net.adjacency[i, j]]
+    return sort(vec(out); by = l -> -abs(l.effect))
+end
+
+"""
+    connectance(net)
+
+Fraction of the possible directed links (excluding self-links) that are present.
+"""
+connectance(net::InteractionNetwork) = count(net.adjacency) / (length(net.labels) * (length(net.labels) - 1))
+
+"""
+    link_density(net)
+
+Mean number of links per node.
+"""
+link_density(net::InteractionNetwork) = count(net.adjacency) / length(net.labels)
+
+"""
+    reciprocity(net)
+
+Fraction of links whose reverse link is also present.
+"""
+function reciprocity(net::InteractionNetwork)
+    total = count(net.adjacency)
+    return total == 0 ? 0.0 : count(net.adjacency .& net.adjacency') / total
+end
+
+"""
+    out_degree(net)
+
+Number of nodes each node affects, in label order.
+"""
+out_degree(net::InteractionNetwork) = vec(sum(net.adjacency; dims = 1))
+
+"""
+    in_degree(net)
+
+Number of nodes each node is affected by, in label order.
+"""
+in_degree(net::InteractionNetwork) = vec(sum(net.adjacency; dims = 2))

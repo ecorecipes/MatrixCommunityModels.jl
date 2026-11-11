@@ -188,6 +188,39 @@ p
 Red links are positive effects, blue negative; node size reflects mean
 abundance.
 
+`InteractionNetwork` holds the same network and gives the usual summary
+measures:
+
+``` julia
+net = InteractionNetwork(effect, labels; threshold = 1)
+(links = count(net.adjacency), connectance = round(connectance(net); digits = 3),
+ link_density = round(link_density(net); digits = 2), reciprocity = round(reciprocity(net); digits = 2))
+```
+
+    (links = 91, connectance = 0.105, link_density = 3.03, reciprocity = 0.11)
+
+``` julia
+first(links(net), 5)
+```
+
+    5-element Vector{@NamedTuple{from::String, to::String, effect::Float64}}:
+     (from = "XS5", to = "XS6", effect = -5.4343774594333025)
+     (from = "XS4", to = "XS5", effect = -3.8721332078786683)
+     (from = "XS4", to = "XS6", effect = -3.8568866264475323)
+     (from = "MM5", to = "MM6", effect = -2.446771597754121)
+     (from = "HT5", to = "HT6", effect = -2.3682103625999105)
+
+``` julia
+sort(collect(zip(labels, out_degree(net))); by = last, rev = true)[1:5]
+```
+
+    5-element Vector{Tuple{String, Int64}}:
+     ("MM6", 29)
+     ("HT6", 23)
+     ("HS6", 6)
+     ("HT1", 5)
+     ("XS1", 5)
+
 ## A note on R²
 
 The paper keeps only relationships with R² above 0.3. Here every

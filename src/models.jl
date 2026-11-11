@@ -269,7 +269,8 @@ function cypripedium_model(; equivalence::Bool = true, integeronly::Bool = false
                 push!(transitions, fecundity(label, from => to,
                       ctx -> annual[year(ctx)][i, j] * 0.5 * exp(-1.0 * ctx.pool.density)))
             elseif to === :P1 && from in reproductive
-                push!(transitions, survival(label, from => to,
+                # adapt3 types this element as survival, but it is production of protocorms
+                push!(transitions, fecundity(label, from => to,
                       ctx -> annual[year(ctx)][i, j] * 1.2 * exp(-2.0 * ctx.pool.density)))
             else
                 push!(transitions, survival(label, from => to, ctx -> annual[year(ctx)][i, j]))

@@ -212,11 +212,31 @@ function lower(sp::AbstractSpecies, ctx::Context)
     return MatrixProjectionModel(U, F; stage_names = sp.stages)
 end
 
-function _species_step(sp::AbstractSpecies, n, pool, env)
+function _species_step(sp::AbstractSpecies, n, pool, env, rng = nothing)
+    rng === nothing || return _demographic_step(sp, n, pool, env, rng)
     ctx = Context(n, pool, env)
     n1 = projection_matrix(sp, ctx) * n
     for (stage, f) in sp.recruitment
         n1[_stage_index(sp, stage)] += _value(f, ctx)
+    end
+    return sp.threshold === nothing ? n1 : sp.threshold(n1)
+end
+
+# One step with demographic stochasticity: individuals are whole, survival and movement are
+# a multinomial draw down each column of U, births and recruitment are Poisson.
+function _demographic_step(sp::AbstractSpecies, n, pool, env, rng)
+    all(isinteger, n) || throw(ArgumentError(
+        "demographic stochasticity needs whole numbers of individuals in :$(sp.name)"))
+    ctx = Context(n, pool, env)
+    U, F = vital_matrices(sp, ctx)
+    worst = maximum(sum(U; dims = 1))
+    worst <= 1 + 1e-6 || throw(ArgumentError(
+        "survival matrix of :$(sp.name) has a column summing to $worst; demographic " *
+        "stochasticity needs survival probabilities (column sums of U at most 1)"))
+    counts = StructuredPopulationCore.demographic_step!(rng, zeros(Int, length(n)), round.(Int, n), U, F)
+    n1 = Float64.(counts)
+    for (stage, f) in sp.recruitment
+        n1[_stage_index(sp, stage)] += StructuredPopulationCore.rand_poisson(rng, max(_value(f, ctx), 0.0))
     end
     return sp.threshold === nothing ? n1 : sp.threshold(n1)
 end
@@ -289,7 +309,7 @@ function open_community(sp::AbstractSpecies)
     occ = Any[p.second for p in sp.occupancy]
     readout = (n, env) -> Float64[_occupancy(w, n, env) for w in occ]
     names = Tuple(pools)
-    update = (n, totals, env) -> _species_step(sp, n, NamedTuple{names}(Tuple(totals)), env)
+    update = (n, totals, env; rng = nothing) -> _species_step(sp, n, NamedTuple{names}(Tuple(totals)), env, rng)
     layout = StateBlockLayout([sp.name], [length(sp.stages)])
     return OpenCommunity(layout, Dict(sp.name => sp.stages), pools, readout, update, Any[sp], nothing)
 end
@@ -343,14 +363,14 @@ function compose(d::UndirectedWiringDiagram, components::AbstractVector)
         return T
     end
     readout = (n, env) -> internal(n, env)[outer]
-    function update(n, totals, env)
+    function update(n, totals, env; rng = nothing)
         T = internal(n, env)
         for (q, j) in enumerate(outer)
             T[j] = totals[q]
         end
         n1 = similar(n, Float64)
         for b in 1:nb
-            n1[ranges[b]] = comps[b].update(n[ranges[b]], T[portjunction[b]], env)
+            n1[ranges[b]] = comps[b].update(n[ranges[b]], T[portjunction[b]], env; rng)
         end
         return n1
     end
@@ -404,11 +424,12 @@ function pool_totals(c::OpenCommunity, n::AbstractVector, env)
 end
 
 """
-    advance(c, n, env)
+    advance(c, n, env; rng = nothing)
 
 Advance a closed community one time step: pool totals are the community's own readouts.
+With `rng`, the step has demographic stochasticity (see [`project`](@ref)).
 """
-advance(c::OpenCommunity, n::AbstractVector, env) = c.update(n, c.readout(n, env), env)
+advance(c::OpenCommunity, n::AbstractVector, env; rng = nothing) = c.update(n, c.readout(n, env), env; rng)
 
 """
     CommunityTrajectory
@@ -431,12 +452,18 @@ function Base.show(io::IO, sol::CommunityTrajectory)
 end
 
 """
-    project(c, n0, envs)
+    project(c, n0, envs; rng = nothing)
 
 Project a closed community from state `n0` through the environments `envs` (one per time
 step). `n0` is a flat vector in layout order, or `species => vector` pairs.
+
+With `rng` (a random number generator) the projection has demographic stochasticity:
+individuals are whole, each survives and moves according to a multinomial draw from its
+column of `U`, and births and recruitment are Poisson with the deterministic values as
+means. Pool totals are computed from the realised counts. This needs `n0` in whole
+numbers and survival matrices whose columns sum to at most one.
 """
-function project(c::OpenCommunity, n0::AbstractVector{<:Real}, envs)
+function project(c::OpenCommunity, n0::AbstractVector{<:Real}, envs; rng = nothing)
     length(n0) == length(c) || throw(DimensionMismatch("n0 has length $(length(n0)), community has $(length(c)) states"))
     T = length(envs)
     u = zeros(Float64, T + 1, length(c))
@@ -446,15 +473,15 @@ function project(c::OpenCommunity, n0::AbstractVector{<:Real}, envs)
     for (k, env) in enumerate(envs)
         totals = c.readout(n, env)
         pools[k, :] = totals
-        n = c.update(n, totals, env)
+        n = c.update(n, totals, env; rng)
         u[k + 1, :] = n
     end
     return CommunityTrajectory(collect(0:T), u, pools, c)
 end
 
-function project(c::OpenCommunity, n0::AbstractVector{<:Pair}, envs)
+function project(c::OpenCommunity, n0::AbstractVector{<:Pair}, envs; rng = nothing)
     d = Dict(n0)
-    return project(c, reduce(vcat, [collect(Float64, d[s]) for s in species_names(c)]), envs)
+    return project(c, reduce(vcat, [collect(Float64, d[s]) for s in species_names(c)]), envs; rng)
 end
 
 _species(c::OpenCommunity) = reduce(vcat, [p isa AbstractSpecies ? AbstractSpecies[p] : _species(p) for p in c.parts])
@@ -492,5 +519,7 @@ include("analysis.jl")
 include("models.jl")
 export verde_fish_model, riparian_model, cypripedium_model, with_rate, VERDE_SPECIES, RIPARIAN_GUILDS
 export equilibrium, jacobian, invasion_growth_rate, mean_abundance, abundance_sensitivity
+export equilibrium_sensitivity, stochastic_invasion_rate
+export InteractionNetwork, links, connectance, link_density, reciprocity, out_degree, in_degree
 
 end # module MatrixCommunityModels

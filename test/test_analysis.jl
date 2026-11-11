@@ -129,3 +129,61 @@ end
     @test g.C.S[6] == 0.05 && RIPARIAN_GUILDS.C.S[6] == 0.02 && g.T === RIPARIAN_GUILDS.T
     @test riparian_model(; guilds = g).community isa OpenCommunity
 end
+
+@testset "equilibrium sensitivity" begin
+    # shrub alone: space at equilibrium is K(1 - 1/(3f)), so d(space)/df = K/(3f^2)
+    build(f) = (community = community(toy_shrub(; f)), n0 = [5.0, 0.0, 1.0])
+    s = equilibrium_sensitivity(build, 3.0, nothing)
+    @test s.converged
+    @test dot([0.1, 1.0, 4.0], s.dn) ≈ TOY_K / (3 * 3.0^2) rtol = 1e-5
+    # agrees with the regression estimate
+    r = abundance_sensitivity(build, collect(2.98:0.01:3.02), fill(nothing, 4000); burnin = 3500)
+    @test s.dn ≈ r.slope rtol = 1e-3
+end
+
+@testset "stochastic invasion rate" begin
+    grass, shrub = toy_grass(), toy_shrub()
+    alone = open_community(grass)
+    geq = equilibrium(alone, [50.0, 10.0], nothing)
+    # constant environment: equals the deterministic invasion growth rate
+    @test stochastic_invasion_rate(shrub, alone, geq.n, fill(nothing, 400); burnin = 200) ≈
+          invasion_growth_rate(shrub, alone, geq.n, nothing) rtol = 1e-8
+    # a resident cannot invade itself at its own equilibrium
+    @test stochastic_invasion_rate(grass, alone, geq.n, fill(nothing, 400); burnin = 200) ≈ 1 rtol = 1e-6
+    @test_throws ArgumentError stochastic_invasion_rate(shrub, alone, geq.n, fill(nothing, 5); burnin = 5)
+end
+
+@testset "demographic stochasticity" begin
+    using Random
+    grass, shrub = toy_grass(), toy_shrub()
+    com = community(grass, shrub)
+    n0 = [50.0, 10.0, 5.0, 0.0, 1.0]
+    envs = fill(nothing, 30)
+    a = project(com, n0, envs; rng = Xoshiro(1))
+    @test all(isinteger, a.u) && all(>=(0), a.u)
+    @test a.u == project(com, n0, envs; rng = Xoshiro(1)).u          # reproducible
+    @test a.u != project(com, n0, envs; rng = Xoshiro(2)).u
+    @test project(com, n0, envs).u == project(com, n0, envs; rng = nothing).u
+    # the mean of many one-step draws approaches the deterministic step
+    big = [5000.0, 1000.0, 500.0, 100.0, 100.0]
+    rng = Xoshiro(3)
+    draws = reduce(hcat, [advance(com, big, nothing; rng) for _ in 1:4000])
+    @test vec(sum(draws; dims = 2)) ./ 4000 ≈ advance(com, big, nothing) rtol = 0.02
+    # requirements
+    @test_throws ArgumentError project(com, [50.5, 10.0, 5.0, 0.0, 1.0], envs; rng = Xoshiro(1))
+    fish = verde_fish_model()
+    n0f = round.(reduce(vcat, last.(fish.n0)))
+    @test_throws ArgumentError project(fish.community, n0f, fish.envs[1:2]; rng = Xoshiro(1))
+end
+
+@testset "interaction network" begin
+    effect = [-1.0 0.8 0.0; 0.6 -2.0 0.05; 0.0 0.3 -1.0]
+    net = InteractionNetwork(effect, ["a", "b", "c"]; threshold = 0.1)
+    @test count(net.adjacency) == 3
+    @test connectance(net) == 3 / 6 && link_density(net) == 1.0
+    @test reciprocity(net) == 2 / 3
+    @test out_degree(net) == [1, 2, 0] && in_degree(net) == [1, 1, 1]
+    l = links(net)
+    @test l[1] == (from = "b", to = "a", effect = 0.8) && length(l) == 3
+    @test_throws DimensionMismatch InteractionNetwork(effect, ["a", "b"]; threshold = 0.1)
+end

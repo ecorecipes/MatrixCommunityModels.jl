@@ -26,6 +26,8 @@ on Catlab.jl.
   matrix model sharing a pool.
 - [Metacommunity](tutorials/07_metacommunity.md): patches as nested communities, with
   dispersal as a pool.
+- [Equilibria, invasion and chance](tutorials/08_equilibria_invasion_chance.md): analytic
+  sensitivities, invasion rates in fluctuating environments, demographic stochasticity.
 
 Each tutorial is a Quarto vignette, also available as
 [HTML and PDF in the repository](https://github.com/ecorecipes/MatrixCommunityModels.jl/tree/main/vignettes).
