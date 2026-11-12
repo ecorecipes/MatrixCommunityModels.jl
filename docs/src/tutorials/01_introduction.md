@@ -37,36 +37,43 @@ This package builds MCMs in three steps that mirror that description:
 ## Two species sharing space
 
 A grass and a shrub compete for 1000 units of space. Seed production of
-both falls linearly to zero as the space fills. Rates are numbers, or
-functions of a context `ctx` holding the species’ own stage vector
-(`ctx.n`), the pool totals (`ctx.pool`) and the environment of the
-current step (`ctx.env`).
+both falls linearly to zero as the space fills. A response is a function
+of a context `ctx` holding the species’ own stages (`ctx.n`), the pool
+totals (`ctx.pool`) and the environment of the current step (`ctx.env`);
+it scales the transition it is attached to.
 
 ``` julia
 K = 1000.0
 crowding(ctx) = max(0.0, 1 - ctx.pool.space / K)
 
-grass = Species(:grass, [:seedling, :adult],
-                [survival(:establish, :seedling => :adult, 0.30),
-                 survival(:persist, :adult => :adult, 0.50),
-                 fecundity(:seed, :adult => :seedling, ctx -> 6.0 * crowding(ctx))];
-                occupancy = [:space => [0.1, 1.0]])
+# each life cycle is a net of named transitions (CategoricalPopulationDynamics.jl)
+grass_life = ValuedProjectionNet([:seedling, :adult],
+    :establishing => [(:seedling => :adult) => 0.30],
+    :persisting   => [(:adult => :adult) => 0.50],
+    :seeding      => [(:adult => :seedling) => 6.0])
 
-shrub = Species(:shrub, [:seedling, :juvenile, :adult],
-                [survival(:establish, :seedling => :juvenile, 0.30),
-                 survival(:mature, :juvenile => :adult, 0.50),
-                 survival(:persist, :adult => :adult, 0.95),
-                 fecundity(:seed, :adult => :seedling, ctx -> 3.0 * crowding(ctx))];
-                occupancy = [:space => [0.1, 1.0, 4.0]])
+shrub_life = ValuedProjectionNet([:seedling, :juvenile, :adult],
+    :establishing => [(:seedling => :juvenile) => 0.30],
+    :maturing     => [(:juvenile => :adult) => 0.50],
+    :persisting   => [(:adult => :adult) => 0.95],
+    :seeding      => [(:adult => :seedling) => 3.0])
+
+# a response says how a named transition depends on the pool; `births` marks reproduction
+plant(life) = births(respond(life, :seeding => crowding), :seeding)
+
+grass = species(:grass, plant(grass_life); occupies = [:space => [:seedling => 0.1, :adult => 1.0]])
+shrub = species(:shrub, plant(shrub_life); occupies = [:space => [:seedling => 0.1, :juvenile => 1.0, :adult => 4.0]])
 
 com = community(grass, shrub)
 ```
 
     OpenCommunity(grass, shrub; pools = space)
 
-`community` joins species by pool name. The result records its state
-layout and the wiring diagram it was built from: one box per species,
-one junction per pool.
+`community` joins species by pool name. The result is a
+`PooledProjectionSystem` from CategoricalPopulationDynamics.jl (see
+`system(com)`), with the wiring diagram it was built from: one box per
+species, one junction per pool. Projecting it lowers it to a
+`CoupledMPMProblem` and calls the solver of MatrixProjectionModels.jl.
 
 ``` julia
 species_names(com), pool_names(com)
@@ -136,21 +143,22 @@ hline!([K]; label = "K", ls = :dash)
 
 ## Every number is traceable
 
-At any state the model is an ordinary projection matrix. `lower` freezes
-one species at a context and returns a `MatrixProjectionModel` from
-MatrixProjectionModels.jl, with survival and fecundity kept apart, so
-all the single-species tools apply.
+At any state the model is an ordinary projection matrix. `matrix_model`
+freezes one species at a community state and returns a
+`MatrixProjectionModel` from MatrixProjectionModels.jl, with survival
+and fecundity kept apart, so all the single-species tools apply.
+(`frozen_net` returns the same thing as a net.)
 
 ``` julia
-empty = Context([0.0, 0.0], (space = 0.0,), nothing)
-full = Context([0.0, 0.0], (space = 900.0,), nothing)
-lower(grass, empty).A, lower(grass, full).A
+empty = [0.0, 0.0]            # nobody there: all the space is free
+full = [0.0, 900.0]           # 900 of the 1000 units of space in use
+matrix_model(grass, :grass, empty, nothing).A, matrix_model(grass, :grass, full, nothing).A
 ```
 
     ([0.0 6.0; 0.3 0.5], [0.0 0.5999999999999999; 0.3 0.5])
 
 ``` julia
-lambda(lower(grass, empty)), lambda(lower(grass, full))
+lambda(matrix_model(grass, :grass, empty, nothing)), lambda(matrix_model(grass, :grass, full, nothing))
 ```
 
     (1.614734406395618, 0.7424428900898051)
@@ -204,9 +212,8 @@ the same pool. Because pool totals are sums, the result does not depend
 on how the species were grouped:
 
 ``` julia
-herb = Species(:herb, [:plant], [survival(:persist, :plant => :plant, 0.2),
-                                 fecundity(:seed, :plant => :plant, ctx -> 2.0 * crowding(ctx))];
-               occupancy = [:space => [0.5]])
+herb_life = ValuedProjectionNet([:plant], :persisting => [(:plant => :plant) => 0.2], :seeding => [(:plant => :plant) => 2.0])
+herb = species(:herb, plant(herb_life); occupies = [:space => [:plant => 0.5]])
 
 nested = compose((@relation (space,) begin
                       woody(space)
@@ -226,11 +233,9 @@ The environment is anything you like, one value per time step, handed to
 every rate. A drought that halves grass survival in some years:
 
 ``` julia
-grass_d = Species(:grass, [:seedling, :adult],
-                  [survival(:establish, :seedling => :adult, ctx -> ctx.env.drought ? 0.15 : 0.30),
-                   survival(:persist, :adult => :adult, ctx -> ctx.env.drought ? 0.25 : 0.50),
-                   fecundity(:seed, :adult => :seedling, ctx -> 6.0 * crowding(ctx))];
-                  occupancy = [:space => [0.1, 1.0]])
+drought(ctx) = ctx.env.drought ? 0.5 : 1.0
+grass_d = species(:grass, respond(plant(grass_life), :establishing => drought, :persisting => drought);
+                  occupies = [:space => [:seedling => 0.1, :adult => 1.0]])
 
 envs = [(drought = t % 5 == 0,) for t in 1:400]
 sold = project(community(grass_d, shrub), sol.u[1, :], envs)

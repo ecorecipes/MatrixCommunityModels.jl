@@ -35,9 +35,9 @@ end
         @test corr[:M] != orig[:M]
         @test all(isfinite, corr.u) && all(>=(0), corr.u)
         # stage-5 sagebrush that does not mature is retained only in the corrected model
-        env = c.envs[1]
-        ctx = Context(ones(6), (space = 0.0,), env)
-        Sc = only(s for s in MatrixCommunityModels._species(c.community) if s.name === :S)
-        @test projection_matrix(Sc, ctx)[5, 5] > 0
+        n = state_vector(c.community, c.n0...)
+        s5 = 3 * 6 + 5                                     # sagebrush is the fourth guild
+        @test community_matrix(c.community, n, c.envs[1])[s5, s5] > 0
+        @test community_matrix(m.community, n, m.envs[1])[s5, s5] == 0
     end
 end

@@ -27,32 +27,39 @@ patch into a seed rain shared by all patches; each of the two patches receives h
 it. A species therefore has two ports: its patch's `space`, and its own seed rain.
 
 Patch `B` burns periodically, which kills most shrubs and some grass. The environment
-of each year says which patches burn.
+of each year says which patches burn. Each species is a life-cycle net; the responses say
+that establishment needs free space and that fire reduces survival; the seed rain arrives
+as an inflow.
 
 ```{julia}
 K = 1000.0
 
+crowding(ctx) = max(0.0, 1 - ctx.pool.space / K)
+
 function grass(patch; m)
-    crowding(ctx) = max(0.0, 1 - ctx.pool.space / K)
     burns(ctx) = getfield(ctx.env, patch)
-    Species(Symbol(:grass_, patch), [:seedling, :adult],
-            [survival(:establish, :seedling => :adult, ctx -> 0.30 * crowding(ctx)),
-             survival(:persist, :adult => :adult, ctx -> burns(ctx) ? 0.35 : 0.50),
-             fecundity(:seed, :adult => :seedling, 6.0 * (1 - m))];
-            occupancy = [:space => [0.0, 1.0], :grass_rain => [0.0, 6.0 * m]],
-            recruitment = [:seedling => ctx -> ctx.pool.grass_rain / 2])
+    life = ValuedProjectionNet([:seedling, :adult],
+        :establishing => [(:seedling => :adult) => 0.30],
+        :persisting => [(:adult => :adult) => 0.50],
+        :seeding => [(:adult => :seedling) => 6.0 * (1 - m)])           # seed that stays in the patch
+    plant = respond(life, :establishing => crowding, :persisting => ctx -> burns(ctx) ? 0.7 : 1.0)
+    plant = inflow(plant, :seedling => ctx -> ctx.pool.grass_rain / 2)   # this patch's half of the seed rain
+    species(Symbol(:grass_, patch), births(plant, :seeding);
+            occupies = [:space => [:adult => 1.0], :grass_rain => [:adult => 6.0 * m]])
 end
 
 function shrub(patch; m)
-    crowding(ctx) = max(0.0, 1 - ctx.pool.space / K)
     burns(ctx) = getfield(ctx.env, patch)
-    Species(Symbol(:shrub_, patch), [:seedling, :juvenile, :adult],
-            [survival(:establish, :seedling => :juvenile, ctx -> 0.30 * crowding(ctx)),
-             survival(:mature, :juvenile => :adult, ctx -> burns(ctx) ? 0.05 : 0.50),
-             survival(:persist, :adult => :adult, ctx -> burns(ctx) ? 0.10 : 0.95),
-             fecundity(:seed, :adult => :seedling, 3.0 * (1 - m))];
-            occupancy = [:space => [0.0, 1.0, 4.0], :shrub_rain => [0.0, 0.0, 3.0 * m]],
-            recruitment = [:seedling => ctx -> ctx.pool.shrub_rain / 2])
+    life = ValuedProjectionNet([:seedling, :juvenile, :adult],
+        :establishing => [(:seedling => :juvenile) => 0.30],
+        :maturing => [(:juvenile => :adult) => 0.50],
+        :persisting => [(:adult => :adult) => 0.95],
+        :seeding => [(:adult => :seedling) => 3.0 * (1 - m)])
+    plant = respond(life, :establishing => crowding, :maturing => ctx -> burns(ctx) ? 0.1 : 1.0,
+                    :persisting => ctx -> burns(ctx) ? 0.10 / 0.95 : 1.0)
+    plant = inflow(plant, :seedling => ctx -> ctx.pool.shrub_rain / 2)
+    species(Symbol(:shrub_, patch), births(plant, :seeding);
+            occupies = [:space => [:juvenile => 1.0, :adult => 4.0], :shrub_rain => [:adult => 3.0 * m]])
 end
 ```
 

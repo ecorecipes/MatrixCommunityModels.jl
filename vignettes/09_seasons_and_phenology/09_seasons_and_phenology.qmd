@@ -32,14 +32,20 @@ probability `free space / demand`: a lottery in which every seed has the same ch
 
 ```{julia}
 function annual(name; germinate, seed, K = 1000.0, flood = 1, seeds_per_plant = 20.0, g = 0.5)
+    life = ValuedProjectionNet([:seed, :plant],
+        :dormancy => [(:seed => :seed) => 0.9],
+        :germination => [(:seed => :plant) => g],
+        :growth => [(:plant => :plant) => 0.9],
+        :seed_set => [(:plant => :seed) => seeds_per_plant])
+    during(season) = ctx -> ctx.env == season ? 1.0 : 0.0
     establishment(ctx) = min(1.0, max(K - ctx.pool.space, 0.0) / max(ctx.pool.demand, 1e-12))
-    Species(name, [:seed, :plant],
-            [survival(:dormant, :seed => :seed, ctx -> ctx.env == germinate ? (1 - g) * 0.9 : 0.9),
-             survival(:germinate, :seed => :plant, ctx -> ctx.env == germinate ? g * establishment(ctx) : 0.0),
-             survival(:grow, :plant => :plant, ctx -> ctx.env == seed ? 0.0 : (ctx.env == flood ? 0.1 : 0.9)),
-             fecundity(:set_seed, :plant => :seed, ctx -> ctx.env == seed ? seeds_per_plant : 0.0)];
-            occupancy = [:space => [0.0, 1.0],
-                         :demand => (n, env) -> env == germinate ? g * n[1] : 0.0])
+    plant = respond(life,
+        :dormancy => ctx -> ctx.env == germinate ? 1 - g : 1.0,          # germinating seeds leave the seed bank
+        :germination => during(germinate), :germination => establishment, # the lottery for free space
+        :seed_set => during(seed),
+        :growth => ctx -> ctx.env == seed ? 0.0 : (ctx.env == flood ? 0.1 / 0.9 : 1.0))   # plants die after seeding; floods kill
+    species(name, births(plant, :seed_set);
+            occupies = [:space => [:plant => 1.0], :demand => (n, env) -> env == germinate ? g * n[:seed] : 0.0])
 end
 
 seasons = [1, 2, 3, 4]
@@ -70,7 +76,7 @@ species' annual invasion rate into the other.
 ```{julia}
 function compete(a, b)
     sol = project(community(a, b), [100.0, 0.0, 100.0, 0.0], envs)
-    rate(x, y) = stochastic_invasion_rate(x, open_community(y), [100.0, 0.0], envs; burnin = 800)^4
+    rate(x, y) = stochastic_invasion_rate(x, y, [100.0, 0.0], envs; burnin = 800)^4
     (sol = sol, invasion = (rate(a, b), rate(b, a)))
 end
 
@@ -79,8 +85,8 @@ seedbank(sol, sp) = sol[sp][1:4:end, 1]      # seeds at the start of each year
 function show_pair(a, b, title)
     r = compete(a, b)
     println(title, ": annual invasion rates ", round.(r.invasion; digits = 3))
-    plot(0:400, log10.([seedbank(r.sol, a.name) seedbank(r.sol, b.name)] .+ 1);
-         label = [String(a.name) String(b.name)], xlabel = "Year", ylabel = "log10(seeds + 1)",
+    plot(0:400, log10.([seedbank(r.sol, only(species_names(a))) seedbank(r.sol, only(species_names(b)))] .+ 1);
+         label = [String(only(species_names(a))) String(only(species_names(b)))], xlabel = "Year", ylabel = "log10(seeds + 1)",
          title = title, lw = 2, ylims = (0, 5))
 end
 ```

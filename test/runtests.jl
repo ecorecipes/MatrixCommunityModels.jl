@@ -6,5 +6,6 @@ using MatrixCommunityModels
     include("test_adapt3.jl")
     include("test_riparian.jl")
     include("test_analysis.jl")
+    include("test_bees.jl")
     include("test_docstrings.jl")
 end

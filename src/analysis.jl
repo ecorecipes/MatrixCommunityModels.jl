@@ -9,8 +9,8 @@ change in any state, relative to `max(|n|, 1)`, falls below `tol`. Returns
 `(n, converged, iterations)`. A stable equilibrium is found only if the iteration
 converges to one; cycles and chaos return `converged = false`.
 """
-function equilibrium(c::OpenCommunity, n0::AbstractVector{<:Real}, env; maxiter::Integer = 100_000, tol::Real = 1e-10)
-    n = collect(Float64, n0)
+function equilibrium(c::OpenCommunity, n0::AbstractVector, env; maxiter::Integer = 100_000, tol::Real = 1e-10)
+    n = _state(c, n0)
     for k in 1:maxiter
         n1 = advance(c, n, env)
         if maximum(abs.(n1 .- n) ./ max.(abs.(n), 1.0)) < tol
@@ -19,11 +19,6 @@ function equilibrium(c::OpenCommunity, n0::AbstractVector{<:Real}, env; maxiter:
         n = n1
     end
     return (n = n, converged = false, iterations = maxiter)
-end
-
-function equilibrium(c::OpenCommunity, n0::AbstractVector{<:Pair}, env; kwargs...)
-    d = Dict(n0)
-    return equilibrium(c, reduce(vcat, [collect(Float64, d[s]) for s in species_names(c)]), env; kwargs...)
 end
 
 """
@@ -53,21 +48,27 @@ end
     invasion_growth_rate(invader, pool, env)
     invasion_growth_rate(invader, resident, n, env)
 
-Asymptotic growth rate of a rare `invader` (a species) when the pools are held at the
-totals `pool` (a `NamedTuple`), or at the totals of the `resident` community in state `n`.
-A value above one means the invader increases when rare. The invader's own contribution
-to the pools is neglected, as is any dependence of its rates on its own abundance.
+Asymptotic growth rate of a rare `invader` (a single species, from [`species`](@ref)) when
+the pools are held at the totals `pool` (a `NamedTuple`), or at the totals of the
+`resident` community in state `n`. A value above one means the invader increases when
+rare. The invader's own contribution to the pools is neglected, as is any dependence of
+its rates on its own abundance.
 """
-function invasion_growth_rate(sp::AbstractSpecies, pool::NamedTuple, env)
-    names = Tuple(p.first for p in sp.occupancy)
-    all(q -> haskey(pool, q), names) ||
-        throw(ArgumentError("invader :$(sp.name) needs pools $(names), got $(keys(pool))"))
-    ctx = Context(zeros(length(sp.stages)), NamedTuple{names}(Tuple(pool[q] for q in names)), env)
-    return StructuredPopulationCore.lambda(projection_matrix(sp, ctx))
+function invasion_growth_rate(invader::OpenCommunity, pool::NamedTuple, env)
+    return StructuredPopulationCore.lambda(_rare_matrix(invader, pool, env))
 end
 
-function invasion_growth_rate(sp::AbstractSpecies, resident::OpenCommunity, n::AbstractVector{<:Real}, env)
-    return invasion_growth_rate(sp, pool_totals(resident, n, env), env)
+function invasion_growth_rate(invader::OpenCommunity, resident::OpenCommunity, n::AbstractVector, env)
+    return invasion_growth_rate(invader, pool_totals(resident, n, env), env)
+end
+
+# the matrix of a single rare species when the pools are held at `pool`
+function _rare_matrix(invader::OpenCommunity, pool::NamedTuple, env)
+    length(invader.names) == 1 || throw(ArgumentError("the invader must be a single species"))
+    all(p -> haskey(pool, p), invader.ports) ||
+        throw(ArgumentError("invader :$(only(invader.names)) needs pools $(Tuple(invader.ports)), got $(keys(pool))"))
+    net = invader.system[only(invader.names)]
+    return to_matrix(net, context(net, zeros(length(stage_names(net))), pool, env))
 end
 
 """
@@ -164,19 +165,15 @@ mean growth factor per step, so a value above one means the invader increases wh
 In a constant environment at the resident's equilibrium it equals
 [`invasion_growth_rate`](@ref).
 """
-function stochastic_invasion_rate(sp::AbstractSpecies, resident::OpenCommunity, n0, envs; burnin::Integer = 0)
+function stochastic_invasion_rate(invader::OpenCommunity, resident::OpenCommunity, n0, envs; burnin::Integer = 0)
     sol = project(resident, n0, envs)
-    names = Tuple(p.first for p in sp.occupancy)
-    index = [findfirst(==(q), resident.ports) for q in names]
-    any(isnothing, index) &&
-        throw(ArgumentError("invader :$(sp.name) needs pools $(names), resident exposes $(Tuple(resident.ports))"))
-    k = length(sp.stages)
+    names = Tuple(resident.ports)
+    k = length(invader)
     v = fill(1.0 / k, k)
     total = 0.0
     steps = 0
     for (t, env) in enumerate(envs)
-        ctx = Context(zeros(k), NamedTuple{names}(Tuple(sol.pools[t, i] for i in index)), env)
-        v = projection_matrix(sp, ctx) * v
+        v = _rare_matrix(invader, NamedTuple{names}(Tuple(sol.pools[t, :])), env) * v
         g = sum(v)
         g > 0 || return 0.0
         v ./= g
@@ -273,15 +270,30 @@ seasons of a year) with the pools held at `pool` (a `NamedTuple`): the product
 with `pool` describing an empty community it gives the species' annual growth rate when
 rare.
 """
-function periodic_matrix(sp::AbstractSpecies, pool::NamedTuple, envs)
-    k = length(sp.stages)
-    names = Tuple(p.first for p in sp.occupancy)
+function periodic_matrix(invader::OpenCommunity, pool::NamedTuple, envs)
+    k = length(invader)
     P = Matrix{Float64}(I, k, k)
     for env in envs
-        ctx = Context(zeros(k), NamedTuple{names}(Tuple(pool[q] for q in names)), env)
-        P = projection_matrix(sp, ctx) * P
+        P = _rare_matrix(invader, pool, env) * P
     end
     return P
+end
+
+"""
+    stage_total(sol, species, stages)
+
+Sum through time of some stages of `species`, from a [`CommunityTrajectory`](@ref).
+`stages` is a stage or group name (as understood by `StageVector`, so `:pupa` is the
+total over its age classes and strata), or a vector of them.
+"""
+function stage_total(sol::CommunityTrajectory, sp::Symbol, stages)
+    groups = sol.community.system[sp].groups
+    idx = Int[]
+    for s in (stages isa Symbol ? (stages,) : stages)
+        haskey(groups, s) || throw(ArgumentError("species :$sp has no stage or group :$s"))
+        append!(idx, groups[s])
+    end
+    return vec(sum(sol[sp][:, unique(idx)]; dims = 2))
 end
 
 """

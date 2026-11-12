@@ -1,380 +1,251 @@
 """
     MatrixCommunityModels
 
-Matrix community models (Lytle & Tonkin 2023) built by composition: each species is an
-open stage-structured model, each shared density pool (space, biomass, ...) is a junction
-of an undirected wiring diagram, and a community is the composite.
+Matrix community models (Lytle & Tonkin 2023) built from the ecorecipes categorical stack.
+
+A species is a projection net from CategoricalPopulationDynamics.jl: named stages, named
+transitions, and responses saying how a transition's values depend on shared pools and
+the environment. A community is a composite of species along an undirected wiring diagram
+whose junctions are the pools (space, biomass, parasites per host, ...). The composite is
+a `PooledProjectionSystem`, which is lowered to a `CoupledMPMProblem` and solved by
+MatrixProjectionModels.jl.
+
+This package adds the composition along wiring diagrams, the analysis of the composed
+community, and a set of published models.
 """
 module MatrixCommunityModels
 
 using LinearAlgebra
-using Catlab: Catlab, UndirectedWiringDiagram, RelationDiagram, nparts, subpart, boxes, ports,
+using Catlab: Catlab, UndirectedWiringDiagram, RelationDiagram, nparts, subpart, ports,
               junction, add_box!, add_junctions!, set_junction!
 import StructuredPopulationCore
 using StructuredPopulationCore: StateBlockLayout
 import MatrixProjectionModels
-using MatrixProjectionModels: MatrixProjectionModel
-using CategoricalPopulationDynamics: ValuedProjectionNet
+using MatrixProjectionModels: MatrixProjectionModel, DirectIteration
+import CategoricalPopulationDynamics
+using CategoricalPopulationDynamics: ValuedProjectionNet, ResponsiveProjectionNet, ResponseContext,
+    StageVector, Pool, PooledProjectionSystem, StateDependentMPMTarget,
+    respond, inflow, after_step, births, context, expand_stage, expand_stages, stratify,
+    stratum_stage, stratum_transition, transition_names, transition_matrix, to_matrix,
+    evaluate, survival_fecundity_matrices, ⊕
+import CategoricalPopulationDynamics: stage_names, pool_names, pool_totals, advance
 
-export Context, Transition, AbstractSpecies, Species, MatrixSpecies, valued_net, OpenCommunity, CommunityTrajectory
-export survival, fecundity, vital_matrices, projection_matrix, lower
-export open_community, community, compose, pool_totals, advance, project, community_matrix
-export species, species_names, stage_names, pool_names, diagram
+# the modelling vocabulary of CategoricalPopulationDynamics.jl, re-exported
+export ValuedProjectionNet, ResponsiveProjectionNet, ResponseContext, StageVector, Pool,
+       PooledProjectionSystem, respond, inflow, after_step, births, context, expand_stage,
+       expand_stages, stratify, stratum_stage, stratum_transition, stage_names,
+       transition_names, transition_matrix, to_matrix, evaluate, survival_fecundity_matrices, ⊕
 
-"""
-    Context(n, pool, env)
+export OpenCommunity, CommunityTrajectory
+export species, community, compose, system, species_names, pool_names, diagram
+export subcommunity, matrix_net
+export project, advance, pool_totals, community_matrix, frozen_net, matrix_model, state_vector
 
-What a vital rate may depend on: the species' own stage vector `n`, the totals of the pools
-it is attached to (`pool`, a `NamedTuple`), and the environment of the current step (`env`).
-"""
-struct Context{N,P,E}
-    n::N
+# A view of the pool totals under a component's own (local) pool names.
+struct PoolView{P <: NamedTuple}
     pool::P
-    env::E
+    alias::Dict{Symbol, Symbol}
 end
-
-"""
-    Transition(name, from, to, kind, rate)
-
-One named entry of a projection matrix: individuals of stage `from` contribute to stage
-`to` at `rate`. `kind` is `:survival` (goes into `U`) or `:fecundity` (goes into `F`).
-`rate` is a number or a function of a [`Context`](@ref).
-"""
-struct Transition
-    name::Symbol
-    from::Symbol
-    to::Symbol
-    kind::Symbol
-    rate::Any
-    function Transition(name, from, to, kind, rate)
-        kind in (:survival, :fecundity) ||
-            throw(ArgumentError("kind must be :survival or :fecundity, got :$kind"))
-        return new(name, from, to, kind, rate)
-    end
-end
-
-"""
-    survival(name, from => to, rate)
-
-A survival/growth [`Transition`](@ref) (an entry of `U`).
-"""
-survival(name::Symbol, ft::Pair{Symbol,Symbol}, rate) = Transition(name, ft.first, ft.second, :survival, rate)
-
-"""
-    fecundity(name, from => to, rate)
-
-A reproduction [`Transition`](@ref) (an entry of `F`).
-"""
-fecundity(name::Symbol, ft::Pair{Symbol,Symbol}, rate) = Transition(name, ft.first, ft.second, :fecundity, rate)
-
-"""
-    AbstractSpecies
-
-Supertype of the single-species building blocks: [`Species`](@ref), declared transition by
-transition, and [`MatrixSpecies`](@ref), declared by a function returning whole matrices.
-"""
-abstract type AbstractSpecies end
-
-_value(x::Number, ctx) = x
-_value(f, ctx) = f(ctx)
-
-"""
-    Species(name, stages, transitions; occupancy = [], recruitment = [], threshold = nothing)
-
-A stage-structured species whose vital rates may depend on shared pools and the environment.
-
-- `occupancy`: `pool => weights` pairs saying how much of each pool the species occupies.
-  `weights` is a vector (one weight per stage), or a function `(n, env) -> Real`.
-- `recruitment`: `stage => f` pairs; `f(ctx)` individuals are added to `stage` each step,
-  independently of the species' own abundance.
-- `threshold`: an optional map applied to the new stage vector (for example
-  quasi-extinction).
-
-One step is `threshold(A(ctx) * n + r(ctx))` with `A = U + F`.
-"""
-struct Species <: AbstractSpecies
-    name::Symbol
-    stages::Vector{Symbol}
-    transitions::Vector{Transition}
-    occupancy::Vector{Pair{Symbol,Any}}
-    recruitment::Vector{Pair{Symbol,Any}}
-    threshold::Any
-end
-
-function Species(name::Symbol, stages::AbstractVector{Symbol}, transitions::AbstractVector{Transition};
-                 occupancy = Pair{Symbol,Any}[], recruitment = Pair{Symbol,Any}[], threshold = nothing)
-    allunique(stages) || throw(ArgumentError("duplicate stage names in species :$name"))
-    for t in transitions
-        (t.from in stages && t.to in stages) ||
-            throw(ArgumentError("transition :$(t.name) of :$name uses an unknown stage"))
-    end
-    for (pool, w) in occupancy
-        w isa AbstractVector && length(w) != length(stages) &&
-            throw(DimensionMismatch("occupancy of pool :$pool needs $(length(stages)) weights"))
-    end
-    for (stage, _) in recruitment
-        stage in stages || throw(ArgumentError("recruitment into unknown stage :$stage of :$name"))
-    end
-    return Species(name, collect(Symbol, stages), collect(Transition, transitions),
-                   Pair{Symbol,Any}[p.first => p.second for p in occupancy],
-                   Pair{Symbol,Any}[p.first => p.second for p in recruitment], threshold)
-end
-
-_stage_index(sp::AbstractSpecies, s::Symbol) = findfirst(==(s), sp.stages)
-
-"""
-    vital_matrices(species, ctx) -> (U, F)
-
-The survival and fecundity matrices of `species` evaluated at a [`Context`](@ref).
-Transitions sharing a matrix entry are added in the order they were declared.
-"""
-function vital_matrices(sp::Species, ctx::Context)
-    k = length(sp.stages)
-    U = zeros(Float64, k, k)
-    F = zeros(Float64, k, k)
-    for t in sp.transitions
-        i, j = _stage_index(sp, t.to), _stage_index(sp, t.from)
-        M = t.kind === :survival ? U : F
-        M[i, j] += _value(t.rate, ctx)
-    end
-    return U, F
-end
-
-"""
-    MatrixSpecies(name, stages, matrices; occupancy = [], recruitment = [], threshold = nothing)
-
-A species whose survival and fecundity matrices are returned whole by
-`matrices(ctx) -> (U, F)`. Use it when the matrices come from elsewhere, for example a
-discretised integral projection model, and listing every entry as a named
-[`Transition`](@ref) would add nothing. The keyword arguments are those of
-[`Species`](@ref).
-"""
-struct MatrixSpecies <: AbstractSpecies
-    name::Symbol
-    stages::Vector{Symbol}
-    matrices::Any
-    occupancy::Vector{Pair{Symbol,Any}}
-    recruitment::Vector{Pair{Symbol,Any}}
-    threshold::Any
-end
-
-function MatrixSpecies(name::Symbol, stages::AbstractVector{Symbol}, matrices;
-                       occupancy = Pair{Symbol,Any}[], recruitment = Pair{Symbol,Any}[], threshold = nothing)
-    allunique(stages) || throw(ArgumentError("duplicate stage names in species :$name"))
-    for (pool, w) in occupancy
-        w isa AbstractVector && length(w) != length(stages) &&
-            throw(DimensionMismatch("occupancy of pool :$pool needs $(length(stages)) weights"))
-    end
-    return MatrixSpecies(name, collect(Symbol, stages), matrices,
-                         Pair{Symbol,Any}[p.first => p.second for p in occupancy],
-                         Pair{Symbol,Any}[p.first => p.second for p in recruitment], threshold)
-end
-
-function vital_matrices(sp::MatrixSpecies, ctx::Context)
-    U, F = sp.matrices(ctx)
-    k = length(sp.stages)
-    (size(U) == (k, k) && size(F) == (k, k)) ||
-        throw(DimensionMismatch("matrices of :$(sp.name) must be $k x $k"))
-    return U, F
-end
-
-"""
-    valued_net(species, ctx)
-
-Freeze a [`Species`](@ref) at a [`Context`](@ref) as a
-`CategoricalPopulationDynamics.ValuedProjectionNet` with two transitions, `:survival` and
-`:fecundity`, for use with that package's categorical tools.
-"""
-function valued_net(sp::Species, ctx::Context)
-    entries(kind) = [(t.from => t.to) => Float64(_value(t.rate, ctx)) for t in sp.transitions if t.kind === kind]
-    parts = [k => entries(k) for k in (:survival, :fecundity) if !isempty(entries(k))]
-    return ValuedProjectionNet(sp.stages, parts...)
-end
-
-"""
-    projection_matrix(species, ctx)
-
-`U + F` for `species` at a [`Context`](@ref).
-"""
-function projection_matrix(sp::AbstractSpecies, ctx::Context)
-    U, F = vital_matrices(sp, ctx)
-    return U + F
-end
-
-"""
-    lower(species, ctx)
-
-Freeze `species` at a [`Context`](@ref) and return an ordinary
-`MatrixProjectionModels.MatrixProjectionModel` with the `U`/`F` split preserved.
-"""
-function lower(sp::AbstractSpecies, ctx::Context)
-    U, F = vital_matrices(sp, ctx)
-    return MatrixProjectionModel(U, F; stage_names = sp.stages)
-end
-
-function _species_step(sp::AbstractSpecies, n, pool, env, rng = nothing)
-    rng === nothing || return _demographic_step(sp, n, pool, env, rng)
-    ctx = Context(n, pool, env)
-    n1 = projection_matrix(sp, ctx) * n
-    for (stage, f) in sp.recruitment
-        n1[_stage_index(sp, stage)] += _value(f, ctx)
-    end
-    return sp.threshold === nothing ? n1 : sp.threshold(n1)
-end
-
-# One step with demographic stochasticity: individuals are whole, survival and movement are
-# a multinomial draw down each column of U, births and recruitment are Poisson.
-function _demographic_step(sp::AbstractSpecies, n, pool, env, rng)
-    all(isinteger, n) || throw(ArgumentError(
-        "demographic stochasticity needs whole numbers of individuals in :$(sp.name)"))
-    ctx = Context(n, pool, env)
-    U, F = vital_matrices(sp, ctx)
-    worst = maximum(sum(U; dims = 1))
-    worst <= 1 + 1e-6 || throw(ArgumentError(
-        "survival matrix of :$(sp.name) has a column summing to $worst; demographic " *
-        "stochasticity needs survival probabilities (column sums of U at most 1)"))
-    counts = StructuredPopulationCore.demographic_step!(rng, zeros(Int, length(n)), round.(Int, n), U, F)
-    n1 = Float64.(counts)
-    for (stage, f) in sp.recruitment
-        n1[_stage_index(sp, stage)] += StructuredPopulationCore.rand_poisson(rng, max(_value(f, ctx), 0.0))
-    end
-    return sp.threshold === nothing ? n1 : sp.threshold(n1)
-end
-
-_occupancy(w::AbstractVector, n, env) = dot(w, n)
-_occupancy(f, n, env) = f(n, env)
+Base.getproperty(v::PoolView, name::Symbol) =
+    getfield(getfield(v, :pool), get(getfield(v, :alias), name, name))
+Base.getindex(v::PoolView, name::Symbol) = getproperty(v, name)
+Base.haskey(v::PoolView, name::Symbol) = haskey(getfield(v, :pool), get(getfield(v, :alias), name, name))
 
 """
     OpenCommunity
 
-A community with exposed pools. It has a state layout (one block of stages per species),
-`ports` (pool names), a readout giving its contribution to each pool, and an update taking
-the pool totals. Build one from a [`Species`](@ref) with [`open_community`](@ref), or from
-several with [`community`](@ref) or [`compose`](@ref).
+One or more species with exposed pools (its ports). Build one species with
+[`species`](@ref), and join them with [`community`](@ref) or [`compose`](@ref).
+
+The flattened model is a `CategoricalPopulationDynamics.PooledProjectionSystem`, available
+from [`system`](@ref). The state of a community is a flat vector: one block of stages per
+species, in the order of [`species_names`](@ref).
 """
 struct OpenCommunity
-    layout::StateBlockLayout
-    stages::Dict{Symbol,Vector{Symbol}}
+    names::Vector{Symbol}
+    nets::Dict{Symbol, ResponsiveProjectionNet}
+    aliases::Dict{Symbol, Dict{Symbol, Symbol}}
+    contributions::Vector{Tuple{Symbol, Symbol, Any}}
     ports::Vector{Symbol}
-    readout::Any
-    update::Any
-    parts::Vector{Any}
     diagram::Any
+    system::PooledProjectionSystem
+    layout::StateBlockLayout
 end
+
+function _open(names, nets, aliases, contributions, ports, diagram)
+    components = map(names) do name
+        net, alias = nets[name], aliases[name]
+        if all(k == v for (k, v) in alias)
+            name => net
+        else
+            # responses were written with the species' own pool names: translate them
+            local_view(f) = ctx -> f(ResponseContext(ctx.n, PoolView(ctx.pool, alias), ctx.env))
+            name => ResponsiveProjectionNet(net.base;
+                responses = Pair{Symbol, Any}[t => local_view(f) for (t, f) in net.responses],
+                inflows = Pair{Symbol, Any}[s => local_view(f) for (s, f) in net.inflows],
+                after = net.after, fecundity = net.fecundity, groups = net.groups)
+        end
+    end
+    pool_order = copy(ports)
+    for (pool, _, _) in contributions
+        pool in pool_order || push!(pool_order, pool)
+    end
+    pools = [Pool(p, Pair{Symbol, Any}[c => w for (q, c, w) in contributions if q === p]) for p in pool_order]
+    sys = PooledProjectionSystem(components...; pools = pools)
+    layout = StateBlockLayout(collect(Symbol, names), [length(stage_names(nets[n])) for n in names])
+    return OpenCommunity(collect(Symbol, names), nets, aliases, contributions, collect(Symbol, ports), diagram, sys, layout)
+end
+
+"""
+    species(name, net; occupies = [], reads = [])
+
+A single species as an [`OpenCommunity`](@ref). `net` is a valued or responsive projection
+net. `occupies` lists `pool => contribution` pairs saying how much of each pool the species
+occupies; a contribution is a vector of weights (one per stage), a list of `stage =>
+weight` pairs, a number (weight on every stage), or a function `(n, env) -> number`.
+`reads` names pools that the species' responses read without contributing to them.
+
+```julia
+grass = species(:grass, respond(life, :seeding => ctx -> max(0, 1 - ctx.pool.space / 1000));
+                occupies = [:space => [:seedling => 0.1, :adult => 1.0]])
+```
+"""
+function species(name::Symbol, net; occupies = Pair{Symbol, Any}[], reads = Symbol[])
+    r = ResponsiveProjectionNet(net)
+    pools = Symbol[p.first for p in occupies]
+    allunique(pools) || throw(ArgumentError("species :$name lists a pool twice"))
+    ports = vcat(pools, [p for p in reads if !(p in pools)])
+    contributions = Tuple{Symbol, Symbol, Any}[(p.first, name, p.second) for p in occupies]
+    return _open([name], Dict(name => r), Dict(name => Dict(p => p for p in ports)), contributions, ports, nothing)
+end
+
+"""
+    subcommunity(c, names...)
+
+The named species of community `c` as a community of their own, keeping the pools they
+are attached to: for example the natives of a fish community without the non-natives, or
+one species on its own as an invader.
+"""
+function subcommunity(c::OpenCommunity, names::Symbol...)
+    all(n -> n in c.names, names) || throw(ArgumentError("not all of $(names) are species of this community"))
+    keep = [n for n in c.names if n in names]
+    aliases = Dict(n => c.aliases[n] for n in keep)
+    contributions = Tuple{Symbol, Symbol, Any}[x for x in c.contributions if x[2] in keep]
+    used = unique(vcat([collect(values(aliases[n])) for n in keep]..., [x[1] for x in contributions]))
+    ports = [p for p in pool_names(c.system) if p in used]
+    return _open(keep, Dict(n => c.nets[n] for n in keep), aliases, contributions, ports, nothing)
+end
+
+"""
+    matrix_net(stages, name => matrix, ...)
+
+A `ValuedProjectionNet` whose transitions are given as whole matrices (rows are
+destinations, columns are sources): every non-zero entry of `matrix` becomes an entry of
+the transition `name`. Use it for a discretised integral projection model, whose kernels
+arrive as matrices.
+"""
+function matrix_net(stages::AbstractVector{Symbol}, matrices::Pair{Symbol, <:AbstractMatrix}...)
+    k = length(stages)
+    transitions = map(matrices) do (name, M)
+        size(M) == (k, k) || throw(DimensionMismatch("matrix for :$name must be $k x $k"))
+        name => [(stages[j] => stages[i]) => Float64(M[i, j]) for j in 1:k for i in 1:k if M[i, j] != 0]
+    end
+    return ValuedProjectionNet(collect(Symbol, stages), transitions...)
+end
+
+"""
+    system(c)
+
+The `PooledProjectionSystem` of a community: its species as responsive projection nets,
+and its pools.
+"""
+system(c::OpenCommunity) = c.system
 
 """
     species_names(c)
 
-Names of the species (state blocks) of an [`OpenCommunity`](@ref), in state order.
+Names of the species of a community, in state order.
 """
-species_names(c::OpenCommunity) = collect(keys(c.layout))
+species_names(c::OpenCommunity) = c.names
 
 """
     stage_names(c, species)
 
-Stage names of `species` in an [`OpenCommunity`](@ref).
+Stage names of `species` in a community.
 """
-stage_names(c::OpenCommunity, sp::Symbol) = c.stages[sp]
+stage_names(c::OpenCommunity, sp::Symbol) = stage_names(c.nets[sp])
 
 """
-    pool_names(c)
+    pool_names(c; internal = false)
 
-Names of the pools an [`OpenCommunity`](@ref) exposes.
+Names of the pools a community exposes; with `internal = true`, all of its pools,
+including those shared only inside it.
 """
-pool_names(c::OpenCommunity) = c.ports
+pool_names(c::OpenCommunity; internal::Bool = false) = internal ? pool_names(c.system) : c.ports
 
 """
     diagram(c)
 
-The undirected wiring diagram a composite [`OpenCommunity`](@ref) was built from, or
-`nothing` for a single species.
+The undirected wiring diagram a community was composed along, or `nothing` for a single
+species.
 """
 diagram(c::OpenCommunity) = c.diagram
 
 Base.length(c::OpenCommunity) = length(c.layout)
+Base.getindex(c::OpenCommunity, sp::Symbol) = c.system[sp]
 
 function Base.show(io::IO, c::OpenCommunity)
-    print(io, "OpenCommunity(", join(species_names(c), ", "), "; pools = ", join(c.ports, ", "), ")")
+    print(io, "OpenCommunity(", join(c.names, ", "), "; pools = ", join(c.ports, ", "), ")")
 end
 
-"""
-    open_community(species)
-
-View a single [`Species`](@ref) as an [`OpenCommunity`](@ref) with one port per pool it
-occupies.
-"""
-function open_community(sp::AbstractSpecies)
-    pools = Symbol[p.first for p in sp.occupancy]
-    allunique(pools) || throw(ArgumentError("species :$(sp.name) lists a pool twice"))
-    occ = Any[p.second for p in sp.occupancy]
-    readout = (n, env) -> Float64[_occupancy(w, n, env) for w in occ]
-    names = Tuple(pools)
-    update = (n, totals, env; rng = nothing) -> _species_step(sp, n, NamedTuple{names}(Tuple(totals)), env, rng)
-    layout = StateBlockLayout([sp.name], [length(sp.stages)])
-    return OpenCommunity(layout, Dict(sp.name => sp.stages), pools, readout, update, Any[sp], nothing)
-end
-
-open_community(c::OpenCommunity) = c
+const _JUNCTION_COUNTER = Ref(0)
 
 """
     compose(diagram, components)
 
-Compose open communities (or species) along an undirected wiring diagram. Box `b` is
-filled by `components[b]`, whose ports are matched to the box's ports in order. The total
-of each junction is the sum, in port order, of the readouts attached to it; every component
-is then updated with the totals of its junctions, all from the same time-`t` state. Outer
-ports of the diagram become the pools of the composite.
+Compose open communities along an undirected wiring diagram. Box `b` is filled by
+`components[b]`, whose pools are matched to the box's ports in order. Each junction is one
+pool: its total is the sum of what every attached species contributes. Outer ports of the
+diagram are the pools of the composite; junctions that are not exposed are shared only
+inside it.
 """
 function compose(d::UndirectedWiringDiagram, components::AbstractVector)
-    comps = OpenCommunity[open_community(c) for c in components]
     nb = nparts(d, :Box)
-    nb == length(comps) || throw(DimensionMismatch("diagram has $nb boxes, got $(length(comps)) components"))
+    nb == length(components) ||
+        throw(DimensionMismatch("diagram has $nb boxes, got $(length(components)) components"))
+    comps = OpenCommunity[c for c in components]
     boxports = [collect(ports(d, b)) for b in 1:nb]
     for b in 1:nb
         length(boxports[b]) == length(comps[b].ports) || throw(DimensionMismatch(
             "box $b has $(length(boxports[b])) ports but its component exposes $(length(comps[b].ports))"))
     end
-    names = Symbol[]
-    sizes = Int[]
-    stages = Dict{Symbol,Vector{Symbol}}()
-    for c in comps, s in species_names(c)
-        s in names && throw(ArgumentError("species :$s appears twice in the composite"))
-        push!(names, s)
-        push!(sizes, length(c.stages[s]))
-        stages[s] = c.stages[s]
-    end
-    layout = StateBlockLayout(names, sizes)
-    offsets = cumsum([0; [length(c) for c in comps]])
-    ranges = [(offsets[b] + 1):offsets[b + 1] for b in 1:nb]
     nj = nparts(d, :Junction)
     portjunction = [[junction(d, p) for p in boxports[b]] for b in 1:nb]
     outer = [junction(d, q; outer = true) for q in 1:nparts(d, :OuterPort)]
     jnames = _junction_names(d, comps, portjunction, nj)
-    outernames = Symbol[jnames[j] for j in outer]
+    for j in 1:nj
+        # a junction that is not exposed gets a name nothing outside can clash with
+        j in outer || (jnames[j] = Symbol(jnames[j], "#", _JUNCTION_COUNTER[] += 1))
+    end
 
-    function internal(n, env)
-        T = zeros(Float64, nj)
-        for b in 1:nb
-            y = comps[b].readout(view(n, ranges[b]), env)
-            for (i, j) in enumerate(portjunction[b])
-                T[j] += y[i]
-            end
+    names = Symbol[]
+    nets = Dict{Symbol, ResponsiveProjectionNet}()
+    aliases = Dict{Symbol, Dict{Symbol, Symbol}}()
+    contributions = Tuple{Symbol, Symbol, Any}[]
+    for b in 1:nb
+        c = comps[b]
+        rename = Dict(c.ports[i] => jnames[j] for (i, j) in enumerate(portjunction[b]))
+        for name in c.names
+            name in names && throw(ArgumentError("species :$name appears twice in the composite"))
+            push!(names, name)
+            nets[name] = c.nets[name]
+            aliases[name] = Dict(k => get(rename, v, v) for (k, v) in c.aliases[name])
         end
-        return T
+        for (pool, name, w) in c.contributions
+            push!(contributions, (get(rename, pool, pool), name, w))
+        end
     end
-    readout = (n, env) -> internal(n, env)[outer]
-    function update(n, totals, env; rng = nothing)
-        T = internal(n, env)
-        for (q, j) in enumerate(outer)
-            T[j] = totals[q]
-        end
-        n1 = similar(n, Float64)
-        for b in 1:nb
-            n1[ranges[b]] = comps[b].update(n[ranges[b]], T[portjunction[b]], env; rng)
-        end
-        return n1
-    end
-    return OpenCommunity(layout, stages, outernames, readout, update, Any[comps...], d)
+    return _open(names, nets, aliases, contributions, Symbol[jnames[j] for j in outer], d)
 end
 
 function _junction_names(d, comps, portjunction, nj)
@@ -392,51 +263,105 @@ function _junction_names(d, comps, portjunction, nj)
 end
 
 """
-    community(species...)
+    community(components...)
 
-Compose species that share pools by name: every pool named in any species' `occupancy`
-becomes one junction, exposed as an outer port. Returns the composite
-[`OpenCommunity`](@ref); the generated wiring diagram is available from [`diagram`](@ref).
+Compose open communities that share pools by name: every pool named by any component
+becomes one junction, exposed as a pool of the result. The wiring diagram that was
+generated is available from [`diagram`](@ref).
 """
-function community(species...)
-    comps = OpenCommunity[open_community(s) for s in species]
+function community(components::OpenCommunity...)
     pools = Symbol[]
-    for c in comps, p in c.ports
+    for c in components, p in c.ports
         p in pools || push!(pools, p)
     end
     d = RelationDiagram(length(pools))
     js = add_junctions!(d, length(pools); variable = pools)
-    for c in comps
-        b = add_box!(d, length(c.ports); name = first(species_names(c)))
+    for c in components
+        b = add_box!(d, length(c.ports); name = first(c.names))
         set_junction!(d, ports(d, b), [findfirst(==(p), pools) for p in c.ports])
     end
     set_junction!(d, js; outer = true)
-    return compose(d, comps)
+    return compose(d, collect(components))
 end
+
+# ---------------------------------------------------------------- state
+
+_split(c::OpenCommunity, n::AbstractVector) =
+    Dict{Symbol, Vector{Float64}}(sp => collect(Float64, n[c.layout[sp]]) for sp in c.names)
+_join(c::OpenCommunity, state::AbstractDict) = reduce(vcat, [state[sp] for sp in c.names])
+
+"""
+    state_vector(c, species => stages, ...)
+
+The flat state vector of a community from one stage vector per species.
+"""
+function state_vector(c::OpenCommunity, blocks::Pair{Symbol}...)
+    d = Dict(blocks)
+    Set(keys(d)) == Set(c.names) || throw(ArgumentError("need one stage vector for each of $(c.names)"))
+    n = reduce(vcat, [collect(Float64, d[sp]) for sp in c.names])
+    length(n) == length(c) || throw(DimensionMismatch("stage vectors do not match the community's stages"))
+    return n
+end
+
+_state(c::OpenCommunity, n::AbstractVector{<:Real}) =
+    length(n) == length(c) ? collect(Float64, n) :
+    throw(DimensionMismatch("state has length $(length(n)), community has $(length(c)) states"))
+_state(c::OpenCommunity, n::AbstractVector{<:Pair}) = state_vector(c, n...)
 
 """
     pool_totals(c, n, env)
 
-Totals of the exposed pools of a closed community `c` in state `n`, as a `NamedTuple`.
+Totals of the pools a closed community exposes, in state `n`, as a `NamedTuple`.
 """
-function pool_totals(c::OpenCommunity, n::AbstractVector, env)
-    return NamedTuple{Tuple(c.ports)}(Tuple(c.readout(n, env)))
+function pool_totals(c::OpenCommunity, n::AbstractVector, env; internal::Bool = false)
+    all_pools = pool_totals(c.system, _split(c, _state(c, n)), env)
+    internal && return all_pools
+    return NamedTuple{Tuple(c.ports)}(Tuple(all_pools[p] for p in c.ports))
 end
 
 """
     advance(c, n, env; rng = nothing)
 
-Advance a closed community one time step: pool totals are the community's own readouts.
-With `rng`, the step has demographic stochasticity (see [`project`](@ref)).
+Advance a closed community one time step. With `rng`, the step has demographic
+stochasticity (see [`project`](@ref)).
 """
-advance(c::OpenCommunity, n::AbstractVector, env; rng = nothing) = c.update(n, c.readout(n, env), env; rng)
+function advance(c::OpenCommunity, n::AbstractVector, env; rng = nothing)
+    state = _split(c, _state(c, n))
+    rng === nothing && return _join(c, advance(c.system, state, env))
+    return _join(c, _demographic_advance(c.system, state, env, rng))
+end
+
+# One step with demographic stochasticity: individuals are whole, survival and movement are
+# a multinomial draw down each column of U, births and inflows are Poisson.
+function _demographic_advance(sys::PooledProjectionSystem, state, env, rng)
+    pool = pool_totals(sys, state, env)
+    next = Dict{Symbol, Vector{Float64}}()
+    for name in CategoricalPopulationDynamics.component_names(sys)
+        net, n = sys[name], state[name]
+        all(isinteger, n) || throw(ArgumentError(
+            "demographic stochasticity needs whole numbers of individuals in :$name"))
+        ctx = context(net, n, pool, env)
+        U, F = survival_fecundity_matrices(net, ctx)
+        worst = maximum(sum(U; dims = 1))
+        worst <= 1 + 1e-6 || throw(ArgumentError(
+            "survival matrix of :$name has a column summing to $worst; demographic stochasticity needs " *
+            "survival probabilities (column sums at most 1). Mark births with `births(net, ...)`"))
+        counts = StructuredPopulationCore.demographic_step!(rng, zeros(Int, length(n)), round.(Int, n), U, F)
+        stepped = Float64.(counts)
+        for (i, r) in enumerate(CategoricalPopulationDynamics._inflows(net, ctx))
+            r > 0 && (stepped[i] += StructuredPopulationCore.rand_poisson(rng, r))
+        end
+        next[name] = collect(Float64, CategoricalPopulationDynamics._after(net, stepped))
+    end
+    return next
+end
 
 """
     CommunityTrajectory
 
-Result of [`project`](@ref). `u[t + 1, :]` is the state at time `t` and `pools[t + 1, :]`
-the pool totals used for the step from `t`. Index with a species name to get its
-stage-by-time matrix.
+Result of [`project`](@ref). `u[t + 1, :]` is the state at time `t`; `pools[t + 1, :]`
+holds the totals of the exposed pools used for the step from `t`. Index with a species
+name to get its stage-by-time matrix.
 """
 struct CommunityTrajectory
     t::Vector{Int}
@@ -455,72 +380,99 @@ end
     project(c, n0, envs; rng = nothing)
 
 Project a closed community from state `n0` through the environments `envs` (one per time
-step). `n0` is a flat vector in layout order, or `species => vector` pairs.
+step). `n0` is a flat vector, or `species => stages` pairs.
+
+The community is lowered to a `MatrixProjectionModels.CoupledMPMProblem` and solved by
+MatrixProjectionModels.jl.
 
 With `rng` (a random number generator) the projection has demographic stochasticity:
 individuals are whole, each survives and moves according to a multinomial draw from its
-column of `U`, and births and recruitment are Poisson with the deterministic values as
-means. Pool totals are computed from the realised counts. This needs `n0` in whole
-numbers and survival matrices whose columns sum to at most one.
+column of the survival matrix, and births and inflows are Poisson with the deterministic
+values as means. This needs whole numbers in `n0`, the births of each species marked with
+`births`, and survival matrices whose columns sum to at most one.
 """
-function project(c::OpenCommunity, n0::AbstractVector{<:Real}, envs; rng = nothing)
-    length(n0) == length(c) || throw(DimensionMismatch("n0 has length $(length(n0)), community has $(length(c)) states"))
+function project(c::OpenCommunity, n0, envs; rng = nothing)
+    start = _state(c, n0)
     T = length(envs)
     u = zeros(Float64, T + 1, length(c))
     pools = fill(NaN, T + 1, length(c.ports))
-    n = collect(Float64, n0)
-    u[1, :] = n
-    for (k, env) in enumerate(envs)
-        totals = c.readout(n, env)
-        pools[k, :] = totals
-        n = c.update(n, totals, env; rng)
-        u[k + 1, :] = n
+    u[1, :] = start
+    if rng === nothing
+        T == 0 && return CommunityTrajectory([0], u, pools, c)
+        target = StateDependentMPMTarget(_split(c, start), (0, T); p = collect(envs))
+        prob = CategoricalPopulationDynamics.lower(c.system, target)
+        sol = MatrixProjectionModels.solve(prob, DirectIteration())
+        for k in 1:(T + 1), sp in c.names
+            u[k, c.layout[sp]] = sol.u[k][sp]
+        end
+        logged = sol.substep_log[:pools]
+        for k in 1:T, (j, p) in enumerate(c.ports)
+            pools[k, j] = logged[k][p]
+        end
+    else
+        n = start
+        for (k, env) in enumerate(envs)
+            totals = pool_totals(c, n, env)
+            pools[k, :] = collect(totals)
+            n = advance(c, n, env; rng)
+            u[k + 1, :] = n
+        end
     end
     return CommunityTrajectory(collect(0:T), u, pools, c)
 end
 
-function project(c::OpenCommunity, n0::AbstractVector{<:Pair}, envs; rng = nothing)
-    d = Dict(n0)
-    return project(c, reduce(vcat, [collect(Float64, d[s]) for s in species_names(c)]), envs; rng)
+_context(c::OpenCommunity, sp::Symbol, n::AbstractVector, env) =
+    context(c.system[sp], _state(c, n)[c.layout[sp]], pool_totals(c.system, _split(c, _state(c, n)), env), env)
+
+"""
+    frozen_net(c, species, n, env)
+
+The `ValuedProjectionNet` of `species` with its responses evaluated in community state
+`n` and environment `env`: the species frozen at one moment, every value still attached
+to its named transition.
+"""
+frozen_net(c::OpenCommunity, sp::Symbol, n::AbstractVector, env) = evaluate(c.system[sp], _context(c, sp, n, env))
+
+"""
+    matrix_model(c, species, n, env)
+
+The `MatrixProjectionModels.MatrixProjectionModel` of `species` frozen in community state
+`n` and environment `env`, with births (see `births`) kept apart from survival, so that
+the single-species analyses of MatrixProjectionModels.jl apply.
+"""
+function matrix_model(c::OpenCommunity, sp::Symbol, n::AbstractVector, env)
+    U, F = survival_fecundity_matrices(c.system[sp], _context(c, sp, n, env))
+    return MatrixProjectionModel(U, F; stage_names = stage_names(c, sp))
 end
-
-_species(c::OpenCommunity) = reduce(vcat, [p isa AbstractSpecies ? AbstractSpecies[p] : _species(p) for p in c.parts])
-
-"""
-    species(c)
-    species(c, name)
-
-The species definitions ([`AbstractSpecies`](@ref)) inside an [`OpenCommunity`](@ref), in state order, or
-the one called `name`.
-"""
-species(c::OpenCommunity) = _species(c)
-species(c::OpenCommunity, name::Symbol) = only(s for s in _species(c) if s.name === name)
 
 """
     community_matrix(c, n, env)
 
 The block-diagonal projection matrix of a closed community frozen at state `n` and
-environment `env`, one block per species in layout order. Pool totals are those of `n`.
-Only communities whose species all share the top-level pools are supported.
+environment `env`, one block per species.
 """
 function community_matrix(c::OpenCommunity, n::AbstractVector, env)
-    pool = pool_totals(c, n, env)
     A = zeros(Float64, length(c), length(c))
-    for sp in _species(c)
-        r = c.layout[sp.name]
-        names = Tuple(p.first for p in sp.occupancy)
-        ctx = Context(n[r], NamedTuple{names}(Tuple(pool[q] for q in names)), env)
-        A[r, r] = projection_matrix(sp, ctx)
+    for sp in c.names
+        r = c.layout[sp]
+        A[r, r] = to_matrix(c.system[sp], _context(c, sp, n, env))
     end
     return A
 end
 
 include("analysis.jl")
-include("models.jl")
-export verde_fish_model, riparian_model, cypripedium_model, with_rate, VERDE_SPECIES, RIPARIAN_GUILDS
 export equilibrium, jacobian, invasion_growth_rate, mean_abundance, abundance_sensitivity
 export equilibrium_sensitivity, stochastic_invasion_rate
 export InteractionNetwork, links, connectance, link_density, reciprocity, out_degree, in_degree
-export periodic_matrix, abundance, CommunityEnsemble, ensemble, extinction_times, quasi_extinction
+export periodic_matrix, abundance, stage_total, CommunityEnsemble, ensemble, extinction_times, quasi_extinction
+
+include("models.jl")
+export verde_fish_model, riparian_model, cypripedium_model, with_rate, VERDE_SPECIES, RIPARIAN_GUILDS
+export density_response
+
+include("bees.jl")
+export day_of_year, hopomo_season, forage_index, flight_index
+export honeybee, honeybee_state, varroa, bumblebee, floral_supply, floral_competition, flower_transmission
+export HONEYBEE_PARAMETERS, VARROA_PARAMETERS, BUMBLEBEE_PARAMETERS
 
 end # module MatrixCommunityModels

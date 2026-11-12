@@ -40,8 +40,9 @@ P, F, z = perennial_kernels(50)
 size(P), size(F)
 ```
 
-`MatrixSpecies` takes a function returning the survival and fecundity matrices. Recruitment
-is limited by space, and an individual of size `z` occupies `0.02 z²` units of it.
+`matrix_net` turns the two kernel matrices into a projection net with two named
+transitions, one mesh cell per stage. Recruitment is limited by space, a response on the
+`recruitment` transition, and an individual of size `z` occupies `0.02 z²` units of space.
 
 ```{julia}
 K = 1000.0
@@ -49,8 +50,8 @@ crowding(ctx) = max(0.0, 1 - ctx.pool.space / K)
 
 function perennial(mesh)
     P, F, z = perennial_kernels(mesh)
-    MatrixSpecies(:perennial, [Symbol(:z, i) for i in 1:mesh], ctx -> (P, F .* crowding(ctx));
-                  occupancy = [:space => 0.02 .* z .^ 2])
+    net = matrix_net([Symbol(:z, i) for i in 1:mesh], :survival_growth => P, :recruitment => F)
+    species(:perennial, births(respond(net, :recruitment => crowding), :recruitment); occupies = [:space => 0.02 .* z .^ 2])
 end
 ipm = perennial(50)
 ```
@@ -60,7 +61,7 @@ On its own the perennial grows to an equilibrium that fills about two thirds of 
 ```{julia}
 n0 = zeros(50)
 n0[z .< 2] .= 2.0
-alone = open_community(ipm)
+alone = ipm
 eq = equilibrium(alone, n0, nothing)
 (converged = eq.converged, individuals = sum(eq.n), space = pool_totals(alone, eq.n, nothing).space)
 ```
@@ -75,12 +76,11 @@ The shrub is the three-stage matrix model of the introduction. The two species a
 composed exactly as two matrix models would be.
 
 ```{julia}
-shrub = Species(:shrub, [:seedling, :juvenile, :adult],
-                [survival(:establish, :seedling => :juvenile, 0.30),
-                 survival(:mature, :juvenile => :adult, 0.50),
-                 survival(:persist, :adult => :adult, 0.95),
-                 fecundity(:seed, :adult => :seedling, ctx -> 3.0 * crowding(ctx))];
-                occupancy = [:space => [0.1, 1.0, 4.0]])
+shrub_life = ValuedProjectionNet([:seedling, :juvenile, :adult],
+    :establishing => [(:seedling => :juvenile) => 0.30], :maturing => [(:juvenile => :adult) => 0.50],
+    :persisting => [(:adult => :adult) => 0.95], :seeding => [(:adult => :seedling) => 3.0])
+shrub = species(:shrub, births(respond(shrub_life, :seeding => crowding), :seeding);
+                occupies = [:space => [0.1, 1.0, 4.0]])
 
 com = community(ipm, shrub)
 sol = project(com, [eq.n; 5.0; 0.0; 1.0], fill(nothing, 600))
@@ -96,7 +96,7 @@ Each species alone settles at the level of crowding at which it just replaces it
 other species can invade if its growth rate at that level of crowding exceeds one.
 
 ```{julia}
-shrub_alone = open_community(shrub)
+shrub_alone = shrub
 seq = equilibrium(shrub_alone, [5.0, 0.0, 1.0], nothing)
 (shrub_into_perennial = invasion_growth_rate(shrub, alone, eq.n, nothing),
  perennial_into_shrub = invasion_growth_rate(ipm, shrub_alone, seq.n, nothing))
@@ -116,10 +116,10 @@ for mesh in (50, 100, 200)
     zz = perennial_kernels(mesh)[3]
     start = zeros(mesh)
     start[zz .< 2] .= 20 / count(zz .< 2)
-    e = equilibrium(open_community(sp), start, nothing)
+    e = equilibrium(sp, start, nothing)
     println("mesh ", mesh, ": individuals ", round(sum(e.n); digits = 1), ", space ",
-            round(pool_totals(open_community(sp), e.n, nothing).space; digits = 1),
-            ", shrub invasion rate ", round(invasion_growth_rate(shrub, open_community(sp), e.n, nothing); digits = 4))
+            round(pool_totals(sp, e.n, nothing).space; digits = 1),
+            ", shrub invasion rate ", round(invasion_growth_rate(shrub, sp, e.n, nothing); digits = 4))
 end
 ```
 

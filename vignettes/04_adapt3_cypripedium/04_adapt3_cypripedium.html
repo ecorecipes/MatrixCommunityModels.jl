@@ -2280,22 +2280,14 @@ var requirejs,require,define;(function(global,setTimeout){var req,s,head,baseEle
 <pre><code>OpenCommunity(candidum, parviflorum; pools = density)</code></pre>
 </div>
 </div>
-<p>The estimated matrices are shipped as data (<code>data/cypripedium</code>), since estimating them needs the R workflow. The transitions that read the pool are the ones into <code>SD</code> and <code>P1</code> from flowering stages:</p>
+<p>The estimated matrices are shipped as data (<code>data/cypripedium</code>), since estimating them needs the R workflow. Each species is a net with three named transitions; the two kinds of production read the pool, through <code>RickerDensity</code> from MatrixProjectionModels.jl:</p>
 <div id="6" class="cell" data-execution_count="1">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>sp <span class="op">=</span> <span class="fu">species</span>(m.community, <span class="op">:</span>candidum)</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>[(t.name, t.kind) for t <span class="kw">in</span> sp.transitions if t.to <span class="kw">in</span> (<span class="op">:</span>SD, <span class="op">:</span>P1) <span class="op">&amp;&amp;</span> t.from <span class="kw">in</span> (<span class="op">:</span>XSm, <span class="op">:</span>Sm, <span class="op">:</span>Md, <span class="op">:</span>Lg, <span class="op">:</span>XLg)]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">transition_names</span>(<span class="fu">system</span>(m.community)[<span class="op">:</span>candidum])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="1">
-<pre><code>10-element Vector{Tuple{Symbol, Symbol}}:
- (:XSm_to_SD, :fecundity)
- (:XSm_to_P1, :fecundity)
- (:Sm_to_SD, :fecundity)
- (:Sm_to_P1, :fecundity)
- (:Md_to_SD, :fecundity)
- (:Md_to_P1, :fecundity)
- (:Lg_to_SD, :fecundity)
- (:Lg_to_P1, :fecundity)
- (:XLg_to_SD, :fecundity)
- (:XLg_to_P1, :fecundity)</code></pre>
+<pre><code>3-element Vector{Symbol}:
+ :life_cycle
+ :protocorm_production
+ :seed_production</code></pre>
 </div>
 </div>
 </section>

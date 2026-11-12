@@ -45,25 +45,18 @@ m.community
     OpenCommunity(candidum, parviflorum; pools = density)
 
 The estimated matrices are shipped as data (`data/cypripedium`), since
-estimating them needs the R workflow. The transitions that read the pool
-are the ones into `SD` and `P1` from flowering stages:
+estimating them needs the R workflow. Each species is a net with three
+named transitions; the two kinds of production read the pool, through
+`RickerDensity` from MatrixProjectionModels.jl:
 
 ``` julia
-sp = species(m.community, :candidum)
-[(t.name, t.kind) for t in sp.transitions if t.to in (:SD, :P1) && t.from in (:XSm, :Sm, :Md, :Lg, :XLg)]
+transition_names(system(m.community)[:candidum])
 ```
 
-    10-element Vector{Tuple{Symbol, Symbol}}:
-     (:XSm_to_SD, :fecundity)
-     (:XSm_to_P1, :fecundity)
-     (:Sm_to_SD, :fecundity)
-     (:Sm_to_P1, :fecundity)
-     (:Md_to_SD, :fecundity)
-     (:Md_to_P1, :fecundity)
-     (:Lg_to_SD, :fecundity)
-     (:Lg_to_P1, :fecundity)
-     (:XLg_to_SD, :fecundity)
-     (:XLg_to_P1, :fecundity)
+    3-element Vector{Symbol}:
+     :life_cycle
+     :protocorm_production
+     :seed_production
 
 ## Projection
 

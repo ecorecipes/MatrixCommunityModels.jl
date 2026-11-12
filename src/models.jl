@@ -1,8 +1,19 @@
-# Published matrix community models, rebuilt by composition.
+# Published matrix community models. Each species is a projection net: a life cycle of
+# named transitions, with responses saying how each transition depends on the year and on
+# the shared pool.
 
 const DATA_DIR = joinpath(dirname(@__DIR__), "data")
 
 _csv(path) = [split(replace(l, "\"" => ""), ",") for l in readlines(path)[2:end]]
+
+"""
+    density_response(pool, f)
+
+A response that applies a density-response function from MatrixProjectionModels.jl (for
+example `RickerDensity(0.0, 1.0)` or `BevertonHoltDensity(1.0, 0.01)`) to the total of
+`pool`: use it as `respond(net, :transition => density_response(:density, f))`.
+"""
+density_response(pool::Symbol, f) = ctx -> f(getproperty(ctx.pool, pool))
 
 # ---------------------------------------------------------------- Verde River fish
 
@@ -13,32 +24,29 @@ Species codes of the Verde River fish model, in the order of Rogosch et al. (201
 """
 const VERDE_SPECIES = ["CACL", "GIRO", "LECY", "CAIN", "MIDO", "CYLU", "AMNA"]
 
+const _VERDE_YEAR_TYPES = (:SUHF => :SU_highflood, :SPHF => :SP_highflood, :MF => :medflood,
+                           :NE => :nonevent, :DR => :drought)
+
 function _verde_species(sp, rate, modifier, K)
     r(code) = rate[code]
-    yeartypes = (:SUHF => :SU_highflood, :SPHF => :SP_highflood, :MF => :medflood,
-                 :NE => :nonevent, :DR => :drought)
-    # year-type mortality: one factor per year type, multiplied in the original order
-    function mort(base, stage, env)
-        x = base
-        for (yt, flag) in yeartypes
-            x *= 1 - getfield(env, flag) * r("STMort$sp") * modifier["$(sp)_$(stage)_$yt"]
-        end
-        return x
-    end
-    G1 = ctx -> mort(r("a$(sp)1") * r("den$(sp)J") * (1 / r("den$(sp)2")), "J", ctx.env)
-    G2 = ctx -> mort(r("a$(sp)2") * r("den$(sp)2") * (1 / r("den$(sp)3")), "A", ctx.env)
-    P3 = ctx -> mort(1 - r("a$(sp)3"), "A", ctx.env)
+    spawners = sp in ("CACL", "GIRO", "LECY") ? [:s2 => 1, :s3 => 1] :
+               sp == "CYLU" ? [:s1 => 1, :s2 => 2, :s3 => 2] : [:s3 => 1]
+    # the life cycle in a benign year with an empty river; growth is in biomass
+    life = ValuedProjectionNet([:s1, :s2, :s3],
+        :juvenile_growth => [(:s1 => :s2) => r("a$(sp)1") * r("den$(sp)J") * (1 / r("den$(sp)2"))],
+        :adult_growth => [(:s2 => :s3) => r("a$(sp)2") * r("den$(sp)2") * (1 / r("den$(sp)3"))],
+        :adult_stasis => [(:s3 => :s3) => 1 - r("a$(sp)3")],
+        :spawning => [(stage => :s1) => 0.5 * mult * r("GSI.$sp") * (1 - r("S0Mort$sp")) for (stage, mult) in spawners])
+    # each kind of year takes its toll on juveniles and adults
+    toll(stage) = [ctx -> 1 - getfield(ctx.env, flag) * r("STMort$sp") * modifier["$(sp)_$(stage)_$yt"]
+                   for (yt, flag) in _VERDE_YEAR_TYPES]
     # the dependency assumption: egg survival falls to zero as total biomass approaches K
-    F = mult -> (ctx -> ((0.5 * mult * r("GSI.$sp") * (1 - r("S0Mort$sp"))) *
-                         max((K - ctx.pool.biomass) / K, 0)) * r("den$(sp)1") * (1 / r("den$(sp)J")))
-    reproducing = sp in ("CACL", "GIRO", "LECY") ? [:s2 => 1, :s3 => 1] :
-                  sp == "CYLU" ? [:s1 => 1, :s2 => 2, :s3 => 2] : [:s3 => 1]
-    transitions = [survival(:growth1, :s1 => :s2, G1), survival(:growth2, :s2 => :s3, G2),
-                   survival(:stasis3, :s3 => :s3, P3)]
-    for (stage, mult) in reproducing
-        push!(transitions, fecundity(Symbol(:eggs_, stage), stage => :s1, F(mult)))
-    end
-    return Species(Symbol(sp), [:s1, :s2, :s3], transitions; occupancy = [:biomass => ones(3)])
+    room(ctx) = max((K - ctx.pool.biomass) / K, 0)
+    eggs_to_biomass = (ctx -> r("den$(sp)1"), ctx -> 1 / r("den$(sp)J"))
+    fish = respond(life,
+        (:juvenile_growth .=> toll("J"))..., (:adult_growth .=> toll("A"))..., (:adult_stasis .=> toll("A"))...,
+        :spawning => room, (:spawning .=> eggs_to_biomass)...)
+    return species(Symbol(sp), births(fish, :spawning); occupies = [:biomass => 1.0])
 end
 
 """
@@ -117,15 +125,27 @@ end
 function _riparian_guild(name::Symbol, corrected::Bool, guilds)
     g = guilds[name]
     b = [g.den[i + 1] / g.den[i] for i in 1:5]                 # self-thinning
+    stage(i) = _RIP_STAGES[i]
+    index(s) = findfirst(==(s), _RIP_STAGES)
+    # corrected: sagebrush and meadow keep their non-maturing stage-5 individuals
+    stasis = corrected && name in (:S, :M) ? (5:6) : g.stasis
+
+    # the life cycle in a year with neither flood nor drought
+    life = ValuedProjectionNet(_RIP_STAGES,
+        :growing => [(stage(i) => stage(i + 1)) => g.a[i] * b[i] for i in 1:5],
+        :staying => [(stage(i) => stage(i)) => 1 - g.a[i] for i in stasis])
+    # floods and droughts kill a stage-specific fraction
+    flood_survival(ctx) = (from, to) -> 1 - ctx.env.flood * g.S[index(from)]
+    drought_survival(ctx) = (from, to) -> 1 - ctx.env.drought * g.D[index(from)]
+    guild = respond(life, :growing => flood_survival, :growing => drought_survival,
+                    :staying => flood_survival, :staying => drought_survival)
+
+    # the dependency assumption: space occupied after this year's mortality, in
+    # cottonwood-seedling units; seedlings can only establish on what is left
     G(i, env) = g.a[i] * b[i] * (1 - env.flood * g.S[i]) * (1 - env.drought * g.D[i])
     P(i, env) = (1 - g.a[i]) * (1 - env.flood * g.S[i]) * (1 - env.drought * g.D[i])
     cum(k) = prod(b[j] for j in k:-1:1)
-    # corrected: sagebrush and meadow keep their non-maturing stage-5 individuals
-    stasis = corrected && name in (:S, :M) ? (5:6) : g.stasis
-    # the original counts the space of a stage-5 stasis term for S and M regardless
-    spaceP = name in (:S, :M) ? (5:6) : g.stasis
-
-    # space occupied after this year's mortality, converted to cottonwood-seedling units
+    spaceP = name in (:S, :M) ? (5:6) : g.stasis     # the original counts a stage-5 stasis for S and M regardless
     function space(n, env)
         x = n[1] * G(1, env) / b[1] + n[2] * G(2, env) / cum(2)
         for i in 3:5
@@ -142,48 +162,44 @@ function _riparian_guild(name::Symbol, corrected::Bool, guilds)
         x += n[6] * P(6, env) / cum(5)
         return x * (_DEN_C1 / g.den[1])
     end
-
-    transitions = [survival(Symbol(:grow, i), _RIP_STAGES[i] => _RIP_STAGES[i + 1], ctx -> G(i, ctx.env))
-                   for i in 1:5]
-    for i in stasis
-        push!(transitions, survival(Symbol(:stay, i), _RIP_STAGES[i] => _RIP_STAGES[i], ctx -> P(i, ctx.env)))
-    end
     free(ctx) = _RIP_K - ctx.pool.space
     seedlings(ctx, adults, gate) = max(adults * gate * (g.den[1] / _DEN_C1) * free(ctx), 0.0)
-    occupancy = Pair{Symbol,Any}[:space => space]
-    recruitment = Pair{Symbol,Any}[]
+    occupies = Pair{Symbol, Any}[:space => space]
+    reads = Symbol[]
+
     if name === :C
         # one tree can seed all free space, so the per-capita rate carries 1/N6
         nonind(x) = x == 0 ? 666.0 : x
-        push!(transitions, fecundity(:seedlings, :s6 => :s1,
-              ctx -> max(_adult(ctx.n[6]) * (1 / nonind(ctx.n[6])) * ctx.env.flood * ctx.env.cprop *
-                         ctx.env.decline * free(ctx), 0.0)))
+        seeding = ValuedProjectionNet(_RIP_STAGES, :seeding => [(:s6 => :s1) => 1.0])
+        guild = births(guild ⊕ respond(seeding, :seeding => ctx ->
+            max(_adult(ctx.n[6]) * (1 / nonind(ctx.n[6])) * ctx.env.flood * ctx.env.cprop * ctx.env.decline * free(ctx), 0.0)),
+            :seeding)
     elseif name === :T
-        push!(recruitment, :s1 => ctx -> max(_adult(ctx.n[3] + ctx.n[4] + ctx.n[5] + ctx.n[6]) * ctx.env.flood *
-                                             ctx.env.tprop * ctx.env.tdecline * (g.den[1] / _DEN_C1) * free(ctx), 0.0))
+        guild = inflow(guild, :s1 => ctx -> max(_adult(ctx.n[3] + ctx.n[4] + ctx.n[5] + ctx.n[6]) * ctx.env.flood *
+                                                ctx.env.tprop * ctx.env.tdecline * (g.den[1] / _DEN_C1) * free(ctx), 0.0))
     elseif name === :W
         if corrected
-            push!(recruitment, :s1 => ctx -> seedlings(ctx, _adult(ctx.n[3] + ctx.n[4] + ctx.n[5] + ctx.n[6]), ctx.env.flood))
+            guild = inflow(guild, :s1 => ctx -> seedlings(ctx, _adult(ctx.n[3] + ctx.n[4] + ctx.n[5] + ctx.n[6]), ctx.env.flood))
         else
             # willow announces whether it has adults, because the original meadow guild reads it
-            push!(occupancy, :willow_adults => (n, env) -> _adult(n[3] + n[4] + n[5] + n[6]))
-            push!(recruitment, :s1 => ctx -> seedlings(ctx, ctx.pool.willow_adults, ctx.env.flood))
+            push!(occupies, :willow_adults => (n, env) -> _adult(n[3] + n[4] + n[5] + n[6]))
+            guild = inflow(guild, :s1 => ctx -> seedlings(ctx, ctx.pool.willow_adults, ctx.env.flood))
         end
     elseif name === :S
-        push!(recruitment, :s1 => ctx -> seedlings(ctx, _adult(ctx.n[2] + ctx.n[3] + ctx.n[4] + ctx.n[5] + ctx.n[6]),
-                                                   ctx.env.nonflood))
+        guild = inflow(guild, :s1 => ctx -> seedlings(ctx, _adult(ctx.n[2] + ctx.n[3] + ctx.n[4] + ctx.n[5] + ctx.n[6]),
+                                                      ctx.env.nonflood))
     elseif name === :M
         if corrected
-            push!(recruitment, :s1 => ctx -> seedlings(ctx, _adult(ctx.n[2] + ctx.n[3] + ctx.n[4] + ctx.n[5] + ctx.n[6]),
-                                                       ctx.env.flood))
+            guild = inflow(guild, :s1 => ctx -> seedlings(ctx, _adult(ctx.n[2] + ctx.n[3] + ctx.n[4] + ctx.n[5] + ctx.n[6]),
+                                                          ctx.env.flood))
         else
             # the original script gives the meadow guild the willow recruitment
-            push!(occupancy, :willow_adults => (n, env) -> 0.0)
-            push!(recruitment, :s1 => ctx -> seedlings(ctx, ctx.pool.willow_adults, ctx.env.flood))
+            push!(reads, :willow_adults)
+            guild = inflow(guild, :s1 => ctx -> seedlings(ctx, ctx.pool.willow_adults, ctx.env.flood))
         end
     end
-    return Species(name, _RIP_STAGES, transitions; occupancy, recruitment,
-                   threshold = name === :S ? _quasiten : _quasi)
+    guild = after_step(guild, name === :S ? _quasiten : _quasi)
+    return species(name, guild; occupies, reads)
 end
 
 """
@@ -239,9 +255,10 @@ The two-orchid community of the adapt3 community-projection vignette (Shefferson
 *Cypripedium candidum* (5 annual matrices) and *C. parviflorum* (17), nine stages each,
 cycled through in order. The species are linked by one pool, `density`, the number of
 individuals of both species, not counting dormant seed when `equivalence` is true.
-Reproduction into dormant seed (`SD`) and protocorms (`P1`) is multiplied by Ricker
-terms `0.5 exp(-density)` and `1.2 exp(-2 density)`. With `integeronly` the stage vectors
-are floored each step, as in adapt3.
+Production of dormant seed (`SD`) and of protocorms (`P1`) by flowering plants is
+multiplied by the Ricker terms `0.5 exp(-density)` and `1.2 exp(-2 density)`, using
+`RickerDensity` from MatrixProjectionModels.jl. With `integeronly` the stage vectors are
+floored each step, as in adapt3.
 
 The annual matrices were estimated in R with lefko3 and are shipped as data. Returns
 `(community, n0, envs)`; the environment of step `t` is the integer `t - 1`, which selects
@@ -251,33 +268,35 @@ function cypripedium_model(; equivalence::Bool = true, integeronly::Bool = false
                            dir = joinpath(DATA_DIR, "cypripedium"))
     stages = Symbol.(readlines(joinpath(dir, "stages.txt")))
     k = length(stages)
-    mats = Dict{Int,Dict{Int,Matrix{Float64}}}()
+    position = Dict(s => i for (i, s) in enumerate(stages))
+    mats = Dict{Int, Dict{Int, Matrix{Float64}}}()
     for row in _csv(joinpath(dir, "matrices.csv"))
         sp, yr, i, j = parse(Int, row[1]), parse(Int, row[2]), parse(Int, row[4]), parse(Int, row[5])
-        M = get!(get!(mats, sp, Dict{Int,Matrix{Float64}}()), yr, zeros(k, k))
+        M = get!(get!(mats, sp, Dict{Int, Matrix{Float64}}()), yr, zeros(k, k))
         M[i, j] = parse(Float64, row[6])
     end
     weights = equivalence ? [0.0; ones(k - 1)] : ones(k)
-    reproductive = (:XSm, :Sm, :Md, :Lg, :XLg)
+    flowering = (:XSm, :Sm, :Md, :Lg, :XLg)
     function orchid(name, annual)
-        year(ctx) = mod(ctx.env, length(annual)) + 1
-        transitions = Transition[]
-        for (j, from) in enumerate(stages), (i, to) in enumerate(stages)
-            any(M[i, j] != 0 for M in annual) || continue
-            label = Symbol(from, :_to_, to)
-            if to === :SD && from in reproductive
-                push!(transitions, fecundity(label, from => to,
-                      ctx -> annual[year(ctx)][i, j] * 0.5 * exp(-1.0 * ctx.pool.density)))
-            elseif to === :P1 && from in reproductive
-                # adapt3 types this element as survival, but it is production of protocorms
-                push!(transitions, fecundity(label, from => to,
-                      ctx -> annual[year(ctx)][i, j] * 1.2 * exp(-2.0 * ctx.pool.density)))
-            else
-                push!(transitions, survival(label, from => to, ctx -> annual[year(ctx)][i, j]))
-            end
-        end
-        return Species(name, stages, transitions; occupancy = [:density => weights],
-                       threshold = integeronly ? (n -> floor.(n)) : nothing)
+        used(i, j) = any(M[i, j] != 0 for M in annual)
+        entries(keep) = [(from => to) => 1.0 for (j, from) in enumerate(stages) for (i, to) in enumerate(stages)
+                         if used(i, j) && keep(from, to)]
+        seed(from, to) = to === :SD && from in flowering
+        protocorm(from, to) = to === :P1 && from in flowering
+        # every element estimated from the field data is a transition; three kinds are told apart
+        life = ValuedProjectionNet(stages,
+            :life_cycle => entries((from, to) -> !seed(from, to) && !protocorm(from, to)),
+            :seed_production => [e.first => 0.5 for e in entries(seed)],
+            :protocorm_production => [e.first => 1.2 for e in entries(protocorm)])
+        # this year's estimate of each element
+        this_year(ctx) = (from, to) -> annual[mod(ctx.env, length(annual)) + 1][position[to], position[from]]
+        plant = respond(life,
+            :life_cycle => this_year, :seed_production => this_year, :protocorm_production => this_year,
+            :seed_production => density_response(:density, MatrixProjectionModels.RickerDensity(0.0, 1.0)),
+            :protocorm_production => density_response(:density, MatrixProjectionModels.RickerDensity(0.0, 2.0)))
+        plant = births(plant, :seed_production, :protocorm_production)
+        integeronly && (plant = after_step(plant, n -> floor.(n)))
+        return species(name, plant; occupies = [:density => weights])
     end
     com = community(orchid(:candidum, [mats[1][y] for y in 1:length(mats[1])]),
                     orchid(:parviflorum, [mats[2][y] for y in 1:length(mats[2])]))

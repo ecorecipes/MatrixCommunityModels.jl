@@ -32,13 +32,13 @@ where `f` is one time step. `equilibrium_sensitivity` does this. For a shrub alo
 ```{julia}
 K = 1000.0
 crowding(ctx) = max(0.0, 1 - ctx.pool.space / K)
-shrub(f) = Species(:shrub, [:seedling, :juvenile, :adult],
-                   [survival(:establish, :seedling => :juvenile, 0.30),
-                    survival(:mature, :juvenile => :adult, 0.50),
-                    survival(:persist, :adult => :adult, 0.95),
-                    fecundity(:seed, :adult => :seedling, ctx -> f * crowding(ctx))];
-                   occupancy = [:space => [0.1, 1.0, 4.0]])
-build(f) = (community = community(shrub(f)), n0 = [5.0, 0.0, 1.0])
+function shrub(f)
+    life = ValuedProjectionNet([:seedling, :juvenile, :adult],
+        :establishing => [(:seedling => :juvenile) => 0.30], :maturing => [(:juvenile => :adult) => 0.50],
+        :persisting => [(:adult => :adult) => 0.95], :seeding => [(:adult => :seedling) => f])
+    species(:shrub, births(respond(life, :seeding => crowding), :seeding); occupies = [:space => [0.1, 1.0, 4.0]])
+end
+build(f) = (community = shrub(f), n0 = [5.0, 0.0, 1.0])
 
 direct = equilibrium_sensitivity(build, 3.0, nothing)
 (equilibrium = round.(direct.n; digits = 2), derivative = round.(direct.dn; digits = 3))
@@ -78,21 +78,22 @@ whose vital rates see the residents' pool totals and each year's environment. He
 ```{julia}
 m = verde_fish_model()
 envs = repeat(m.envs, 10)
-fish = species(m.community)
+fish = [subcommunity(m.community, s) for s in species_names(m.community)]
+name(sp) = only(species_names(sp))
 
 # growth in an empty river: the resident is a community with nobody in it
-nobody = open_community(first(fish))
+nobody = first(fish)
 empty_rate = [stochastic_invasion_rate(sp, nobody, zeros(3), envs) for sp in fish]
 
 # growth when rare in the community of the other six
 invasion_rate = map(fish) do sp
-    residents = community((s for s in fish if s.name != sp.name)...)
-    n0 = [p for p in m.n0 if p.first != sp.name]
+    residents = subcommunity(m.community, (s for s in species_names(m.community) if s != name(sp))...)
+    n0 = [p for p in m.n0 if p.first != name(sp)]
     stochastic_invasion_rate(sp, residents, n0, envs; burnin = 108)
 end
 
 for (sp, e, r) in zip(fish, empty_rate, invasion_rate)
-    @printf("%-5s  empty river %.3f   invading the other six %.3f\n", sp.name, e, r)
+    @printf("%-5s  empty river %.3f   invading the other six %.3f\n", name(sp), e, r)
 end
 ```
 
@@ -155,7 +156,7 @@ and whose transitions include growth in mass, is correctly refused:
 
 ```{julia}
 try
-    project(m.community, round.(reduce(vcat, last.(m.n0))), m.envs[1:2]; rng)
+    project(m.community, round.(state_vector(m.community, m.n0...)), m.envs[1:2]; rng)
 catch err
     println(first(split(sprint(showerror, err), ";")))
 end

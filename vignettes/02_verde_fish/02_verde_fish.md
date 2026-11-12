@@ -32,9 +32,11 @@ is multiplied by `max(0, 1 - B/K)`, where `B` is the total biomass of
 all fish and `K` = 47,660 g.
 
 `verde_fish_model()` builds this community from the published vital-rate
-tables. Its source in `src/models.jl` is short: three survival
-transitions and one to three fecundity transitions per species, and one
-line saying that every stage occupies the `biomass` pool gram for gram.
+tables. In `src/models.jl` each species is a projection net from
+CategoricalPopulationDynamics.jl with four named transitions;
+*responses* attached to those names say how each year type reduces
+growth and survival and how total biomass limits spawning; and one line
+says that every stage occupies the `biomass` pool gram for gram.
 
 ``` julia
 m = verde_fish_model()
@@ -44,16 +46,14 @@ fish = m.community
     OpenCommunity(CACL, GIRO, LECY, CAIN, MIDO, CYLU, AMNA; pools = biomass)
 
 ``` julia
-[(t.name, t.from => t.to, t.kind) for t in species(fish, :CYLU).transitions]
+transition_names(system(fish)[:CYLU])
 ```
 
-    6-element Vector{Tuple{Symbol, Pair{Symbol, Symbol}, Symbol}}:
-     (:growth1, :s1 => :s2, :survival)
-     (:growth2, :s2 => :s3, :survival)
-     (:stasis3, :s3 => :s3, :survival)
-     (:eggs_s1, :s1 => :s1, :fecundity)
-     (:eggs_s2, :s2 => :s1, :fecundity)
-     (:eggs_s3, :s3 => :s1, :fecundity)
+    4-element Vector{Symbol}:
+     :adult_growth
+     :adult_stasis
+     :juvenile_growth
+     :spawning
 
 ## Projection through the 1964-2017 flow record
 
@@ -116,17 +116,19 @@ hline!([47660]; label = "K", ls = :dash)
 ![](02_verde_fish_files/figure-commonmark/cell-9-output-1.svg)
 
 Freezing a species at a year type and a biomass gives an ordinary
-projection matrix, so its growth rate in that situation can be read off.
-Here each species alone in an almost empty river, by year type:
+`MatrixProjectionModel`, so the tools of MatrixProjectionModels.jl
+apply; here, its growth rate. Here each species alone in an almost empty
+river, by year type:
 
 ``` julia
 flags(; kw...) = merge((SP_highflood = 0, SU_highflood = 0, medflood = 0, drought = 0, nonevent = 0), kw)
 types = ["spring flood" => flags(SP_highflood = 1), "summer flood" => flags(SU_highflood = 1),
          "medium flood" => flags(medflood = 1), "drought" => flags(drought = 1),
          "non-event" => flags(nonevent = 1)]
-for sp in species(fish)
-    lams = [lambda(lower(sp, Context(zeros(3), (biomass = 0.0,), env))) for (_, env) in types]
-    @printf("%-5s %s\n", sp.name, join([@sprintf("%-13s %5.2f", first(t), l) for (t, l) in zip(types, lams)], "  "))
+nobody = zeros(length(fish))
+for sp in species_names(fish)
+    lams = [lambda(matrix_model(fish, sp, nobody, env)) for (_, env) in types]
+    @printf("%-5s %s\n", sp, join([@sprintf("%-13s %5.2f", first(t), l) for (t, l) in zip(types, lams)], "  "))
 end
 ```
 
@@ -150,7 +152,7 @@ matter of composing a different set of species. The natives without the
 non-natives:
 
 ``` julia
-natives = community((species(fish, s) for s in (:CACL, :GIRO, :CAIN))...)
+natives = subcommunity(fish, :CACL, :GIRO, :CAIN)
 n0 = [p for p in m.n0 if p.first in (:CACL, :GIRO, :CAIN)]
 alone = project(natives, n0, m.envs)
 plot(yrs, [sum(sol[:CACL]; dims = 2) sum(alone[:CACL]; dims = 2)];
