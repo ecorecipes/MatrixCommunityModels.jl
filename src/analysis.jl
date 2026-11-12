@@ -263,3 +263,102 @@ out_degree(net::InteractionNetwork) = vec(sum(net.adjacency; dims = 1))
 Number of nodes each node is affected by, in label order.
 """
 in_degree(net::InteractionNetwork) = vec(sum(net.adjacency; dims = 2))
+
+"""
+    periodic_matrix(species, pool, envs)
+
+The projection matrix of `species` over one cycle of environments `envs` (for example the
+seasons of a year) with the pools held at `pool` (a `NamedTuple`): the product
+`A(envs[end]) ⋯ A(envs[1])`. Its dominant eigenvalue is the growth factor per cycle, so
+with `pool` describing an empty community it gives the species' annual growth rate when
+rare.
+"""
+function periodic_matrix(sp::AbstractSpecies, pool::NamedTuple, envs)
+    k = length(sp.stages)
+    names = Tuple(p.first for p in sp.occupancy)
+    P = Matrix{Float64}(I, k, k)
+    for env in envs
+        ctx = Context(zeros(k), NamedTuple{names}(Tuple(pool[q] for q in names)), env)
+        P = projection_matrix(sp, ctx) * P
+    end
+    return P
+end
+
+"""
+    abundance(sol, species)
+    abundance(ens, species)
+
+Total abundance of `species` (summed over its stages) through time: a vector for a
+[`CommunityTrajectory`](@ref), a replicate-by-time matrix for a
+[`CommunityEnsemble`](@ref).
+"""
+abundance(sol::CommunityTrajectory, sp::Symbol) = vec(sum(sol[sp]; dims = 2))
+
+"""
+    CommunityEnsemble
+
+Replicate projections of one community, from [`ensemble`](@ref). `u[r, t + 1, :]` is the
+state of replicate `r` at time `t`.
+"""
+struct CommunityEnsemble
+    t::Vector{Int}
+    u::Array{Float64,3}
+    community::OpenCommunity
+end
+
+Base.show(io::IO, ens::CommunityEnsemble) =
+    print(io, "CommunityEnsemble(", size(ens.u, 1), " replicates, ", length(ens.t) - 1, " steps, ",
+          size(ens.u, 3), " states)")
+
+abundance(ens::CommunityEnsemble, sp::Symbol) = dropdims(sum(ens.u[:, :, ens.community.layout[sp]]; dims = 3); dims = 3)
+
+"""
+    ensemble(c, n0, envs; replicates, rng, demographic = true)
+
+Project a closed community `replicates` times and collect the results in a
+[`CommunityEnsemble`](@ref). `envs` is a sequence of environments used for every
+replicate, or a function `r -> sequence` giving replicate `r` its own (environmental
+stochasticity). With `demographic = true` each projection has demographic stochasticity
+drawn from `rng` (see [`project`](@ref)); with `false`, `rng` is not used and replicates
+differ only through `envs`.
+"""
+function ensemble(c::OpenCommunity, n0, envs; replicates::Integer, rng = nothing, demographic::Bool = true)
+    replicates >= 1 || throw(ArgumentError("replicates must be at least 1"))
+    demographic && rng === nothing && throw(ArgumentError("demographic = true needs an rng"))
+    u = nothing
+    t = Int[]
+    for r in 1:replicates
+        seq = envs isa Function ? envs(r) : envs
+        sol = project(c, n0, seq; rng = demographic ? rng : nothing)
+        if u === nothing
+            u = zeros(Float64, replicates, size(sol.u, 1), size(sol.u, 2))
+            t = sol.t
+        end
+        size(sol.u, 1) == size(u, 2) || throw(DimensionMismatch("every replicate needs the same number of steps"))
+        u[r, :, :] = sol.u
+    end
+    return CommunityEnsemble(t, u, c)
+end
+
+"""
+    extinction_times(ens, species; threshold = 1)
+
+For each replicate of a [`CommunityEnsemble`](@ref), the first time at which the total
+abundance of `species` is below `threshold`, or `nothing` if that never happens.
+"""
+function extinction_times(ens::CommunityEnsemble, sp::Symbol; threshold::Real = 1)
+    N = abundance(ens, sp)
+    return [(i = findfirst(<(threshold), view(N, r, :)); i === nothing ? nothing : ens.t[i]) for r in axes(N, 1)]
+end
+
+"""
+    quasi_extinction(ens, species; threshold = 1)
+
+Cumulative probability, at each time, that the total abundance of `species` has fallen
+below `threshold` at or before that time, estimated as the fraction of replicates of a
+[`CommunityEnsemble`](@ref).
+"""
+function quasi_extinction(ens::CommunityEnsemble, sp::Symbol; threshold::Real = 1)
+    times = extinction_times(ens, sp; threshold)
+    return [count(x -> x !== nothing && x <= t, times) / length(times) for t in ens.t]
+end

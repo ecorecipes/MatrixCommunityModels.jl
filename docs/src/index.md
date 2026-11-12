@@ -28,6 +28,8 @@ on Catlab.jl.
   dispersal as a pool.
 - [Equilibria, invasion and chance](tutorials/08_equilibria_invasion_chance.md): analytic
   sensitivities, invasion rates in fluctuating environments, demographic stochasticity.
+- [Seasons and phenology](tutorials/09_seasons_and_phenology.md): within-year steps, a
+  lottery for space, coexistence by timing, and drift.
 
 Each tutorial is a Quarto vignette, also available as
 [HTML and PDF in the repository](https://github.com/ecorecipes/MatrixCommunityModels.jl/tree/main/vignettes).

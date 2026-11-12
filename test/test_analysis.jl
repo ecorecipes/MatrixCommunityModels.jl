@@ -187,3 +187,61 @@ end
     @test l[1] == (from = "b", to = "a", effect = 0.8) && length(l) == 3
     @test_throws DimensionMismatch InteractionNetwork(effect, ["a", "b"]; threshold = 0.1)
 end
+
+@testset "periodic matrix" begin
+    # a species whose rates differ between two seasons
+    sp = Species(:x, [:seed, :plant],
+                 [survival(:germinate, :seed => :plant, ctx -> ctx.env == 1 ? 0.5 * toy_crowding(ctx) : 0.0),
+                  survival(:dormant, :seed => :seed, ctx -> ctx.env == 1 ? 0.4 : 0.9),
+                  fecundity(:set_seed, :plant => :seed, ctx -> ctx.env == 2 ? 10.0 : 0.0)];
+                 occupancy = [:space => [0.0, 1.0]])
+    A(env, space) = projection_matrix(sp, Context(zeros(2), (space = space,), env))
+    @test periodic_matrix(sp, (space = 0.0,), [1, 2]) == A(2, 0.0) * A(1, 0.0)
+    @test periodic_matrix(sp, (space = 300.0,), [1]) == A(1, 300.0)
+    # projecting through the seasons with nobody else present multiplies by it
+    n = [10.0, 0.0]
+    empty = (space = 0.0,)
+    @test periodic_matrix(sp, empty, [1, 2, 1, 2]) ≈ periodic_matrix(sp, empty, [1, 2])^2
+end
+
+@testset "ensembles" begin
+    using Random
+    grass, shrub = toy_grass(), toy_shrub()
+    com = community(grass, shrub)
+    n0 = [50.0, 10.0, 5.0, 0.0, 1.0]
+    envs = fill(nothing, 40)
+    ens = ensemble(com, n0, envs; replicates = 25, rng = Xoshiro(4))
+    @test size(ens.u) == (25, 41, 5) && ens.t == collect(0:40)
+    @test all(ens.u[:, 1, :] .== n0')
+    N = abundance(ens, :shrub)
+    @test size(N) == (25, 41) && N[3, :] == vec(sum(ens.u[3, :, 3:5]; dims = 2))
+    sol = project(com, n0, envs)
+    @test abundance(sol, :grass) == vec(sum(sol[:grass]; dims = 2))
+    # without demographic noise and with fixed environments, replicates are identical
+    det = ensemble(com, n0, envs; replicates = 3, demographic = false)
+    @test det.u[1, :, :] == det.u[3, :, :] == sol.u
+    # per-replicate environments
+    varied = ensemble(com, n0, r -> fill(nothing, 40); replicates = 2, demographic = false)
+    @test varied.u[2, :, :] == sol.u
+    # extinction summaries on a doomed population
+    doomed = community(Species(:d, [:a], [survival(:s, :a => :a, 0.5)]; occupancy = [:space => [1.0]]))
+    e = ensemble(doomed, [20.0], fill(nothing, 30); replicates = 50, rng = Xoshiro(5))
+    times = extinction_times(e, :d)
+    @test all(!isnothing, times) && all(t -> 1 <= t <= 30, times)
+    q = quasi_extinction(e, :d)
+    @test q[1] == 0 && q[end] == 1 && issorted(q)
+    @test quasi_extinction(e, :d; threshold = 21)[1] == 1
+    @test extinction_times(det, :shrub) == fill(nothing, 3)
+    @test_throws ArgumentError ensemble(com, n0, envs; replicates = 2)
+    @test_throws ArgumentError ensemble(com, n0, envs; replicates = 0, rng = Xoshiro(1))
+end
+
+@testset "Graphs extension" begin
+    import Graphs
+    effect = [-1.0 0.8 0.0; 0.6 -2.0 0.05; 0.0 0.3 -1.0]
+    net = InteractionNetwork(effect, ["a", "b", "c"]; threshold = 0.1)
+    g = Graphs.SimpleDiGraph(net)
+    @test Graphs.nv(g) == 3 && Graphs.ne(g) == 3
+    @test Graphs.has_edge(g, 2, 1) && Graphs.has_edge(g, 1, 2) && Graphs.has_edge(g, 2, 3)
+    @test Graphs.outdegree(g) == out_degree(net) && Graphs.indegree(g) == in_degree(net)
+end

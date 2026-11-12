@@ -26,7 +26,11 @@ simulation loop.
   `stochastic_invasion_rate`, analytic `equilibrium_sensitivity`, the simulation-based
   cross-species sensitivity of Lytle & Tonkin (`abundance_sensitivity`), and
   `InteractionNetwork` with connectance, link density, reciprocity and degrees.
-- Demographic stochasticity: `project(...; rng)` draws whole individuals.
+- Demographic stochasticity: `project(...; rng)` draws whole individuals; `ensemble`,
+  `extinction_times` and `quasi_extinction` summarise replicate runs.
+- Seasonal models: environments can be seasons, and `periodic_matrix` gives a species'
+  projection over a cycle.
+- With Graphs.jl loaded, `Graphs.SimpleDiGraph(net)` converts an `InteractionNetwork`.
 - Published models rebuilt and checked against their original implementations:
   the Verde River fish model (identical output), the Yampa River riparian guild model
   (within 4e-16, plus a corrected variant), and the adapt3 Cypripedium community
@@ -64,6 +68,7 @@ sol[:CACL]                                  # biomass by year and stage
 | 6 | [Composing IPMs](vignettes/06_composing_ipms/06_composing_ipms.md) ([PDF](vignettes/06_composing_ipms/06_composing_ipms.pdf)) | An integral projection model and a matrix model sharing a pool |
 | 7 | [Metacommunity](vignettes/07_metacommunity/07_metacommunity.md) ([PDF](vignettes/07_metacommunity/07_metacommunity.pdf)) | Patches as nested communities, dispersal as a pool |
 | 8 | [Equilibria, invasion and chance](vignettes/08_equilibria_invasion_chance/08_equilibria_invasion_chance.md) ([PDF](vignettes/08_equilibria_invasion_chance/08_equilibria_invasion_chance.pdf)) | Analytic sensitivities, invasion rates in fluctuating environments, demographic stochasticity |
+| 9 | [Seasons and phenology](vignettes/09_seasons_and_phenology/09_seasons_and_phenology.md) ([PDF](vignettes/09_seasons_and_phenology/09_seasons_and_phenology.pdf)) | Within-year steps, a lottery for space, coexistence by timing, drift |
 
 ## Status
 
@@ -73,4 +78,6 @@ Early development. The API may change.
 
 The package is MIT licensed. `data/verde_fish` is from Rogosch et al. (2019),
 <https://doi.org/10.5281/zenodo.1309024> (MIT). `data/riparian/maybell.csv` is from
-Lytle et al. (2017), <https://doi.org/10.6084/m9.figshare.4652608>.
+Lytle et al. (2017), <https://doi.org/10.6084/m9.figshare.4652608> (CC BY 4.0), with
+line endings converted. `data/cypripedium` holds matrices estimated with the R packages
+lefko3 and adapt3 from the datasets those packages distribute.

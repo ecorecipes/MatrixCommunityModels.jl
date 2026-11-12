@@ -521,5 +521,6 @@ export verde_fish_model, riparian_model, cypripedium_model, with_rate, VERDE_SPE
 export equilibrium, jacobian, invasion_growth_rate, mean_abundance, abundance_sensitivity
 export equilibrium_sensitivity, stochastic_invasion_rate
 export InteractionNetwork, links, connectance, link_density, reciprocity, out_degree, in_degree
+export periodic_matrix, abundance, CommunityEnsemble, ensemble, extinction_times, quasi_extinction
 
 end # module MatrixCommunityModels
