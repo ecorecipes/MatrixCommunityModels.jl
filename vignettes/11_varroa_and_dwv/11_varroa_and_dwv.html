@@ -2336,7 +2336,8 @@ var requirejs,require,define;(function(global,setTimeout){var req,s,head,baseEle
 <pre><code>0.19</code></pre>
 </div>
 </div>
-<p>Nothing here was tuned. Martin (1998) reports a 12-fold increase a year for his model, which includes drone brood; this one grows three times as fast as that with drones and somewhat more slowly without. It behaves like BEEHAVE, whose rules it follows: BEEHAVE runs started with 20 mites are reported to peak near 24,000 in the fourth summer, and removing drone brood in BEEHAVE cuts mite numbers by 90% in a year (Schödl et al. 2022). Here the mites get there about a year sooner. Schödl et al. note that bee experts and field studies put the effect of removing drone brood at 50 to 67%, so these rules probably give drone brood too much weight.</p>
+<p>Nothing here was tuned. In the field, mite numbers grow by 0.105 to 0.236 a week while there is brood, which is 0.015 to 0.034 a day (Harris et al. 2003: ten years of their own colonies in Louisiana, and the studies they review). Both versions of this model fall in that range, the one with drones near the top of it. Martin (1998) reports a 12-fold increase a year for his model, which includes drone brood; this one gives three times that with drones and somewhat less without. It behaves like BEEHAVE, whose rules it follows: BEEHAVE runs started with 20 mites are reported to peak near 24,000 in the fourth summer. Here the mites get there about a year sooner.</p>
+<p>The weight of drone brood is less certain than the growth rate. Removing drone brood in BEEHAVE cuts mite numbers by 90% in a year, where bee experts and field studies put the effect at 50 to 67% (Schödl et al. 2022). So these rules may send too many mites through drone cells, even though the growth they give is within what has been measured.</p>
 <p>In this model mites alone do not harm the bees, following BEEHAVE, in which all damage comes through viruses:</p>
 <div id="16" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>alone <span class="op">=</span> <span class="fu">project</span>(<span class="fu">honeybee</span>(), <span class="fu">honeybee_state</span>(<span class="fu">honeybee</span>()), <span class="fl">1</span><span class="op">:</span>(<span class="fl">365</span> <span class="op">*</span> <span class="fl">3</span>))</span>
@@ -2456,7 +2457,7 @@ var requirejs,require,define;(function(global,setTimeout){var req,s,head,baseEle
 </section>
 <section id="references" class="level2">
 <h2 class="anchored" data-anchor-id="references">References</h2>
-<p>Martin, S. J. (1998). <em>Ecological Modelling</em> 109, 267-281; (2001) <em>Journal of Applied Ecology</em> 38, 1082-1093. Becher, M. A. et al. (2014). <em>Journal of Applied Ecology</em> 51, 470-482. Genersch, E. et al. (2010). <em>Apidologie</em> 41, 332-352. Schödl, I. et al. (2022). <em>Ecology and Evolution</em> 12, e9456.</p>
+<p>Martin, S. J. (1998). <em>Ecological Modelling</em> 109, 267-281; (2001) <em>Journal of Applied Ecology</em> 38, 1082-1093. Becher, M. A. et al. (2014). <em>Journal of Applied Ecology</em> 51, 470-482. Genersch, E. et al. (2010). <em>Apidologie</em> 41, 332-352. Harris, J. W. et al. (2003). <em>Environmental Entomology</em> 32, 1305-1312. Schödl, I. et al. (2022). <em>Ecology and Evolution</em> 12, e9456.</p>
 </section>
 
 </main>

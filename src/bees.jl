@@ -556,10 +556,13 @@ const BUMBLEBEE_PARAMETERS = (
     shortage_mortality = 1.0,     # proportional rise in forager mortality when nectar is unobtainable (proposed)
     forager_fraction = 0.5,       # of workers (Haeussler et al. 2017)
     queen_foraging = 3.0,         # nectar and pollen a founding queen collects, relative to a worker (crop volume, Bumble-BEEHAVE)
-    nectar_per_forager = 0.31,    # g sugar per day: 0.6 ml (Banks et al. 2020) at 1.5 mol/l sucrose, the top of the range for flowers in Bumble-BEEHAVE
+    nectar_per_forager = 0.31,    # g sugar per day: 0.6 ml at 1.5 mol/l sucrose, the top of the range for flowers in Bumble-BEEHAVE.
+                                  # Banks et al. (2020) give 0.6 ml per worker, not per forager: see nectar_per_worker
     pollen_per_forager = 0.11,    # g per day: 0.018 g load (Bumble-BEEHAVE) x 5.9 trips (Minahan & Brunet 2018)
     nectar_per_colony = 0.6,      # g sugar per day to incubate the brood (about 10 kJ per day, Bumble-BEEHAVE)
-    nectar_per_worker = 0.077,    # g sugar per day (0.15 ml, Banks et al. 2017, not checked; Banks et al. 2020 give 0.35 ml)
+    nectar_per_worker = 0.077,    # g sugar per day (0.15 ml, Banks et al. 2017, not checked). Banks et al. (2020) use 0.35 ml with
+                                  # 0.6 ml collected per worker; that pair (0.18 here, and 0.62 per forager) gives nearly the same
+                                  # results, but 0.18 with the collection rate left at 0.31 starves every colony
     pollen_per_worker = 0.15,     # g to rear a worker or male (Bumble-BEEHAVE mass balance)
     pollen_per_gyne = 0.8,        # g to rear a gyne (Bumble-BEEHAVE mass balance)
     infected_hazard = 1.0,        # ratio of mortality of DWV-infected to healthy workers (evidence conflicting)

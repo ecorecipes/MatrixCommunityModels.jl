@@ -84,14 +84,19 @@ share = stage_total(sol, :varroa, :drone_cell)[180] / mites[180]
 round(share; digits = 2)       # of all mites, in drone cells on day 180
 ```
 
-Nothing here was tuned. Martin (1998) reports a 12-fold increase a year for his model,
-which includes drone brood; this one grows three times as fast as that with drones and
-somewhat more slowly without. It behaves like BEEHAVE, whose rules it follows: BEEHAVE runs started with 20
-mites are reported to peak near 24,000 in the fourth summer, and removing drone brood in
-BEEHAVE cuts mite numbers by 90% in a year (Schödl et al. 2022). Here the mites get there
-about a year sooner. Schödl et al. note that bee experts and field studies put the effect
-of removing drone brood at 50 to 67%, so these rules probably give drone brood too much
-weight.
+Nothing here was tuned. In the field, mite numbers grow by 0.105 to 0.236 a week while
+there is brood, which is 0.015 to 0.034 a day (Harris et al. 2003: ten years of their own
+colonies in Louisiana, and the studies they review). Both versions of this model fall in
+that range, the one with drones near the top of it. Martin (1998) reports a 12-fold
+increase a year for his model, which includes drone brood; this one gives three times that
+with drones and somewhat less without. It behaves like BEEHAVE, whose rules it follows:
+BEEHAVE runs started with 20 mites are reported to peak near 24,000 in the fourth summer.
+Here the mites get there about a year sooner.
+
+The weight of drone brood is less certain than the growth rate. Removing drone brood in
+BEEHAVE cuts mite numbers by 90% in a year, where bee experts and field studies put the
+effect at 50 to 67% (Schödl et al. 2022). So these rules may send too many mites through
+drone cells, even though the growth they give is within what has been measured.
 
 In this model mites alone do not harm the bees, following BEEHAVE, in which all damage
 comes through viruses:
@@ -218,5 +223,6 @@ there until the bee would have emerged, where BEEHAVE releases them at once.
 
 Martin, S. J. (1998). *Ecological Modelling* 109, 267-281; (2001) *Journal of Applied
 Ecology* 38, 1082-1093. Becher, M. A. et al. (2014). *Journal of Applied Ecology* 51,
-470-482. Genersch, E. et al. (2010). *Apidologie* 41, 332-352. Schödl, I. et al. (2022).
+470-482. Genersch, E. et al. (2010). *Apidologie* 41, 332-352. Harris, J. W. et al. (2003).
+*Environmental Entomology* 32, 1305-1312. Schödl, I. et al. (2022).
 *Ecology and Evolution* 12, e9456.
