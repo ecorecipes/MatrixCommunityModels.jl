@@ -51,7 +51,7 @@ flight_index(day::Real; threshold = 10, full = 18) = clamp((_temperature(day) - 
     HONEYBEE_PARAMETERS
 
 Default parameters of [`honeybee`](@ref); sources are in the
-comments of `src/bees.jl`. Mite and virus values are provisional (see the vignettes).
+comments of `src/bees.jl`. Mite and virus values were checked against BEEHAVE's parameter list and code.
 """
 const HONEYBEE_PARAMETERS = (
     max_laying = 1600.0,          # eggs per day (HoPoMo, after Bodenheimer 1937)
@@ -194,6 +194,12 @@ function honeybee(; virus::Bool = false, parameters = HONEYBEE_PARAMETERS, forag
             :recruiting_infected => ctx -> faster,
             :foraging_infected => ctx -> max(0.0, 1 - p.infected_mortality - flying(ctx)) / max(1 - p.hive_mortality - flying(ctx), 1e-9))
         push!(occupies, :infected_adults => [:hive_infected => 1.0, :forager_infected => 1.0])
+        # what a mite taking a new host needs to know: in-hive bees, how many are infected, and
+        # how many leave that class each day (by dying or becoming foragers)
+        push!(occupies, :hive_bees => [:hive_healthy => 1.0, :hive_infected => 1.0])
+        push!(occupies, :infected_hive_bees => [:hive_infected => 1.0])
+        push!(occupies, :host_turnover => (n, env) -> (ctx = (n = n, env = env);
+            n[:hive] * (1 - hardship(ctx) * (1 - p.hive_mortality) * (1 - recruit(ctx)))))
         push!(reads, :viral_phoretic)
     end
     # the stores: a module on two more "stages", merged into the colony
@@ -258,16 +264,16 @@ end
 """
     VARROA_PARAMETERS
 
-Default parameters of [`varroa`](@ref), from the primary literature as summarised in
-reviews; provisional.
+Default parameters of [`varroa`](@ref). The values are those of Martin (1998), checked
+against the parameter list and code of BEEHAVE (Becher et al. 2014), which cite them.
 """
 const VARROA_PARAMETERS = (
     offspring = 1.01,             # viable daughters per foundress per cycle in worker cells (Martin 1994, 1998)
-    emergence_loss = 0.29,        # mites lost when the bee emerges; calibrated to growth of about 0.02 per day (Martin 1998)
-    mortality_summer = 0.006,     # phoretic mites per day in the foraging season (Martin 1998)
+    emergence_loss = 0.30,        # mites that fall and die when the bee emerges from a worker cell (Martin 1998)
+    mortality_summer = 0.006,     # phoretic mites per day in the foraging season (Martin 1998; Fries et al. 1994)
     mortality_winter = 0.002,     # phoretic mites per day in winter (Martin 1998)
-    crowding = 0.5,               # reduction of daughters per extra foundress in a cell (proposed)
-    acquisition = 0.2)            # rate at which phoretic mites acquire virus from infected adults (proposed)
+    crowding = 0.1)               # daughters per foundress are divided by 1 + crowding x (foundresses - 1); Martin (1998,
+                                  # Table 4) gives factors 1, 0.91, 0.86, 0.60 for one to four foundresses, this gives 1, 0.91, 0.83, 0.77
 
 """
     varroa(; virus = false, parameters = VARROA_PARAMETERS, treatment = day -> 0.0, name = :varroa)
@@ -279,8 +285,12 @@ cells being capped; that fraction depends on the pools `capping` and `adult_bees
 by [`honeybee`](@ref). Drone brood, which mites prefer, is not modelled.
 
 With `virus = true` mites are stratified into `clean` and `viral`. A clean mite becomes
-viral by entering a cell with an infected pupa or by feeding on infected adults (pool
-`infected_adults`); viral mites stay viral, and so do their daughters.
+viral by entering a cell with an infected pupa or by taking an infected adult as its host
+(pools `host_turnover`, `hive_bees`, `infected_hive_bees`); viral mites stay viral, and so do
+their daughters. Taking a host follows BEEHAVE: a clean mite that takes a new host, because it has
+just left a cell or because its host died or became a forager, becomes viral with a
+probability equal to the fraction of in-hive bees that are infected. Infection of adult bees
+by viral mites, which BEEHAVE includes (without extra mortality for this virus), is left out.
 
 `treatment(day_of_year)` is an extra daily mortality of phoretic mites.
 """
@@ -314,18 +324,24 @@ function varroa(; virus::Bool = false, parameters = VARROA_PARAMETERS, treatment
     reads = [:capping, :adult_bees, :emerging]
     if virus
         one_way = [1.0 0.0; 1.0 1.0]
-        mites = stratify(mites, [:clean, :viral]; coupling = Dict(:waiting => one_way, :invading => one_way))
+        mites = stratify(mites, [:clean, :viral];
+                         coupling = Dict(t => one_way for t in (:waiting, :invading, :leaving, :daughters)))
         # a clean mite meets the virus in a cell shared with a viral mite, or on infected adult bees
         function in_cell(ctx)
             ctx.pool.capping > 0 || return 0.0
             return infection_per_cell * (1 - exp(-invade(ctx) * ctx.n[:phoretic_viral] / ctx.pool.capping))
         end
-        on_adults(ctx) = ctx.pool.adult_bees > 0 ? 1 - exp(-p.acquisition * ctx.pool.infected_adults / ctx.pool.adult_bees) : 0.0
+        # a mite taking a new host meets the virus with the prevalence among in-hive bees (as in BEEHAVE)
+        prevalence(ctx) = ctx.pool.hive_bees > 0 ? clamp(ctx.pool.infected_hive_bees / ctx.pool.hive_bees, 0.0, 1.0) : 0.0
+        switching(ctx) = ctx.pool.hive_bees > 0 ? clamp(ctx.pool.host_turnover / ctx.pool.hive_bees, 0.0, 1.0) : 0.0
+        on_adults(ctx) = switching(ctx) * prevalence(ctx)
         mites = respond(mites,
             :waiting_clean => ctx -> 1 - on_adults(ctx), :waiting_clean_to_viral => on_adults,
+            :leaving_clean => ctx -> 1 - prevalence(ctx), :leaving_clean_to_viral => prevalence,
+            :daughters_clean => ctx -> 1 - prevalence(ctx), :daughters_clean_to_viral => prevalence,
             :invading_clean => ctx -> 1 - in_cell(ctx), :invading_clean_to_viral => in_cell)
         push!(occupies, :viral_phoretic => [:phoretic_viral => 1.0])
-        push!(reads, :infected_adults)
+        append!(reads, [:hive_bees, :infected_hive_bees, :host_turnover])
     end
     mites = after_step(mites, n -> [x < 1e-6 ? 0.0 : x for x in n])
     return species(name, mites; occupies, reads)

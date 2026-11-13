@@ -71,8 +71,9 @@ sol[:CACL]                                  # biomass by year and stage
 
 ## Status
 
-Early development. The API may change. The Varroa, virus and competition parameters of the
-bee models are provisional (see those vignettes).
+Early development. The API may change. The Varroa and virus parameters of the bee models
+were checked against BEEHAVE; the competition and flower-transmission parameters are
+provisional (see those vignettes).
 
 ## Data and licences
 

@@ -6,7 +6,7 @@ Simon Frost
   pools](#bees-and-mites-meet-through-pools)
 - [The virus is a stratum](#the-virus-is-a-stratum)
 - [Treatment, and its timing](#treatment-and-its-timing)
-- [What is provisional](#what-is-provisional)
+- [Where the numbers come from](#where-the-numbers-come-from)
 - [References](#references)
 
 ``` julia
@@ -91,12 +91,13 @@ plot(years, log10.(mites .+ 1); label = "mites", xlabel = "Year", ylabel = "log1
 (growth_per_day = round(log(mites[211] / mites[151]) / 60; digits = 4), fold_in_first_year = round(mites[366] / 20; digits = 1))
 ```
 
-    (growth_per_day = 0.0193, fold_in_first_year = 16.6)
+    (growth_per_day = 0.0185, fold_in_first_year = 14.2)
 
 Martin (1998) reports 0.021 per day while there is brood and a 12-fold
-increase a year; the proportion of mites lost at emergence was set to
-bring the model close to that. Drone brood, which mites prefer and in
-which they produce more daughters, is not modelled.
+increase a year. Nothing here was tuned to that: the daughters per mite,
+the mites lost at emergence and the mortality are Martin’s values. Drone
+brood, which mites prefer and in which they produce more daughters, is
+not modelled.
 
 In this model mites alone do not harm the bees, following BEEHAVE, in
 which all damage comes through viruses:
@@ -139,8 +140,11 @@ responses that differ for infected bees are attached to the transitions
 of the infected stratum: a fifth of infected pupae die or emerge
 deformed, and infected adults die three times as fast in the hive. Mites
 are stratified the same way (`clean`, `viral`): a clean mite becomes
-viral by sharing a cell with an infected pupa or by feeding on infected
-adults, and stays viral.
+viral by sharing a cell with an infected pupa or by taking an infected
+adult as its host, and stays viral. A mite takes a new host when it
+leaves a cell, or when its host dies or becomes a forager; the chance
+that the new host is infected is the fraction of in-hive bees that are
+(the rule used by BEEHAVE).
 
 ``` julia
 function colony(; treatment = day -> 0.0, years = 5)
@@ -167,11 +171,11 @@ winters = 365 .* (1:5) .+ 1
 ```
 
     5-element Vector{@NamedTuple{year::Int64, adults::Int64, mites_per_100_bees::Float64, infected::Float64}}:
-     (year = 1, adults = 9255, mites_per_100_bees = 3.6, infected = 0.0)
-     (year = 2, adults = 8557, mites_per_100_bees = 64.9, infected = 0.04)
-     (year = 3, adults = 3772, mites_per_100_bees = 706.9, infected = 0.52)
-     (year = 4, adults = 3366, mites_per_100_bees = 758.2, infected = 0.56)
-     (year = 5, adults = 3368, mites_per_100_bees = 738.2, infected = 0.56)
+     (year = 1, adults = 9258, mites_per_100_bees = 3.1, infected = 0.0)
+     (year = 2, adults = 8840, mites_per_100_bees = 47.8, infected = 0.02)
+     (year = 3, adults = 3780, mites_per_100_bees = 1149.9, infected = 0.52)
+     (year = 4, adults = 2913, mites_per_100_bees = 2402.1, infected = 0.68)
+     (year = 5, adults = 2832, mites_per_100_bees = 2424.9, infected = 0.68)
 
 A colony of fewer than about 4,000 bees is usually taken not to survive
 the winter (BEEHAVE; Kielmanowicz et al. 2015), so this colony is
@@ -199,8 +203,8 @@ plot(untreated.t ./ 365, [adults(untreated) adults(early) adults(late)];
 ```
 
     3-element Vector{@NamedTuple{treatment::String, winter_5_adults::Int64, mites::Int64}}:
-     (treatment = "none", winter_5_adults = 3368, mites = 24870)
-     (treatment = "days 200-240", winter_5_adults = 6049, mites = 5487)
+     (treatment = "none", winter_5_adults = 2832, mites = 68705)
+     (treatment = "days 200-240", winter_5_adults = 7810, mites = 2165)
      (treatment = "days 270-310", winter_5_adults = 9272, mites = 0)
 
 Treating in October, when there is no brood for the mites to hide in,
@@ -212,14 +216,24 @@ winter bees are reared; in this model the absence of brood matters more,
 which may reflect its lack of drone brood and of mites arriving from
 other colonies.)
 
-## What is provisional
+## Where the numbers come from
 
-The mite and virus parameters are taken from Martin (1998, 2001) and
-BEEHAVE as summarised in reviews; the primary papers were not available
-when this was written, and only the mite growth rate was checked against
-the original abstract. They are listed in `VARROA_PARAMETERS` and
-`HONEYBEE_PARAMETERS`. The rate at which mites acquire virus from adult
-bees, and the effect of several mites sharing a cell, are assumptions.
+The mite and virus parameters are those of Martin (1998, 2001), checked
+against the parameter list and program code of BEEHAVE (Becher et
+al. 2014), which cite them: 1.01 daughters per mite in a worker cell,
+30% of mites lost at emergence, mite mortality of 0.006 a day with brood
+and 0.002 without, transmission from mite to pupa of 0.89, death of a
+fifth of infected pupae, adult mortality of 0.012 a day after infection
+as a pupa, and a treatment killing 11.5% of phoretic mites a day for 40
+days. They are listed in `VARROA_PARAMETERS` and `HONEYBEE_PARAMETERS`.
+Martin’s papers themselves were not read.
+
+Three things differ from those sources. Several mites sharing a cell
+leave fewer daughters each: Martin gives factors of 1, 0.91, 0.86 and
+0.60 for one to four mites, and the smooth form used here gives 1, 0.91,
+0.83 and 0.77. Mite mortality switches with the foraging season, not
+with the presence of brood. And viral mites do not infect adult bees,
+which BEEHAVE allows (without extra mortality for this virus).
 
 ## References
 

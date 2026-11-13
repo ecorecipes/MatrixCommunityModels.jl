@@ -216,11 +216,11 @@ summer = 365 .* (0:5) .+ 200
 
     6-element Vector{@NamedTuple{year::Int64, honey_bees::Float64, bumblebees::Float64}}:
      (year = 1, honey_bees = 0.0, bumblebees = 0.0)
-     (year = 2, honey_bees = 0.21, bumblebees = 0.11)
-     (year = 3, honey_bees = 0.6, bumblebees = 0.24)
-     (year = 4, honey_bees = 0.6, bumblebees = 0.21)
-     (year = 5, honey_bees = 0.59, bumblebees = 0.21)
-     (year = 6, honey_bees = 0.59, bumblebees = 0.21)
+     (year = 2, honey_bees = 0.14, bumblebees = 0.08)
+     (year = 3, honey_bees = 0.77, bumblebees = 0.28)
+     (year = 4, honey_bees = 0.83, bumblebees = 0.23)
+     (year = 5, honey_bees = 0.83, bumblebees = 0.22)
+     (year = 6, honey_bees = 0.83, bumblebees = 0.24)
 
 Bumblebee prevalence follows the hive’s, with no route of its own: when
 the hive is treated for mites, the virus all but disappears from both.
@@ -231,7 +231,7 @@ maximum(stage_total(treated, :bumblebee, :infected_worker) ./
         max.(stage_total(treated, :bumblebee, [:worker, :infected_worker]), 1e-9))
 ```
 
-    0.009940926669910682
+    0.008881983331943922
 
 In a field survey, DWV was found in 36% of honey bees and 11% of
 bumblebees at the same sites, and was far more prevalent in both where
