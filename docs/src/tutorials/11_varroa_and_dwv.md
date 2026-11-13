@@ -15,7 +15,7 @@ using MatrixCommunityModels
 using Plots
 ```
 
-The [previous vignette](../10_honeybee_colony/10_honeybee_colony.md)
+The [previous vignette](10_honeybee_colony.md)
 built a honey bee colony. This one adds the mite *Varroa destructor* as
 a second species, and then deformed wing virus (DWV) as a second
 *stratum* of both species.
