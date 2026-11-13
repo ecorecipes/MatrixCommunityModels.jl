@@ -136,17 +136,28 @@ their own transitions (`honey_kept`, `pollen_kept`: what is left after
 the day’s consumption) and inflows (what the foragers bring in). They
 are written as a separate net and merged into the bees with `⊕`.
 
+Drones are a third module: a second life cycle (`drone_egg`,
+`drone_larva`, `drone_pupa`, `drone`, lasting 3, 7 and 14 days as brood)
+on its own stages, merged in the same way. From late April to late
+August the queen lays one drone egg for every 25 worker eggs. Drones eat
+and need nursing but do no work; they are here because of what the next
+vignette adds.
+
 ``` julia
 colony = honeybee()
-stage_names(colony, :honeybee)[[1, 4, 9, 21, 22, 23, 24]]
+stage_names(colony, :honeybee)[[1, 4, 9, 21, 22, 23, 26, 33, 47, 48, 49]]
 ```
 
-    7-element Vector{Symbol}:
+    11-element Vector{Symbol}:
      :egg1
      :larva1
      :pupa1
      :hive
      :forager
+     :drone_egg1
+     :drone_larva1
+     :drone_pupa1
+     :drone
      :honey
      :pollen
 
@@ -154,8 +165,15 @@ stage_names(colony, :honeybee)[[1, 4, 9, 21, 22, 23, 24]]
 transition_names(system(colony)[:honeybee])
 ```
 
-    11-element Vector{Symbol}:
+    18-element Vector{Symbol}:
      :capping
+     :drone_capping
+     :drone_egg_ageing
+     :drone_emerging
+     :drone_hatching
+     :drone_larva_ageing
+     :drone_life
+     :drone_pupa_ageing
      :egg_ageing
      :emerging
      :foraging
@@ -190,7 +208,7 @@ second = 366:731
  reared_per_year = round(Int, sum(stage_total(sol, :honeybee, :pupa12)[second])))
 ```
 
-    (peak_adults = 35574, on_day = 203, winter_cluster = 9272, reared_per_year = 135916)
+    (peak_adults = 35338, on_day = 203, winter_cluster = 9228, reared_per_year = 135062)
 
 Published colonies peak at 40,000 to 60,000 adults in July, overwinter
 with roughly 10,000 and rear 120,000 to 150,000 workers a year (Seeley;
@@ -217,7 +235,7 @@ net = frozen_net(colony, :honeybee, sol.u[june + 1, :], june)
  hive_life = transition_matrix(net, :hive_life)[21, 21])
 ```
 
-    (recruiting = 0.04240952562024547, foraging = 0.896, hive_life = 0.9535904743797545)
+    (recruiting = 0.04240223802017676, foraging = 0.896, hive_life = 0.9535977619798232)
 
 In June a hive bee has about a 4% chance per day of becoming a forager,
 and a forager about a 10% chance per day of dying.

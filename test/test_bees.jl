@@ -9,7 +9,8 @@
         colony = honeybee()
         @test species_names(colony) == [:honeybee]
         names = stage_names(colony, :honeybee)
-        @test length(names) == 3 + 5 + 12 + 2 + 2 && names[1] == :egg1 && names[end] == :pollen
+        @test length(names) == 3 + 5 + 12 + 2 + (3 + 7 + 14 + 1) + 2 && names[1] == :egg1 && names[end] == :pollen
+        @test length(stage_names(honeybee(drones = false), :honeybee)) == 3 + 5 + 12 + 2 + 2
         @test Set(transition_names(system(colony)[:honeybee])) ⊇ Set([:hatching, :capping, :emerging, :recruiting, :larva_ageing, :honey_kept])
         sol = project(colony, honeybee_state(colony), 1:(365 * 3))
         a = adults(sol)
@@ -19,6 +20,11 @@
         @test 110_000 < sum(stage_total(sol, :honeybee, :pupa12)[year(2)]) < 160_000   # bees reared in a year
         @test stage_total(sol, :honeybee, :honey)[end] > 30_000      # stores carry the colony through winter
         @test maximum(a[year(3)]) ≈ maximum(a[year(2)]) rtol = 0.01  # a stable annual cycle
+        # drones in summer only, a few hundred of them; no brood at all for a few weeks in midwinter
+        d = stage_total(sol, :honeybee, :drone)
+        @test 200 < maximum(d[year(2)]) < 1500 && d[365 * 2 + 1] < 1
+        brood = stage_total(sol, :honeybee, [:egg, :larva, :pupa, :drone_egg, :drone_larva, :drone_pupa])
+        @test 10 < count(<(1), brood[year(2)]) < 60
         # a colony too small to function dies, and its stores remain
         small = project(colony, honeybee_state(colony; adults = 500), 1:120)
         @test adults(small)[end] == 0 && stage_total(small, :honeybee, :honey)[end] > 20_000
@@ -27,12 +33,18 @@
     @testset "varroa" begin
         c = community(honeybee(), varroa())
         @test species_names(c) == [:honeybee, :varroa]
-        @test length(stage_names(c, :varroa)) == 13
+        @test length(stage_names(c, :varroa)) == 1 + 12 + 15
         sol = project(c, honeybee_state(c; mites = 20), 1:(365 * 2))
         m = abundance(sol, :varroa)
-        @test 0.015 < log(m[211] / m[151]) / 60 < 0.025              # about 0.02 per day while there is brood
-        @test 10 < m[366] / 20 < 25                                  # of the order of the 12-fold of Martin (1998)
-        @test m[366] < m[300]                                        # decline over the broodless winter
+        @test 0.025 < log(m[211] / m[151]) / 60 < 0.04               # about 0.03 per day with drone brood
+        @test m[366] < m[300]                                        # decline over winter
+        # without drone brood: about 0.02 per day, and of the order of the 12-fold a year of Martin (1998)
+        w = community(honeybee(drones = false), varroa(drones = false))
+        @test length(stage_names(w, :varroa)) == 13
+        mw = abundance(project(w, honeybee_state(w; mites = 20), 1:(365 * 2)), :varroa)
+        @test 0.015 < log(mw[211] / mw[151]) / 60 < 0.025
+        @test 6 < mw[366] / 20 < 20
+        @test m[366] > 3 * mw[366]
         # without virus the mites do not harm the bees in this model
         alone = project(honeybee(), honeybee_state(honeybee()), 1:(365 * 2))
         @test adults(sol) ≈ adults(alone) rtol = 1e-9
@@ -48,7 +60,11 @@
         end
         c, sick = run()
         @test :hive_infected in stage_names(c, :honeybee) && :phoretic_viral in stage_names(c, :varroa)
-        @test :capping_healthy_to_infected in transition_names(system(c)[:honeybee])
+        @test :hive_carrier in stage_names(c, :honeybee)
+        @test Set(transition_names(system(c)[:honeybee])) ⊇ Set([:capping_healthy_to_infected, :hive_life_healthy_to_carrier,
+                                                                  :drone_larva_ageing_healthy_to_infected])
+        @test Set(transition_names(system(c)[:varroa])) ⊇ Set([:invading_clean_to_viral, :daughters_viral_to_clean,
+                                                                :leaving_drone_clean_to_viral])
         @test :viral_phoretic in pool_names(c) && :infected_adults in pool_names(c)
         _, well = run(treatment = d -> 270 <= d < 310 ? 0.115 : 0.0)
         winter = 365 * 3 + 1
@@ -57,6 +73,14 @@
         @test infected(sick)[winter] / adults(sick)[winter] > 0.3
         @test infected(well)[winter] / adults(well)[winter] < 0.01
         @test stage_total(sick, :varroa, :viral)[winter] / abundance(sick, :varroa)[winter] > 0.95
+        # bees infected as adults carry the virus without dying of it
+        carriers(sol) = stage_total(sol, :honeybee, [:hive_carrier, :forager_carrier])
+        @test carriers(sick)[winter] / adults(sick)[winter] > 0.2
+        @test sum(stage_total(sick, :honeybee, [:egg_carrier, :larva_carrier, :pupa_carrier, :drone_carrier])) == 0
+        # a cell takes at most four mites, however many there are (a little brood dies after they enter)
+        cells, pupae = stage_total(sick, :varroa, :cell12), stage_total(sick, :honeybee, :pupa12)
+        @test 3.5 < maximum(cells[pupae .> 1] ./ pupae[pupae .> 1]) < 4.1
+        @test maximum(abundance(sick, :varroa)) > 10_000
         # virus without mites goes nowhere
         lone = honeybee(virus = true)
         @test sum(infected(project(lone, honeybee_state(lone), 1:400))) == 0
@@ -97,11 +121,15 @@
         queens(sol) = stage_total(sol, :bumblebee, :hibernating)[end]
         c, none = joint(:scramble; hives = 0)
         @test Set(pool_names(c)) ⊇ Set([:hb_nectar, :hb_pollen, :bb_nectar, :bb_pollen])
-        _, many = joint(:scramble; hives = 3)
+        _, many = joint(:scramble; hives = 10)
         @test queens(many) < queens(none)                            # exploitative competition
         # a refuge that only bumblebees can use protects them from the same hives
-        _, refuge = joint(:preemptive; hives = 3, refuge = 0.3)
+        _, refuge = joint(:preemptive; hives = 10, refuge = 0.3)
         @test queens(refuge) > queens(many)
+        # two hives per square kilometre are within the default supply: they thrive and bumblebees are unaffected
+        _, few = joint(:scramble; hives = 2)
+        @test queens(few) ≈ queens(none) rtol = 0.01
+        @test maximum(adults(few)[year(4)]) > 30_000
         # a standing crop adds a flowers species and its stock pools
         cs, crop = joint(:standing_crop; hives = 1, years = 2)
         @test :flowers in species_names(cs) && :nectar_stock in pool_names(cs)
@@ -112,6 +140,10 @@
         cv, spill = joint(:scramble; hives = 1, virus = true, treatment = d -> 0.0)
         @test :infectious_visits in pool_names(cv)
         @test maximum(stage_total(spill, :bumblebee, :infected_worker)) > 0
+        # about a tenth of bumblebee workers in midsummer, of the order found in field surveys
+        day = 365 * 2 + 200
+        @test 0.03 < stage_total(spill, :bumblebee, :infected_worker)[day] /
+                     stage_total(spill, :bumblebee, [:worker, :infected_worker])[day] < 0.2
         _, clean = joint(:scramble; hives = 0, virus = true)
         @test maximum(stage_total(clean, :bumblebee, :infected_worker)) == 0
     end
