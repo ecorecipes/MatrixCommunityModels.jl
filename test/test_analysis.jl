@@ -107,8 +107,11 @@ end
     @test community_matrix(com, n, nothing)[1:2, 1:2] ≈ mpm.A
     # the single-species tools of MatrixProjectionModels.jl apply to the frozen model
     @test MatrixProjectionModels.lambda(mpm) ≈ (0.5 + sqrt(0.25 + 4 * 0.3 * 3.6)) / 2
-    # 0.3 x 3.6 / 0.5 = 2.16 by hand; MatrixProjectionModels returns 2.126 (difference not yet understood)
-    @test MatrixProjectionModels.net_repro_rate(mpm.U, mpm.F) ≈ 0.3 * 3.6 / 0.5 rtol = 0.05
+    # R0 = (F N)[1, 1] = 0.3 x 3.6 / (1 - 0.5) = 2.16 exactly, from the fundamental matrix
+    @test MatrixProjectionModels.net_repro_rate(mpm.U, mpm.F; method = :fundamental) ≈ 0.3 * 3.6 / 0.5
+    # the default (:generation) sums the life table only until survivorship falls below 0.01,
+    # here seven ages, so it gives 2.16 x (1 - 0.5^6)
+    @test MatrixProjectionModels.net_repro_rate(mpm.U, mpm.F) ≈ 2.16 * (1 - 0.5^6)
 end
 
 @testset "equilibrium, stability, invasion" begin
