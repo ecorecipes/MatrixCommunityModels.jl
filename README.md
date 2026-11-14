@@ -19,6 +19,9 @@ simulation loop.
   *responses* that say how a named transition depends on shared pools and the environment.
 - Composition along Catlab undirected wiring diagrams (`compose`), or by pool name
   (`community`). Composites nest. The result is a `PooledProjectionSystem`.
+- Integral projection models in the same communities: a stage may carry a continuous
+  trait (`ContinuousStage`), with kernels as its named transitions (`kernel_net`). Such a
+  species composes with matrix models through the same pools.
 - Projection (`project`) lowers the community to a `CoupledMPMProblem` and solves it with
   MatrixProjectionModels.jl. A species frozen at any state is an ordinary
   `MatrixProjectionModel` (`matrix_model`) or net (`frozen_net`).
@@ -30,6 +33,9 @@ simulation loop.
   River fish model (identical output), the Yampa River riparian guild model (within 4e-16,
   plus a corrected variant), and the adapt3 Cypripedium community (within 2e-15).
 - A honey bee, *Varroa*, deformed wing virus and bumblebee community, built step by step.
+- A native thistle (the IPM of Rose et al. 2005, whose equilibria are reproduced), musk
+  thistle (the matrix model of Jongejans et al. 2008, growth rate 1.748 as published) and
+  the flower-head weevil they share.
 
 ## Installation
 
@@ -60,7 +66,7 @@ sol[:CACL]                                  # biomass by year and stage
 | 3 | [Riparian guilds](vignettes/03_riparian_guilds/03_riparian_guilds.md) ([PDF](vignettes/03_riparian_guilds/03_riparian_guilds.pdf)) | Five guilds linked by space; original and corrected |
 | 4 | [Two orchids](vignettes/04_adapt3_cypripedium/04_adapt3_cypripedium.md) ([PDF](vignettes/04_adapt3_cypripedium/04_adapt3_cypripedium.pdf)) | An adapt3 community projection reproduced |
 | 5 | [Cross-species sensitivity](vignettes/05_cross_species_sensitivity/05_cross_species_sensitivity.md) ([PDF](vignettes/05_cross_species_sensitivity/05_cross_species_sensitivity.pdf)) | Interactions revealed by perturbing vital rates; the interaction network |
-| 6 | [Composing IPMs](vignettes/06_composing_ipms/06_composing_ipms.md) ([PDF](vignettes/06_composing_ipms/06_composing_ipms.pdf)) | An integral projection model and a matrix model sharing a pool |
+| 6 | [Composing IPMs](vignettes/06_composing_ipms/06_composing_ipms.md) ([PDF](vignettes/06_composing_ipms/06_composing_ipms.pdf)) | An integral projection model and a matrix model sharing a pool; kernels that respond to pools; a seed bank |
 | 7 | [Metacommunity](vignettes/07_metacommunity/07_metacommunity.md) ([PDF](vignettes/07_metacommunity/07_metacommunity.pdf)) | Patches as nested communities, dispersal as a pool |
 | 8 | [Equilibria, invasion and chance](vignettes/08_equilibria_invasion_chance/08_equilibria_invasion_chance.md) ([PDF](vignettes/08_equilibria_invasion_chance/08_equilibria_invasion_chance.pdf)) | Analytic sensitivities, invasion rates in fluctuating environments, demographic stochasticity |
 | 9 | [Seasons and phenology](vignettes/09_seasons_and_phenology/09_seasons_and_phenology.md) ([PDF](vignettes/09_seasons_and_phenology/09_seasons_and_phenology.pdf)) | Within-year steps, a lottery for space, coexistence by timing, drift |
@@ -68,13 +74,16 @@ sol[:CACL]                                  # biomass by year and stage
 | 11 | [Bees 2: Varroa and deformed wing virus](vignettes/11_varroa_and_dwv/11_varroa_and_dwv.md) ([PDF](vignettes/11_varroa_and_dwv/11_varroa_and_dwv.pdf)) | Mites as a second species, the virus as a stratum, treatment timing |
 | 12 | [Bees 3: a bumblebee population](vignettes/12_bumblebees/12_bumblebees.md) ([PDF](vignettes/12_bumblebees/12_bumblebees.pdf)) | The annual colony cycle from three modules, nest sites |
 | 13 | [Bees 4: sharing flowers](vignettes/13_bees_sharing_flowers/13_bees_sharing_flowers.md) ([PDF](vignettes/13_bees_sharing_flowers/13_bees_sharing_flowers.pdf)) | Four forms of competition for nectar and pollen, and virus spillover |
+| 14 | [Thistles and a weevil](vignettes/14_thistles_and_weevil/14_thistles_and_weevil.md) ([PDF](vignettes/14_thistles_and_weevil/14_thistles_and_weevil.pdf)) | A published IPM of a native thistle, a published matrix model of a weed and the weevil they share |
 
 ## Status
 
 Early development. The API may change. The Varroa and virus rules and parameters of the bee
 models follow BEEHAVE and were checked against its code. The floral supply rests on
 published measurements; the overlap, refuge and virus-on-flowers rates are assumptions
-(see vignette 13).
+(see vignette 13). In the thistle community the two plant models are published; the
+weevil's winter survival is calibrated, and how the species share weevils rests on
+assumptions listed in vignette 14.
 
 ## Data and licences
 

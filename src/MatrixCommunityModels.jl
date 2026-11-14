@@ -19,7 +19,8 @@ using LinearAlgebra
 using Catlab: Catlab, UndirectedWiringDiagram, RelationDiagram, nparts, subpart, ports,
               junction, add_box!, add_junctions!, set_junction!
 import StructuredPopulationCore
-using StructuredPopulationCore: StateBlockLayout
+using StructuredPopulationCore: StateBlockLayout, ContinuousDomain
+import StructuredPopulationCore: meshpoints, step_size
 import MatrixProjectionModels
 using MatrixProjectionModels: MatrixProjectionModel, DirectIteration
 import CategoricalPopulationDynamics
@@ -27,7 +28,7 @@ using CategoricalPopulationDynamics: ValuedProjectionNet, ResponsiveProjectionNe
     StageVector, Pool, PooledProjectionSystem, StateDependentMPMTarget,
     respond, inflow, after_step, births, context, expand_stage, expand_stages, stratify,
     stratum_stage, stratum_transition, transition_names, transition_matrix, to_matrix,
-    evaluate, survival_fecundity_matrices, ⊕
+    evaluate, survival_fecundity_matrices, ⊕, left_kan_extension
 import CategoricalPopulationDynamics: stage_names, pool_names, pool_totals, advance
 
 # the modelling vocabulary of CategoricalPopulationDynamics.jl, re-exported
@@ -39,6 +40,7 @@ export ValuedProjectionNet, ResponsiveProjectionNet, ResponseContext, StageVecto
 export OpenCommunity, CommunityTrajectory
 export species, community, compose, system, species_names, pool_names, diagram
 export subcommunity, matrix_net
+export ContinuousStage, ContinuousDomain, meshpoints, step_size, kernel_net, responsive, by_trait, trait_weights
 export project, advance, pool_totals, community_matrix, frozen_net, matrix_model, state_vector
 
 # A view of the pool totals under a component's own (local) pool names.
@@ -460,6 +462,8 @@ function community_matrix(c::OpenCommunity, n::AbstractVector, env)
     return A
 end
 
+include("kernels.jl")
+
 include("analysis.jl")
 export equilibrium, jacobian, invasion_growth_rate, mean_abundance, abundance_sensitivity
 export equilibrium_sensitivity, stochastic_invasion_rate
@@ -474,5 +478,9 @@ include("bees.jl")
 export day_of_year, hopomo_season, forage_index, flight_index
 export honeybee, honeybee_state, varroa, bumblebee, floral_supply, floral_competition, flower_transmission
 export HONEYBEE_PARAMETERS, VARROA_PARAMETERS, BUMBLEBEE_PARAMETERS
+
+include("thistles.jl")
+export platte_thistle, platte_thistle_stage, musk_thistle, flowerhead_weevil
+export PLATTE_THISTLE_PARAMETERS, MUSK_THISTLE_PARAMETERS, WEEVIL_PARAMETERS
 
 end # module MatrixCommunityModels

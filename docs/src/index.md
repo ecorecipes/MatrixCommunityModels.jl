@@ -24,7 +24,7 @@ on Catlab.jl.
 - [Cross-species sensitivity](tutorials/05_cross_species_sensitivity.md): interactions
   revealed by perturbing vital rates, and the resulting network.
 - [Composing IPMs](tutorials/06_composing_ipms.md): an integral projection model and a
-  matrix model sharing a pool.
+  matrix model sharing a pool, kernels that respond to pools, and a seed bank.
 - [Metacommunity](tutorials/07_metacommunity.md): patches as nested communities, with
   dispersal as a pool.
 - [Equilibria, invasion and chance](tutorials/08_equilibria_invasion_chance.md): analytic
@@ -35,6 +35,9 @@ on Catlab.jl.
   [Varroa and deformed wing virus](tutorials/11_varroa_and_dwv.md),
   [a bumblebee population](tutorials/12_bumblebees.md) and
   [sharing flowers](tutorials/13_bees_sharing_flowers.md): a community built step by step.
+- [Thistles and a weevil](tutorials/14_thistles_and_weevil.md): a published integral
+  projection model of a native thistle, a published matrix model of an invasive thistle,
+  and the weevil they share.
 
 Each tutorial is a Quarto vignette, also available as
 [HTML and PDF in the repository](https://github.com/ecorecipes/MatrixCommunityModels.jl/tree/main/vignettes).
