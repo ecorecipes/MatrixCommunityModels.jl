@@ -23,7 +23,7 @@ MatrixProjectionModels = {url = "https://github.com/ecorecipes/MatrixProjectionM
 StructuredPopulationCore = {url = "https://github.com/ecorecipes/ProjectionModels.jl"}
 
 [compat]
-CategoricalPopulationDynamics = "0.1"
+CategoricalPopulationDynamics = "0.1.1"
 Catlab = "0.17"
 Graphs = "1"
 LinearAlgebra = "1"

@@ -144,7 +144,6 @@ function kernel_net(stages::AbstractVector, transitions::Pair{Symbol}...; rule::
     allunique(names) || throw(ArgumentError("stage names must be unique, got $names"))
     cells = reduce(vcat, [_stage_cells(s) for s in stages])
     allunique(cells) || throw(ArgumentError("a stage name clashes with the cell names of a continuous stage"))
-    position = Dict(c => i for (i, c) in enumerate(cells))
     by_name = Dict{Symbol, Any}(_stage_name(s) => s for s in stages)
     ranges = Dict{Symbol, UnitRange{Int}}()
     start = 1
@@ -185,7 +184,7 @@ function kernel_net(stages::AbstractVector, transitions::Pair{Symbol}...; rule::
             end
         end
         push!(matrices, tname => M)
-        isempty(varying) || push!(responses, tname => _kernel_response(varying, position, k, rule))
+        isempty(varying) || push!(responses, tname => _kernel_response(varying, k, rule))
     end
     groups = Dict{Symbol, Vector{Int}}(s.name => collect(ranges[s.name]) for s in stages if s isa ContinuousStage)
     return ResponsiveProjectionNet(matrix_net(cells, matrices...); responses, groups)
@@ -193,14 +192,14 @@ end
 kernel_net(stage::ContinuousStage, transitions::Pair{Symbol}...; kwargs...) = kernel_net([stage], transitions...; kwargs...)
 
 # The response of a transition with responsive kernels: its entries have the base value one, and are
-# multiplied by this step's kernel values.
-function _kernel_response(varying, position::Dict{Symbol, Int}, k::Int, rule::Symbol)
+# multiplied by this step's kernel values, returned as a matrix laid out like the projection matrix.
+function _kernel_response(varying, k::Int, rule::Symbol)
     return function (ctx)
         values = ones(Float64, k, k)
         for (rows, cols, to, from, f) in varying
             values[rows, cols] .= _kernel_block(f(ctx), to, from, rule)
         end
-        return (from, to) -> values[position[to], position[from]]
+        return values
     end
 end
 

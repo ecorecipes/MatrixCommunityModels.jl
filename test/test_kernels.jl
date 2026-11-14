@@ -85,6 +85,11 @@ using Random
         U, B = survival_fecundity_matrices(net, half)
         @test U ≈ [h * slowed(500.0)(y, x) for y in z, x in z]          # the growth kernel has changed shape
         @test B ≈ 0.5 .* [h * F(y, x) for y in z, x in z]               # the seeding kernel has only been scaled
+        # the net can still be refined: replicated in two strata, each stratum has the kernel of the moment
+        two = stratify(net, [:north, :south])
+        @test stage_names(two)[[1, 51]] == [:plant1_north, :plant1_south]
+        U2, B2 = survival_fecundity_matrices(two, context(two, zeros(100), (space = 500.0,), nothing))
+        @test U2 == kron(Matrix(1.0I, 2, 2), U) && B2 == kron(Matrix(1.0I, 2, 2), B)
         # equilibrium and invasion analysis do not depend on the mesh
         function at_equilibrium(cells)
             plant, sp = perennial(cells)
