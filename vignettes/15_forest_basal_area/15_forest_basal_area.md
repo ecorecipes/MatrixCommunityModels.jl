@@ -503,10 +503,10 @@ end
 ```
 
     cells   states   ms per step   settled basal area: spruce     fir   beech
-      100      114           0.3                        37.51   43.96   40.51
-      200      214           1.3                        36.90   43.36   44.32
-      350      364           3.8                        36.69   42.76   43.53
-      700      714          14.8                        36.67   42.60   42.55
+      100      114           0.2                        37.51   43.96   40.51
+      200      214           0.9                        36.90   43.36   44.32
+      350      364           2.6                        36.69   42.76   43.53
+      700      714          10.5                        36.67   42.60   42.55
 
 The time is for one year of spruce alone, on the machine that rendered
 this page; the three species together take three times as long. Almost
@@ -518,9 +518,12 @@ matreex works differently. Before a run it tabulates the kernel of each
 species at every whole number of m² per hectare, which took it 36 to 63
 seconds for a species on the machine used for the reference runs, and
 during a run it interpolates between the two nearest tables, at about 5
-ms a year for spruce alone. Here nothing is tabulated and the kernel is
-exact at the basal area of the year, at several times the cost for each
-year.
+ms a year for spruce alone. Here the kernel is by default exact at the
+basal area of the year, at several times the cost for each year.
+`forest_tree(kind; tabulate = 0:1:80)` does what matreex does instead:
+the kernel is built once at each whole number of m² per hectare that the
+stand reaches and interpolated in between, which makes a year about five
+times faster and keeps the basal area within 1e-4 of the exact run.
 
 The mesh matters more here than in the earlier vignettes, where a pool
 total hardly changed with the number of cells. On a coarse mesh trees

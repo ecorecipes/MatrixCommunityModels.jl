@@ -13,8 +13,9 @@
     SEA_FAN_PARAMETERS
 
 Default parameters of [`sea_fan`](@ref): the integral projection model of the sea fan
-*Gorgonia ventalina* of Bruno, Ellner, Vu, Kim & Harvell (2011), fitted to colonies
-followed in the Yucatán from 2002 to 2005. Size is the cube root of the area of healthy
+*Gorgonia ventalina* of Bruno, Ellner, Vu, Kim & Harvell (2011), fitted to about 750
+colonies followed from 2002 to 2005 on five reefs, two in the Florida Keys and three off
+the Yucatán. Size is the cube root of the area of healthy
 tissue in cm², and the time step is a year. The rates that changed over the epizootic are
 in [`SEA_FAN_PHASES`](@ref). Sources of the values are in the comments of `src/seafans.jl`.
 """
@@ -47,7 +48,7 @@ const SEA_FAN_PARAMETERS = (
 The three phases of the aspergillosis epizootic in [`sea_fan`](@ref), after Bruno et al.
 (2011): `pre_epizootic` (before 1994), `peak` (the outbreak, fitted to surveys of 1997 to
 1999 in the Florida Keys) and `endemic` (after the peak, from colonies followed in the
-Yucatán from 2002 to 2005). A phase is the environment of a time step, so an epizootic is
+Florida Keys and the Yucatán from 2002 to 2005). A phase is the environment of a time step, so an epizootic is
 a sequence of phases:
 
 ```julia

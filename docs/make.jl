@@ -31,7 +31,10 @@ makedocs(;
                                   size_threshold = 300 * 1024),
          pages = ["Home" => "index.md",
                   "Tutorials" => tutorial_pages(),
-                  "API Reference" => "api.md"])
+                  "API Reference" => ["Composing communities" => "api/communities.md",
+                                      "Analysis" => "api/analysis.md",
+                                      "IPMs and kernels" => "api/kernels.md",
+                                      "Published models" => "api/models.md"]])
 
 if get(ENV, "CI", "false") == "true"
     deploydocs(; repo = "github.com/ecorecipes/MatrixCommunityModels.jl.git", push_preview = true)

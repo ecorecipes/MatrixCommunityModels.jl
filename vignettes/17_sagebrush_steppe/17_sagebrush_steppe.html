@@ -2371,7 +2371,10 @@ window.Quarto = {
   <li><a href="#does-each-species-invade-when-rare" id="toc-does-each-species-invade-when-rare" class="nav-link" data-scroll-target="#does-each-species-invade-when-rare">Does each species invade when rare?</a></li>
   <li><a href="#removing-the-niche-differences" id="toc-removing-the-niche-differences" class="nav-link" data-scroll-target="#removing-the-niche-differences">Removing the niche differences</a></li>
   <li><a href="#where-the-niche-differences-lie" id="toc-where-the-niche-differences-lie" class="nav-link" data-scroll-target="#where-the-niche-differences-lie">Where the niche differences lie</a></li>
-  <li><a href="#years-that-differ" id="toc-years-that-differ" class="nav-link" data-scroll-target="#years-that-differ">Years that differ</a></li>
+  <li><a href="#years-that-differ" id="toc-years-that-differ" class="nav-link" data-scroll-target="#years-that-differ">Years that differ</a>
+  <ul class="collapse">
+  <li><a href="#exclusion-when-years-differ" id="toc-exclusion-when-years-differ" class="nav-link" data-scroll-target="#exclusion-when-years-differ">Exclusion when years differ</a></li>
+  </ul></li>
   <li><a href="#the-comparison-with-ipmdoit-and-the-papers" id="toc-the-comparison-with-ipmdoit-and-the-papers" class="nav-link" data-scroll-target="#the-comparison-with-ipmdoit-and-the-papers">The comparison with IPMdoit and the papers</a></li>
   <li><a href="#what-is-measured-and-what-is-assumed" id="toc-what-is-measured-and-what-is-assumed" class="nav-link" data-scroll-target="#what-is-measured-and-what-is-assumed">What is measured and what is assumed</a></li>
   <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
@@ -2645,6 +2648,7 @@ P. secunda falls below a hundredth of its cover after 16 years
 P. spicata falls below a hundredth of its cover after 78 years</code></pre>
 </div>
 </div>
+<p>These are mean years. Adler et al. (2010) give three to four centuries for the exclusion, and their simulations are taken to draw a year at random each step, as IPMdoit does; the same experiment with drawn years is run at the end of the section “Years that differ”.</p>
 </section>
 <section id="where-the-niche-differences-lie" class="level2">
 <h2 class="anchored" data-anchor-id="where-the-niche-differences-lie">Where the niche differences lie</h2>
@@ -2724,6 +2728,53 @@ P. spicata                   1.245614   1.245614      1.1867       78%</code></p
 </div>
 </div>
 <p>Fluctuations raise the growth rate of every invader. For the grasses most of the growth when rare is already there in the mean year, so it comes from mechanisms that do not need fluctuations; for the shrub, most of it comes with the fluctuations. This comparison is a rough one: the residents also differ between the two settings, and it is not the partition of Adler et al. (2010), which could not be read.</p>
+<section id="exclusion-when-years-differ" class="level3">
+<h3 class="anchored" data-anchor-id="exclusion-when-years-differ">Exclusion when years differ</h3>
+<p>Without niche differences the grasses fell to a hundredth of their cover in 16 to 80 mean years, where Adler et al. (2010) report three to four centuries. Their simulations are taken to draw the years, so the experiment is repeated here with a year drawn at random from the 22 for each step. The community starts, as before, at the mean-year equilibrium of the full model. A grass counts as excluded in the first year its cover is below a hundredth of its starting cover (the definition used above); the first year below a ten-thousandth is given as a stricter one. There are 40 sequences of years, drawn with <code>Xoshiro(seed)</code> for seeds 1 to 40.</p>
+<div id="34" class="cell" data-execution_count="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="im">using</span> <span class="bu">Random</span>, <span class="bu">Statistics</span></span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a><span class="co"># the first year each grass is below a share (1e-2, then 1e-4) of its starting cover</span></span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">exclusion_years</span>(envs)</span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>    n <span class="op">=</span> <span class="fu">copy</span>(together)</span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>    c0 <span class="op">=</span> <span class="fu">cover</span>(flat, n)</span>
+<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a>    when <span class="op">=</span> <span class="fu">zeros</span>(<span class="dt">Int</span>, <span class="fl">3</span>, <span class="fl">2</span>)</span>
+<span id="cb29-7"><a href="#cb29-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> (t, env) <span class="kw">in</span> <span class="fu">enumerate</span>(envs)</span>
+<span id="cb29-8"><a href="#cb29-8" aria-hidden="true" tabindex="-1"></a>        n <span class="op">=</span> <span class="fu">advance</span>(flat, n, env)</span>
+<span id="cb29-9"><a href="#cb29-9" aria-hidden="true" tabindex="-1"></a>        c <span class="op">=</span> <span class="fu">cover</span>(flat, n)</span>
+<span id="cb29-10"><a href="#cb29-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> j <span class="kw">in</span> <span class="fl">1</span><span class="op">:</span><span class="fl">3</span>, (s, share) <span class="kw">in</span> <span class="fu">enumerate</span>((<span class="fl">1e-2</span>, <span class="fl">1e-4</span>))</span>
+<span id="cb29-11"><a href="#cb29-11" aria-hidden="true" tabindex="-1"></a>            when[j, s] <span class="op">==</span> <span class="fl">0</span> <span class="op">&amp;&amp;</span> c[j <span class="op">+</span> <span class="fl">1</span>] <span class="op">&lt;</span> share <span class="op">*</span> c0[j <span class="op">+</span> <span class="fl">1</span>] <span class="op">&amp;&amp;</span> (when[j, s] <span class="op">=</span> t)</span>
+<span id="cb29-12"><a href="#cb29-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">end</span></span>
+<span id="cb29-13"><a href="#cb29-13" aria-hidden="true" tabindex="-1"></a>        <span class="fu">all</span>(<span class="fu">&gt;</span>(<span class="fl">0</span>), when) <span class="op">&amp;&amp;</span> <span class="cf">break</span></span>
+<span id="cb29-14"><a href="#cb29-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">end</span></span>
+<span id="cb29-15"><a href="#cb29-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> when</span>
+<span id="cb29-16"><a href="#cb29-16" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span>
+<span id="cb29-17"><a href="#cb29-17" aria-hidden="true" tabindex="-1"></a>in_mean_years <span class="op">=</span> <span class="fu">exclusion_years</span>(<span class="fu">fill</span>(<span class="cn">nothing</span>, <span class="fl">600</span>))</span>
+<span id="cb29-18"><a href="#cb29-18" aria-hidden="true" tabindex="-1"></a>drawn <span class="op">=</span> [<span class="fu">exclusion_years</span>(<span class="fu">rand</span>(<span class="fu">Xoshiro</span>(seed), <span class="fl">1</span><span class="op">:</span><span class="fl">22</span>, <span class="fl">1500</span>)) for seed <span class="kw">in</span> <span class="fl">1</span><span class="op">:</span><span class="fl">40</span>]</span>
+<span id="cb29-19"><a href="#cb29-19" aria-hidden="true" tabindex="-1"></a><span class="fu">println</span>(<span class="st">&quot;                 below a hundredth                 below a ten-thousandth&quot;</span>)</span>
+<span id="cb29-20"><a href="#cb29-20" aria-hidden="true" tabindex="-1"></a><span class="fu">println</span>(<span class="st">&quot;grass            mean years   drawn: median (range)   mean years   drawn: median (range)&quot;</span>)</span>
+<span id="cb29-21"><a href="#cb29-21" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (j, k) <span class="kw">in</span> <span class="fu">enumerate</span>(kinds[<span class="fl">2</span><span class="op">:</span><span class="kw">end</span>])</span>
+<span id="cb29-22"><a href="#cb29-22" aria-hidden="true" tabindex="-1"></a>    <span class="fu">print</span>(<span class="fu">rpad</span>(names[k], <span class="fl">17</span>))</span>
+<span id="cb29-23"><a href="#cb29-23" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> s <span class="kw">in</span> <span class="fl">1</span><span class="op">:</span><span class="fl">2</span></span>
+<span id="cb29-24"><a href="#cb29-24" aria-hidden="true" tabindex="-1"></a>        times <span class="op">=</span> [d[j, s] for d <span class="kw">in</span> drawn]</span>
+<span id="cb29-25"><a href="#cb29-25" aria-hidden="true" tabindex="-1"></a>        <span class="fu">all</span>(<span class="fu">&gt;</span>(<span class="fl">0</span>), times) <span class="op">||</span> <span class="fu">error</span>(<span class="st">&quot;a grass outlasted 1500 drawn years&quot;</span>)</span>
+<span id="cb29-26"><a href="#cb29-26" aria-hidden="true" tabindex="-1"></a>        <span class="pp">@printf</span>(<span class="st">&quot;%10d   %9.1f (%d to %d)%s&quot;</span>, in_mean_years[j, s], <span class="fu">median</span>(times), <span class="fu">extrema</span>(times)<span class="op">...</span>, s <span class="op">==</span> <span class="fl">1</span> ? <span class="st">&quot;     &quot;</span> <span class="op">:</span> <span class="st">&quot;&quot;</span>)</span>
+<span id="cb29-27"><a href="#cb29-27" aria-hidden="true" tabindex="-1"></a>    <span class="cf">end</span></span>
+<span id="cb29-28"><a href="#cb29-28" aria-hidden="true" tabindex="-1"></a>    <span class="fu">println</span>()</span>
+<span id="cb29-29"><a href="#cb29-29" aria-hidden="true" tabindex="-1"></a><span class="cf">end</span></span>
+<span id="cb29-30"><a href="#cb29-30" aria-hidden="true" tabindex="-1"></a>later <span class="op">=</span> <span class="fu">count</span>(d <span class="op">-&gt;</span> <span class="fu">any</span>(d[<span class="op">:</span>, <span class="fl">1</span>] <span class="op">.&gt;</span> in_mean_years[<span class="op">:</span>, <span class="fl">1</span>]), drawn)</span>
+<span id="cb29-31"><a href="#cb29-31" aria-hidden="true" tabindex="-1"></a><span class="fu">println</span>(<span class="st">&quot;sequences in which some grass lasts longer than in mean years: &quot;</span>, later, <span class="st">&quot; of &quot;</span>, <span class="fu">length</span>(drawn))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                 below a hundredth                 below a ten-thousandth
+grass            mean years   drawn: median (range)   mean years   drawn: median (range)
+H. comata                80        35.0 (13 to 119)            109        50.0 (21 to 137)
+P. secunda               16        11.0 (5 to 25)             46        25.0 (10 to 52)
+P. spicata               78        36.5 (17 to 81)            115        56.0 (25 to 124)
+sequences in which some grass lasts longer than in mean years: 8 of 40</code></pre>
+</div>
+</div>
+<p>Years that differ do not delay the exclusion: they bring it forward, by about half. The median time to a hundredth of the starting cover is 35 years for needle-and-thread, 11 for <em>P. secunda</em> and 36.5 for <em>P. spicata</em>. In 8 of the 40 sequences some grass lasts longer than in the mean year, and the longest time here is 119 years. IPMdoit, run on the same 200 sequences (seeds 1 to 200, a check outside this vignette), gives the same year of exclusion for every grass and sequence as this package, with medians of 39, 11 and 41 years; in one sequence of the 200 needle-and-thread lasts 905 years, and in the others none lasts beyond 270. Started instead from the state of the full model after the 300 drawn years of the figure above, and measured against that starting cover, the grasses go sooner still (medians 25, 5 and 30 years over the same 200 sequences, also a check outside this vignette). A likely reason is the shrub. In drawn years it holds on average several times its cover in the mean year (above), and without niche differences each grass is limited by the shrub’s cover as much as by its own.</p>
+<p>Fluctuating years therefore do not close the gap with the three to four centuries of Adler et al. (2010); they widen it.</p>
+</section>
 </section>
 <section id="the-comparison-with-ipmdoit-and-the-papers" class="level2">
 <h2 class="anchored" data-anchor-id="the-comparison-with-ipmdoit-and-the-papers">The comparison with IPMdoit and the papers</h2>
@@ -2793,9 +2844,13 @@ P. spicata                   1.245614   1.245614      1.1867       78%</code></p
 </tr>
 <tr class="even">
 <td>Exclusion takes 300 to 400 years (Adler et al. 2010, abstract)</td>
-<td>no: the grasses fall to a hundredth of their cover in 16 to 80 mean years</td>
+<td>no: the grasses fall to a hundredth of their cover in 16 to 80 mean years, and sooner when years are drawn at random (medians 11 to 36.5 years over 40 sequences; one sequence in 200 keeps a grass for 905 years)</td>
 </tr>
 <tr class="odd">
+<td>Exclusion without niche differences, 200 sequences of drawn years</td>
+<td>the same year of exclusion as IPMdoit for every grass and sequence</td>
+</tr>
+<tr class="even">
 <td>Stabilisation comes mostly from recruitment (Chu &amp; Adler 2015, abstract)</td>
 <td>in part: recruitment holds the two smaller grasses, growth and survival the shrub</td>
 </tr>
@@ -2854,6 +2909,10 @@ P. spicata                   1.245614   1.245614      1.1867       78%</code></p
 <td>assumed here; the procedure of the papers could not be read</td>
 </tr>
 <tr class="even">
+<td>Exclusion: the first year below a hundredth (or a ten-thousandth) of the starting cover</td>
+<td>assumed here; the definition of the paper could not be read</td>
+</tr>
+<tr class="odd">
 <td>Starting state</td>
 <td>IPMdoit’s Idaho example</td>
 </tr>
@@ -2864,11 +2923,11 @@ P. spicata                   1.245614   1.245614      1.1867       78%</code></p
 <li>The papers could not be read, so the results here are compared with their abstracts only. The model is IPMdoit’s, which was written by the same group five years after the first paper and follows Chu &amp; Adler (2015). It is not known whether it is the model of Adler et al. (2010) in every detail.</li>
 <li>IPMdoit’s example does not run as it stands. To run it, the reference script passes the cover and population vectors that <code>crowd_overlap</code> needs, multiplies the kernel by the mesh width (which <code>make_K_matrix</code> leaves out and <code>make_K_matrix_ss</code> includes), and writes the recruits per unit of cover without dividing by the species’ cover, so that an invader with no cover has recruits. These are the only changes.</li>
 <li>Removing niche differences by copying a species’ own coefficient onto its neighbours, without rescaling, makes the shrub’s neighbours crowd much more than the shrub: its spatial scale is twelve times wider in survival. Done that way, a rare needle-and-thread has a growth rate of 0.008. The rescaling used here avoids that, but is a choice.</li>
-<li>The grasses vanish within a century without their niche differences, not in the three to four centuries of Adler et al. (2010). Their figure is for fluctuating years, and their procedure for removing niche differences may differ.</li>
+<li>The grasses vanish within a century without their niche differences, not in the three to four centuries of Adler et al. (2010). Drawing the years at random, as their simulations are taken to do, does not close the gap: it brings the exclusion forward, to a median of 11 to 36.5 years. The difference must lie elsewhere, and what follows cannot be checked without the paper. Their procedure for removing niche differences is not known here; the result depends on it (see the rescaling above). Their definition of exclusion and their starting state may differ. Their fits were made in 2010, while IPMdoit’s follow Chu &amp; Adler (2015). Their exclusion times may also come from another model: the paper’s keywords list an individual-based model as well as an integral projection model, and in a model of discrete plants a rare grass need not decline as its expected cover does in an IPM.</li>
 <li>Genets that grow past the end of the mesh are lost, as in IPMdoit.</li>
 <li>The observed covers at Dubois were not compared with the model.</li>
 </ul>
-<p>IPMdoit was read in full: its R functions, its Idaho example and the scripts that read the parameters. The data and scripts of Chu &amp; Adler (2015) on Dryad could not be downloaded: Dryad refused automated access. Of Chu &amp; Adler (2015), Appendix H (the coefficients) and the abstract were read. Of Adler et al. (2010), only the abstract. Both papers are behind the publisher’s paywall.</p>
+<p>IPMdoit was read in full: its R functions, its Idaho example and the scripts that read the parameters. The data and scripts of Chu &amp; Adler (2015) on Dryad could not be downloaded: Dryad refused automated access. Of Chu &amp; Adler (2015), Appendix H (the coefficients) and the abstract were read. Of Adler et al. (2010), only the abstract and its keywords. Both papers are behind the publisher’s paywall. A further search in November 2026 found no open copy of Adler et al. (2010) or its supplement: the publisher refused automated access, Semantic Scholar lists the paper as closed, and the repository records of Utah State University and Princeton link only to the publisher.</p>
 </section>
 <section id="references" class="level2">
 <h2 class="anchored" data-anchor-id="references">References</h2>

@@ -121,5 +121,28 @@ sagebrush_reference(file) = [split(l, ",") for l in readlines(joinpath(@__DIR__,
             @test niche ? rate > 1 : rate < 1
         end
     end
+
+    @testset "exclusion without niche differences, mean and drawn years" begin
+        # From IPMdoit's equilibrium of the full model, the first year each grass is below a hundredth of its
+        # starting cover. IPMdoit, run from the same state with the niche differences removed as in
+        # run_sagebrush_reference.R, gives 80, 16 and 78 years in the mean year and 43, 15 and 36 along the R
+        # script's drawn years (sagebrush_years.csv, set.seed(2010)). Each crossing clears the threshold by at
+        # least 1%.
+        flat = sagebrush_community(; niche_differences = false)
+        n0 = community_state(flat, "community")
+        c0 = cover_vector(flat, n0)
+        function excluded(envs)
+            sol = project(flat, n0, envs)
+            C = reduce(hcat, cover_vector(flat, row) for row in eachrow(sol.u))
+            return [findfirst(<(0.01 * c0[j]), C[j, :]) - 1 for j in 2:4]
+        end
+        years = [parse(Int, r[2]) for r in sagebrush_reference("sagebrush_years.csv")]
+        mean_years, drawn = excluded(fill(nothing, 82)), excluded(years[1:45])
+        @test mean_years == [80, 16, 78]
+        @test drawn == [43, 15, 36]
+        # drawing the years brings the exclusion forward, here by about half for the two slower grasses
+        @test all(drawn .<= mean_years)
+        @test all(drawn[[1, 3]] .< 0.6 .* mean_years[[1, 3]])
+    end
     BLAS.set_num_threads(threads)
 end
