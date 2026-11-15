@@ -263,25 +263,15 @@ matrix of the frozen species depends on the stand only through its basal
 area, and its growth rate falls as the basal area rises. The stand
 therefore settles at the basal area where the rate is one, and its size
 distribution there is the stable distribution of the frozen matrix.
+`equilibrium` does this when it is given the pool and a range to search,
+in place of a starting state alone.
 
 ``` julia
 growth_rate(A) = maximum(abs, eigvals(A))
-function settles(sp, kind; cells = 700, a = 30.0, b = 45.0)      # secant method on growth rate = 1
-    excess(x) = growth_rate(frozen(sp, kind, x; cells)) - 1
-    fa, fb = excess(a), excess(b)
-    for _ in 1:40
-        abs(b - a) < 1e-9 && break
-        a, fa, b = b, fb, b - fb * (b - a) / (fb - fa)
-        fb = excess(b)
-    end
-    return b
-end
-function settled_stand(sp, kind)
-    b = settles(sp, kind)
-    F = eigen(frozen(sp, kind, b))
-    stable = abs.(F.vectors[:, argmax(abs.(F.values))])
-    return stable .* (b / pool_totals(sp, stable, nothing).basal_area)
-end
+# the basal area between 30 and 45 m²/ha at which the growth rate is one, and the stand there
+settles(sp, kind; cells = 700) =
+    equilibrium(sp, :basal_area => (30.0, 45.0), forest_stand(kind; cells, basal_area = 30.0), nothing)
+settled_stand(sp, kind) = settles(sp, kind).n
 
 fir, beech = forest_tree(:fir), forest_tree(:beech)
 trees = (spruce = spruce, fir = fir, beech = beech)
@@ -296,9 +286,9 @@ for kind in keys(trees)
 end
 ```
 
-    spruce settles at 36.670 m²/ha (matreex: 36.669), with 251 trees and 40 seedlings and saplings per ha; a year moves the stand by 1e-14
+    spruce settles at 36.670 m²/ha (matreex: 36.669), with 251 trees and 40 seedlings and saplings per ha; a year moves the stand by 3e-14
     fir    settles at 42.604 m²/ha (matreex: 42.603), with 205 trees and 60 seedlings and saplings per ha; a year moves the stand by 6e-15
-    beech  settles at 42.546 m²/ha (matreex: 42.546), with 306 trees and 137 seedlings and saplings per ha; a year moves the stand by 8e-15
+    beech  settles at 42.546 m²/ha (matreex: 42.546), with 306 trees and 137 seedlings and saplings per ha; a year moves the stand by 6e-15
 
 The stands found this way do not move when stepped, and they hold the
 basal areas that matreex reaches by simulation, to within three parts in
@@ -507,16 +497,16 @@ for cells in (100, 200, 350, 700)
     n = forest_stand(:spruce; cells, basal_area = 30.0, diameters = (90, 600))
     advance(stands_here.spruce, n, nothing)
     step = minimum(@elapsed(advance(stands_here.spruce, n, nothing)) for _ in 1:5)
-    found = cells == 700 ? [basal(k) for k in keys(trees)] : [settles(stands_here[k], k; cells) for k in keys(trees)]
+    found = cells == 700 ? [basal(k) for k in keys(trees)] : [settles(stands_here[k], k; cells).total for k in keys(trees)]
     @printf("%5d   %6d   %11.1f   %26.2f  %6.2f  %6.2f\n", cells, length(stands_here.spruce), 1000 * step, found...)
 end
 ```
 
     cells   states   ms per step   settled basal area: spruce     fir   beech
-      100      114           0.4                        37.51   43.96   40.51
-      200      214           1.5                        36.90   43.36   44.32
-      350      364           4.0                        36.69   42.76   43.53
-      700      714          15.7                        36.67   42.60   42.55
+      100      114           0.3                        37.51   43.96   40.51
+      200      214           1.3                        36.90   43.36   44.32
+      350      364           3.8                        36.69   42.76   43.53
+      700      714          14.8                        36.67   42.60   42.55
 
 The time is for one year of spruce alone, on the machine that rendered
 this page; the three species together take three times as long. Almost
@@ -552,7 +542,7 @@ kept = vec(sum(kernel(spruce, :spruce, basal(:spruce)); dims = 1))
  die = sum(rates.death.(z, basal(:spruce)) .* spruce_trees) / sum(spruce_trees))
 ```
 
-    (outgrow_the_mesh = 0.000377432300278218, die = 0.0054728894130986906)
+    (outgrow_the_mesh = 0.00037743230027865077, die = 0.0054728894131006916)
 
 For spruce the end of the mesh, at 1.2 m, removes 0.04% of the trees a
 year, a fifteenth as many as die. For fir and beech, whose meshes end at

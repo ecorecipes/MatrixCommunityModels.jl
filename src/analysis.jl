@@ -22,6 +22,72 @@ function equilibrium(c::OpenCommunity, n0::AbstractVector, env; maxiter::Integer
 end
 
 """
+    equilibrium(species, pool => (low, high), n0, env; tol = 1e-10, maxiter = 200)
+
+The equilibrium of a single species that regulates itself through one pool, found without
+iterating the dynamics: the value of `pool` between `low` and `high` at which the species,
+with its matrix evaluated there, has a growth rate of one. The state returned is the
+stable distribution of that matrix, scaled so that the species' contribution to the pool
+equals the value found. Returns `(n, total, converged, iterations)`, where `total` is the
+pool value.
+
+Use it when iteration is slow, for example a long-lived species on a large mesh, whose
+approach to equilibrium takes thousands of steps. It assumes that the matrix depends on
+the state only through the pool (and through totals that scale with it), that the
+species' contribution to the pool is proportional to its abundance, and that the growth
+rate falls below one somewhere between `low` and `high` and exceeds it elsewhere in that
+range. `n0` is any state of the species with a positive contribution to the pool; only its
+shape is used, to evaluate the matrix. The equilibrium found need not be stable: check
+with [`jacobian`](@ref), or by projecting from it.
+"""
+function equilibrium(c::OpenCommunity, bracket::Pair{Symbol, <:Tuple{Real, Real}}, n0::AbstractVector, env;
+        tol::Real = 1e-10, maxiter::Integer = 200)
+    length(c.names) == 1 || throw(ArgumentError("equilibrium by pool value needs a single species"))
+    pool = bracket.first
+    held(n) = getproperty(pool_totals(c, n, env), pool)
+    start = _state(c, n0)
+    held(start) > 0 || throw(ArgumentError("the starting state contributes nothing to the pool :$pool"))
+    # the state with the stable shape of the matrix at pool value `x`, and its growth rate
+    function at(x)
+        n = start .* (x / held(start))
+        rate = NaN
+        for _ in 1:50
+            F = eigen(community_matrix(c, n, env))
+            lead = argmax(abs.(F.values))
+            shape = abs.(F.vectors[:, lead])
+            stable = shape .* (x / held(shape))
+            done = abs(abs(F.values[lead]) - rate) <= 1e-13
+            n, rate = stable, abs(F.values[lead])
+            done && break
+        end
+        return n, rate
+    end
+    a, b = float(bracket.second[1]), float(bracket.second[2])
+    (na, ra), (nb, rb) = at(a), at(b)
+    (ra - 1) * (rb - 1) <= 0 || throw(ArgumentError(
+        "the growth rate is $ra at :$pool = $a and $rb at $b: the equilibrium is not between them"))
+    fa, fb = ra - 1, rb - 1
+    n, x, iterations, converged = nb, b, 0, false
+    for k in 1:maxiter                       # regula falsi with the Illinois correction
+        iterations = k
+        x = fb == fa ? (a + b) / 2 : b - fb * (b - a) / (fb - fa)
+        n, r = at(x)
+        f = r - 1
+        if abs(f) <= tol || abs(b - a) <= tol * max(abs(x), 1.0)
+            converged = true
+            break
+        end
+        if f * fb < 0
+            a, fa = b, fb
+        else
+            fa /= 2
+        end
+        b, fb = x, f
+    end
+    return (n = n, total = x, converged = converged, iterations = iterations)
+end
+
+"""
     jacobian(c, n, env; h = 1e-6)
 
 Jacobian of one time step of a closed community at state `n`, by central differences with

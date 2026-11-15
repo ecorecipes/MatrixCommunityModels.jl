@@ -118,6 +118,15 @@ using Random
         @test e50.converged && e100.converged
         @test sum(e50.n) ≈ sum(e100.n) rtol = 2e-3
         @test pool_totals(sp50, e50.n, nothing).space ≈ pool_totals(sp100, e100.n, nothing).space rtol = 2e-3
+        # the same equilibrium without iterating: the pool value at which the growth rate is one
+        direct = equilibrium(sp50, :space => (1.0, K), e50.n ./ 7, nothing)
+        @test direct.converged
+        @test direct.total ≈ pool_totals(sp50, e50.n, nothing).space rtol = 1e-5
+        @test pool_totals(sp50, direct.n, nothing).space ≈ direct.total
+        @test direct.n ≈ e50.n rtol = 1e-4
+        @test advance(sp50, direct.n, nothing) ≈ direct.n rtol = 1e-8
+        @test_throws ArgumentError equilibrium(sp50, :space => (1.0, 2.0), e50.n, nothing)       # not bracketed
+        @test_throws ArgumentError equilibrium(sp50, :space => (1.0, K), zeros(50), nothing)
 
         # composed with a matrix model through the pool
         shrub_life = ValuedProjectionNet([:seedling, :juvenile, :adult],
