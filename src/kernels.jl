@@ -17,7 +17,8 @@ holding the number of individuals in that cell; `name` itself stays usable as th
 (`ctx.n[:plant]`, `stage_total(sol, :thistle, :plant)`).
 
 `meshpoints(stage)` are the trait values at the middle of the cells, `step_size(stage)` is
-the cell width and `stage_names(stage)` are the cell names.
+the cell width and `stage_names(stage)` are the cell names. In a response, `ctx.n[stage]`
+is the vector of numbers in the cells, in the order of `meshpoints(stage)`.
 """
 struct ContinuousStage
     name::Symbol
@@ -34,6 +35,19 @@ function ContinuousStage(name::Symbol, domain::ContinuousDomain)
 end
 ContinuousStage(name::Symbol, lower::Real, upper::Real, cells::Integer) =
     ContinuousStage(name, ContinuousDomain(Float64(lower), Float64(upper), Int(cells)))
+
+"""
+    n[stage::ContinuousStage]
+
+The numbers of individuals in the cells of `stage`, one for each cell in the order of
+`meshpoints(stage)`, read from a stage vector such as `ctx.n` in a response. (`ctx.n[:plant]`,
+with the stage's name, is their total.)
+
+The cells are found by name, not by position. The result is therefore right whatever other
+stages the net holds, and it stays right when the net is refined with `stratify` or
+`expand_stages`: each entry is then the total over the stages that descend from that cell.
+"""
+Base.getindex(n::StageVector, stage::ContinuousStage) = Float64[n[c] for c in stage.cells]
 
 stage_names(s::ContinuousStage) = s.cells
 meshpoints(s::ContinuousStage) = s.z
@@ -215,6 +229,11 @@ also be given as a vector, one for each cell. Return it from a response:
 ```julia
 respond(life, :seeding => ctx -> by_trait(plant, z -> exp(-0.02 * eggs_on(z, ctx))))
 ```
+
+The response keeps working if the net is refined afterwards with `stratify` or
+`expand_stages`: the cells of every stratum take the factor of the cell they descend from.
+A response that depends on the stage's own numbers should read them with `ctx.n[stage]`,
+which finds the cells by name, rather than by position in `ctx.n`.
 """
 by_trait(stage::ContinuousStage, f) = by_trait(stage, Float64[f(z) for z in stage.z])
 function by_trait(stage::ContinuousStage, factors::AbstractVector{<:Real})

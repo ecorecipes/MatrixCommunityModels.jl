@@ -20,7 +20,7 @@ using Catlab: Catlab, UndirectedWiringDiagram, RelationDiagram, nparts, subpart,
               junction, add_box!, add_junctions!, set_junction!
 import StructuredPopulationCore
 using StructuredPopulationCore: StateBlockLayout, ContinuousDomain
-import StructuredPopulationCore: meshpoints, step_size
+import StructuredPopulationCore: meshpoints, step_size, quasi_extinction   # extended here, not redefined
 import MatrixProjectionModels
 using MatrixProjectionModels: MatrixProjectionModel, DirectIteration
 import CategoricalPopulationDynamics
@@ -403,7 +403,8 @@ function project(c::OpenCommunity, n0, envs; rng = nothing)
         T == 0 && return CommunityTrajectory([0], u, pools, c)
         target = StateDependentMPMTarget(_split(c, start), (0, T); p = collect(envs))
         prob = CategoricalPopulationDynamics.lower(c.system, target)
-        sol = MatrixProjectionModels.solve(prob, DirectIteration())
+        # only the trajectory and the pools are read from the solution, so each step's matrices are not kept
+        sol = MatrixProjectionModels.solve(prob, DirectIteration(); save_matrices = false)
         for k in 1:(T + 1), sp in c.names
             u[k, c.layout[sp]] = sol.u[k][sp]
         end

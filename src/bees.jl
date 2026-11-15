@@ -218,7 +218,7 @@ function honeybee(; virus::Bool = false, drones::Bool = true, parameters = HONEY
             p.inhibition * n[:forager] / max(adults(n), 1.0)
         return flight_index(day(ctx)) * n[:larva] / (n[:larva] + p.brood_signal) * (1 - exp(-max(R, 0.0)))
     end
-    age(stage) = parse(Int, match(r"larva(\d)", String(stage))[1])     # works for larva3 and larva3_infected
+    age(stage) = parse(Int, match(r"larva(\d)", String(stage))[1])     # larva3 gives 3 (the names before stratification)
     # the queen lays whole eggs (as in BEEHAVE), so there are days in midwinter with no laying and no brood
     function eggs(ctx)
         (starving(ctx) || failing(ctx)) && return 0.0

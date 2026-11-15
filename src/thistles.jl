@@ -108,7 +108,8 @@ function platte_thistle(; parameters = PLATTE_THISTLE_PARAMETERS, cells::Integer
         load = egg_load(ctx)
         kept = [spared * escape(load(x)) for x in z]
         establishing = if seed_limited
-            crop = sum(potential[i] * kept[i] * ctx.n[i] for i in eachindex(z))
+            plants = ctx.n[plant]             # numbers by cell, found by name
+            crop = sum(potential[i] * kept[i] * plants[i] for i in eachindex(z))
             crop > 0 ? min(crop^(p.recruitment - 1), p.greatest_establishment) : p.greatest_establishment
         else
             p.establishment

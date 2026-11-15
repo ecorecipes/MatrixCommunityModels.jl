@@ -16,6 +16,19 @@ using Random
         @test step_size(plant) ≈ 0.2
         @test meshpoints(plant)[[1, 50]] ≈ [0.1, 9.9]
         @test meshpoints(ContinuousStage(:plant, ContinuousDomain(0.0, 10.0, 50))) == meshpoints(plant)
+        # Names shared with the rest of the stack are the same functions there, so they stay usable when the
+        # other packages are loaded alongside
+        upstream = MatrixCommunityModels.CategoricalPopulationDynamics
+        @test meshpoints === upstream.meshpoints && step_size === upstream.step_size
+        for other in (upstream, MatrixCommunityModels.StructuredPopulationCore, MatrixCommunityModels.MatrixProjectionModels)
+            common = intersect(names(MatrixCommunityModels), names(other))
+            @test all(name -> getfield(MatrixCommunityModels, name) === getfield(other, name), common)
+        end
+        together = Module()
+        Core.eval(together, :(using MatrixCommunityModels, MatrixCommunityModels.CategoricalPopulationDynamics,
+                              MatrixCommunityModels.MatrixProjectionModels))
+        @test Core.eval(together, :meshpoints) === meshpoints && Core.eval(together, :step_size) === step_size
+        @test Core.eval(together, :stratify) === stratify && Core.eval(together, :quasi_extinction) === quasi_extinction
     end
 
     @testset "one continuous stage" begin
@@ -57,6 +70,9 @@ using Random
         @test A[2:end, 2:end] ≈ [h * P(y, x) for y in z, x in z]
         ctx = context(net, vcat(7.0, ones(40)), NamedTuple(), nothing)
         @test ctx.n[:seed] == 7 && ctx.n[:plant] == 40
+        # the numbers in the cells, found by name wherever the stage sits in the net
+        counted = context(net, vcat(7.0, collect(1.0:40.0)), NamedTuple(), nothing)
+        @test counted.n[plant] == collect(1.0:40.0) && counted.n[:plant] == sum(1:40)
 
         # two traits on different meshes: the state is individuals per cell, so a kernel is weighted by
         # the width of the destination cell
@@ -140,6 +156,21 @@ using Random
         sp = species(:thistle, damaged; occupies = [:heads => weights], reads = [:eggs])
         n = vcat(4.0, collect(1.0:20.0))
         @test pool_totals(system(sp), Dict(:thistle => n), nothing).heads ≈ sum(z .^ 2 .* (1:20))
+        # both keep working when the net is refined: the cells of every stratum take the factor, and the
+        # weight, of the cell they descend from
+        strata = stratify(damaged, [:north, :south])
+        @test stage_names(strata)[[1, 2, 22, 23]] == [:seed_north, :plant1_north, :seed_south, :plant1_south]
+        @test to_matrix(strata, context(strata, zeros(42), (eggs = 3.0,), nothing)) == kron(Matrix(1.0I, 2, 2), A)
+        both = species(:thistle, strata; occupies = [:heads => weights], reads = [:eggs])
+        n2 = vcat(4.0, collect(1.0:20.0), 5.0, 2 .* collect(1.0:20.0))
+        @test pool_totals(system(both), Dict(:thistle => n2), nothing).heads ≈ 3 * sum(z .^ 2 .* (1:20))
+        @test context(strata, n2, (eggs = 3.0,), nothing).n[plant] == 3 .* collect(1.0:20.0)   # each cell, over both strata
+        # a response that reads the stage's own numbers by name sees those totals
+        crowded = respond(net, :seeding => ctx -> by_trait(plant, 1 ./ (1 .+ ctx.n[plant] ./ 10)))
+        A1 = to_matrix(crowded, context(crowded, vcat(4.0, 3 .* collect(1.0:20.0)), NamedTuple(), nothing))
+        @test A1[1, 2:end] ≈ [2.0 / (1 + 3i / 10) for i in 1:20]
+        split = stratify(crowded, [:north, :south])
+        @test to_matrix(split, context(split, n2, NamedTuple(), nothing)) == kron(Matrix(1.0I, 2, 2), A1)
     end
 
     @testset "errors" begin
