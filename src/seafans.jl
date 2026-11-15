@@ -1,0 +1,192 @@
+# Sea fans and aspergillosis: an integral projection model stratified by infection status.
+#
+# The model is that of Bruno, Ellner, Vu, Kim & Harvell (2011) for the Caribbean sea fan Gorgonia ventalina
+# and the fungus Aspergillus sydowii. A colony is described by its size and by whether it is infected. The
+# life cycle is written once, as five named transitions of one continuous stage; `stratify` makes the strata,
+# and coupling matrices say which stratum each transition leaves and which it enters.
+#
+# Size is the cube root of the area of healthy tissue in cm², the time step is a year and numbers are colonies
+# per m² of suitable habitat. Equation, table, figure, page and appendix numbers below are the paper's.
+
+"""
+    SEA_FAN_PARAMETERS
+
+Default parameters of [`sea_fan`](@ref): the integral projection model of the sea fan
+*Gorgonia ventalina* of Bruno, Ellner, Vu, Kim & Harvell (2011), fitted to colonies
+followed in the Yucatán from 2002 to 2005. Size is the cube root of the area of healthy
+tissue in cm², and the time step is a year. The rates that changed over the epizootic are
+in [`SEA_FAN_PHASES`](@ref). Sources of the values are in the comments of `src/seafans.jl`.
+"""
+const SEA_FAN_PARAMETERS = (
+    size_range = (0.0, 20.0),              # the largest fans measured had a size of about 14 (Figs. 2 and 3); the range holds the population
+    height = (1.3, 1.5),                   # height in cm = 1.3 x size^1.5, that is 1.3 x sqrt(area) (Eq. A.3)
+    growth = (0.682, 0.945, 0.53),         # healthy fan: size next year is normal, mean a + b x size, with this sd (Eq. 6)
+    recovering_growth = (0.27, 0.57),      # infected fan that recovers: mean change in size, and its sd (Eq. 7)
+    infected_growth = (-0.33, 0.57),       # infected fan that stays infected: mean change in size, and its sd (Eq. 7)
+    tissue_loss = (0.05, -3.2, 0.52),      # share of infected fans that lose much tissue, their mean change in size and its sd (Eq. 7)
+    mortality = (-0.55, -0.62),            # logit of the mortality of a healthy fan, a + b x size (p. 130)
+    infected_mortality = (1.3, -0.67),     # logit of the mortality of an infected fan (p. 130)
+    storm_mortality = (0.093, 2.3, 8.7),   # mortality of large fans in storms, healthy or infected: a x logistic(b x (size - c)) (Eq. B.2)
+    large_fan = 5.6,                       # fans above this size run the higher risk of infection (Eq. 5): 175 cm², about 17.5 cm tall
+    risk_height = 20.0,                    # cm; at the peak the risk of a large fan rose with its height above this (Appendix D)
+    reproductive_height = 20.0,            # cm; shorter fans do not reproduce (p. 130)
+    # Recruits for each cm² of healthy tissue on reproductive fans (Eq. 4). The paper prints "2 x 10^4", which cannot be
+    # meant: reproductive fans carry some hundreds of cm² of tissue per m², and 0.19 recruits per m² were counted. Read as
+    # 2 x 10^-4, a value given to one figure. Calibrated within that rounding: 2.0 x 10^-4 gives growth rates 0.005 to
+    # 0.010 below the four that can be read from the paper's Figs. E2 and E3, and 2.4 x 10^-4 gives all four within 0.004.
+    fecundity = 2.4e-4,
+    # Size of a recruit: mean and sd. NOT IN THE PAPER, which says only that the mortality of recruits predicted from "the
+    # estimated recruit size distribution" is 22% (pp. 127 to 128). Assumed: a normal distribution with this sd. Its mean
+    # is then set so that 22% of recruits die in their first year. Such a recruit is about 1.6 cm tall.
+    recruit_size = (1.17, 0.3))
+
+"""
+    SEA_FAN_PHASES
+
+The three phases of the aspergillosis epizootic in [`sea_fan`](@ref), after Bruno et al.
+(2011): `pre_epizootic` (before 1994), `peak` (the outbreak, fitted to surveys of 1997 to
+1999 in the Florida Keys) and `endemic` (after the peak, from colonies followed in the
+Yucatán from 2002 to 2005). A phase is the environment of a time step, so an epizootic is
+a sequence of phases:
+
+```julia
+reef = sea_fan()
+project(reef, n0, [fill(SEA_FAN_PHASES.peak, 6); fill(SEA_FAN_PHASES.endemic, 8)])
+```
+
+Each phase holds
+
+- `small_fan_risk`, `large_fan_risk`, `risk_per_cm`: the chance that a healthy fan is
+  infected within the year. It is `small_fan_risk` up to the size `large_fan` of
+  [`SEA_FAN_PARAMETERS`](@ref), and above it `large_fan_risk` plus `risk_per_cm` for each
+  cm of height above `risk_height`, which is 20 cm;
+- `recovery`: the chance that an infected fan that survives the year is healthy at its end;
+- `disease_mortality`: mortality of infected fans of any size, added to the mortality that
+  depends on size;
+- `recruitment`: a multiplier of the recruits produced, which were far fewer before 2003.
+
+A phase is a `NamedTuple`, so a variant is made with `merge`, for example
+`merge(SEA_FAN_PHASES.endemic, (recovery = 0.2,))`.
+"""
+const SEA_FAN_PHASES = (
+    # no infection; recruitment was about 11 times lower than in 2003 (Appendix C)
+    pre_epizootic = (small_fan_risk = 0.0, large_fan_risk = 0.0, risk_per_cm = 0.0, recovery = 0.38,
+                     disease_mortality = 0.0, recruitment = 1 / 11),
+    # Appendix D: ln(risk at 20 cm) = -3.0, slope 0.0083 per cm, ln(disease mortality) = -0.48, recovery 0.10. The risk of
+    # small fans was fitted too but is not tabulated; Fig. 8B shows it near 0.01, so the endemic value is used. Recruitment
+    # is reduced as before the epizootic, as in the paper's Table E1 and Fig. E2B
+    peak = (small_fan_risk = 0.011, large_fan_risk = exp(-3.0), risk_per_cm = 0.0083, recovery = 0.10,
+            disease_mortality = exp(-0.48), recruitment = 1 / 11),
+    # Eq. 5 and p. 130: risks 0.011 and 0.053, recovery 0.38
+    endemic = (small_fan_risk = 0.011, large_fan_risk = 0.053, risk_per_cm = 0.0, recovery = 0.38,
+               disease_mortality = 0.0, recruitment = 1.0))
+
+"""
+    sea_fan_stage(; parameters = SEA_FAN_PARAMETERS, cells = 100)
+
+The [`ContinuousStage`](@ref) from which [`sea_fan`](@ref) is built: colonies by size,
+the cube root of the area of healthy tissue in cm². `meshpoints` of it are the sizes of
+the cells. In the stratified net its cell `fan7` becomes `fan7_healthy` and
+`fan7_infected`; `ctx.n[stage]` gives the numbers by size whatever the stratum, and
+`ctx.n[stage, :infected]` those of the infected fans.
+"""
+sea_fan_stage(; parameters = SEA_FAN_PARAMETERS, cells::Integer = 100) =
+    ContinuousStage(:fan, parameters.size_range[1], parameters.size_range[2], cells)
+
+"""
+    sea_fan(; parameters = SEA_FAN_PARAMETERS, cells = 100, resistant = false,
+              outside = 1.0, transmission = 0.0, name = :sea_fan)
+
+The sea fan *Gorgonia ventalina* with aspergillosis, as the integral projection model of
+Bruno et al. (2011): colonies are classified by size (see [`sea_fan_stage`](@ref)) and by
+infection status. Numbers are colonies per m² of suitable habitat and the time step is a
+year.
+
+A fan's year is one of five transitions. A healthy fan survives and grows, and has either
+escaped infection (`escaping`) or met the fungus (`encountering`); an infected fan
+survives and either recovers (`recovering`) or stays infected (`lingering`); and healthy
+fans of 20 cm or taller produce recruits (`recruiting`). Each is a kernel over size, with
+the chance of that fate at each size attached as a response by trait. `stratify` then makes
+the strata `healthy` and `infected`: `encountering` leads from the first to the second and
+`recovering` back, so the stages are `fan1_healthy`, ..., `fan1_infected`, ... and the
+transitions `escaping_healthy`, `encountering_healthy_to_infected`,
+`recovering_infected_to_healthy`, `lingering_infected` and `recruiting_healthy`.
+
+The environment of a time step is the phase of the epizootic, one of
+[`SEA_FAN_PHASES`](@ref) or a variant of one; with `nothing` the phase is `endemic`.
+
+- `resistant = true` adds a third stratum, `resistant`, of fans that cannot be infected
+  and whose recruits are resistant too: they are in other respects healthy fans, and a
+  resistant fan that meets the fungus stays as it is. `resistant = :only` gives resistant
+  fans alone, to be composed with the others as a species of their own.
+- The species adds its healthy tissue, in cm², to the pool `tissue`, and that of its
+  infected fans to the pool `infectious`.
+- `outside` and `transmission` say where the infection comes from. The chance of infection
+  given by the phase is multiplied by `outside + transmission * infectious / tissue`, read
+  from the pools. With the defaults all infection comes from outside the reef and the model
+  is the published one, which is linear. `transmission > 0` makes a share of it depend on
+  the share of tissue that is infected; the paper has no such term and gives no value.
+"""
+function sea_fan(; parameters = SEA_FAN_PARAMETERS, cells::Integer = 100, resistant::Union{Bool, Symbol} = false,
+                 outside::Real = 1.0, transmission::Real = 0.0, name::Symbol = :sea_fan)
+    resistant isa Bool || resistant === :only ||
+        throw(ArgumentError("resistant must be false, true or :only, got :$resistant"))
+    (outside >= 0 && transmission >= 0) || throw(ArgumentError("outside and transmission cannot be negative"))
+    p = parameters
+    fan = sea_fan_stage(; parameters, cells)
+    height(x) = p.height[1] * x^p.height[2]
+    storms(x) = p.storm_mortality[1] * _logistic(p.storm_mortality[2] * (x - p.storm_mortality[3]))
+    survival(x) = max(0.0, 1 - _logistic(p.mortality[1] + p.mortality[2] * x) - storms(x))
+    infected_survival(x, phase) = max(0.0, 1 - _logistic(p.infected_mortality[1] + p.infected_mortality[2] * x) -
+                                           storms(x) - phase.disease_mortality)
+    growth(y, x) = _normal_density(y, p.growth[1] + p.growth[2] * x, p.growth[3])
+    lost, loss, loss_sd = p.tissue_loss
+    # size next year of an infected fan whose size changes by `change` on average, or which loses much tissue
+    changing((change, sd)) = (y, x) -> (1 - lost) * _normal_density(y, x + change, sd) + lost * _normal_density(y, x + loss, loss_sd)
+    recruits(x) = height(x) >= p.reproductive_height ? p.fecundity * x^3 : 0.0
+    recruit_size(y) = _normal_density(y, p.recruit_size[1], p.recruit_size[2])
+
+    # a fan's year without its fates: where each transition takes a fan of size x that follows it
+    life = kernel_net(fan,
+        :escaping => growth,                               # a healthy fan grows the same whether or not it is infected by the
+        :encountering => growth,                           # next census (p. 128)
+        :recovering => changing(p.recovering_growth),
+        :lingering => changing(p.infected_growth),
+        :recruiting => (y, x) -> recruits(x) * recruit_size(y))
+
+    phase(ctx) = ctx.env === nothing ? SEA_FAN_PHASES.endemic : ctx.env
+    function risk(x, ph)                                   # chance that a healthy fan of size x is infected within the year
+        x <= p.large_fan && return ph.small_fan_risk
+        return clamp(ph.large_fan_risk + ph.risk_per_cm * max(0.0, height(x) - p.risk_height), 0.0, 1.0)
+    end
+    # the inoculum that a healthy fan meets, relative to that of the published model
+    function pressure(ctx)
+        (transmission > 0 && haskey(ctx.pool, :infectious) && ctx.pool.tissue > 0) || return Float64(outside)
+        return outside + transmission * ctx.pool.infectious / ctx.pool.tissue
+    end
+    infection(x, ctx) = min(1.0, pressure(ctx) * risk(x, phase(ctx)))
+    # the chance of each fate at each size, written before the strata exist
+    net = respond(life,
+        :escaping => ctx -> by_trait(fan, x -> survival(x) * (1 - infection(x, ctx))),
+        :encountering => ctx -> by_trait(fan, x -> survival(x) * infection(x, ctx)),
+        :recovering => ctx -> by_trait(fan, x -> infected_survival(x, phase(ctx)) * phase(ctx).recovery),
+        :lingering => ctx -> by_trait(fan, x -> infected_survival(x, phase(ctx)) * (1 - phase(ctx).recovery)),
+        :recruiting => ctx -> phase(ctx).recruitment)
+    net = births(net, :recruiting)
+
+    strata = resistant === :only ? [:resistant] : resistant ? [:healthy, :infected, :resistant] : [:healthy, :infected]
+    # which stratum each transition leaves and which it enters; coupling matrices are [to, from]
+    route(moves...) = Float64[(from => to) in moves for to in strata, from in strata]
+    net = stratify(net, strata; coupling = Dict{Symbol, Any}(
+        :escaping => route(:healthy => :healthy, :resistant => :resistant),
+        :encountering => route(:healthy => :infected, :resistant => :resistant),
+        :recovering => route(:infected => :healthy),
+        :lingering => route(:infected => :infected),
+        :recruiting => route(:healthy => :healthy, :resistant => :resistant)))
+
+    tissue(x) = x^3                                        # cm² of healthy tissue on a fan of size x
+    occupies = Pair{Symbol, Any}[:tissue => trait_weights(fan, tissue)]                  # fans of every stratum
+    :infected in strata && push!(occupies, :infectious => trait_weights(fan, tissue; stratum = :infected))
+    reads = transmission > 0 && :infected in strata ? [:tissue, :infectious] : Symbol[]
+    return species(name, net; occupies, reads)
+end

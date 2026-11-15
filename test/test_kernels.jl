@@ -165,6 +165,14 @@ using Random
         n2 = vcat(4.0, collect(1.0:20.0), 5.0, 2 .* collect(1.0:20.0))
         @test pool_totals(system(both), Dict(:thistle => n2), nothing).heads ≈ 3 * sum(z .^ 2 .* (1:20))
         @test context(strata, n2, (eggs = 3.0,), nothing).n[plant] == 3 .* collect(1.0:20.0)   # each cell, over both strata
+        # the cells of one stratum, and pool weights for one stratum
+        @test context(strata, n2, (eggs = 3.0,), nothing).n[plant, :north] == collect(1.0:20.0)
+        @test context(strata, n2, (eggs = 3.0,), nothing).n[plant, :south] == 2 .* collect(1.0:20.0)
+        @test_throws KeyError context(strata, n2, (eggs = 3.0,), nothing).n[plant, :west]
+        southern = trait_weights(plant, x -> x^2; stratum = :south)
+        @test first.(southern) == stratum_stage.(stage_names(plant), :south) && last.(southern) == last.(weights)
+        south = species(:thistle, strata; occupies = [:heads => southern], reads = [:eggs])
+        @test pool_totals(system(south), Dict(:thistle => n2), nothing).heads ≈ 2 * sum(z .^ 2 .* (1:20))
         # a response that reads the stage's own numbers by name sees those totals
         crowded = respond(net, :seeding => ctx -> by_trait(plant, 1 ./ (1 .+ ctx.n[plant] ./ 10)))
         A1 = to_matrix(crowded, context(crowded, vcat(4.0, 3 .* collect(1.0:20.0)), NamedTuple(), nothing))

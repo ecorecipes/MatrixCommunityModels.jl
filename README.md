@@ -36,6 +36,13 @@ simulation loop.
 - A native thistle (the IPM of Rose et al. 2005, whose equilibria are reproduced), musk
   thistle (the matrix model of Jongejans et al. 2008, growth rate 1.748 as published) and
   the flower-head weevil they share.
+- Three European trees (Norway spruce, silver fir and beech; `forest_tree`) as IPMs on
+  700 mesh cells each, sharing one pool of stand basal area: the model of the R package
+  matreex, whose kernels are reproduced to 1e-9 and whose runs to within 1e-3 (1e-5 when
+  matreex is run with finer numerical settings).
+- A sea fan and its fungal disease (the IPM of Bruno et al. 2011, whose growth rates,
+  elasticities and resistance scenario are reproduced): healthy, infected and resistant
+  colonies are strata of one life cycle written by size.
 
 ## Installation
 
@@ -75,6 +82,8 @@ sol[:CACL]                                  # biomass by year and stage
 | 12 | [Bees 3: a bumblebee population](vignettes/12_bumblebees/12_bumblebees.md) ([PDF](vignettes/12_bumblebees/12_bumblebees.pdf)) | The annual colony cycle from three modules, nest sites |
 | 13 | [Bees 4: sharing flowers](vignettes/13_bees_sharing_flowers/13_bees_sharing_flowers.md) ([PDF](vignettes/13_bees_sharing_flowers/13_bees_sharing_flowers.pdf)) | Four forms of competition for nectar and pollen, and virus spillover |
 | 14 | [Thistles and a weevil](vignettes/14_thistles_and_weevil/14_thistles_and_weevil.md) ([PDF](vignettes/14_thistles_and_weevil/14_thistles_and_weevil.pdf)) | A published IPM of a native thistle, a published matrix model of a weed and the weevil they share |
+| 15 | [A forest on a large mesh](vignettes/15_forest_basal_area/15_forest_basal_area.md) ([PDF](vignettes/15_forest_basal_area/15_forest_basal_area.pdf)) | Three tree species as IPMs on 700 cells each, coupled through stand basal area and checked against the R package matreex |
+| 16 | [Sea fans and aspergillosis](vignettes/16_sea_fan_aspergillosis/16_sea_fan_aspergillosis.md) ([PDF](vignettes/16_sea_fan_aspergillosis/16_sea_fan_aspergillosis.pdf)) | A published IPM stratified by infection status: strata, responses by size and pools together |
 
 ## Status
 
@@ -83,7 +92,13 @@ models follow BEEHAVE and were checked against its code. The floral supply rests
 published measurements; the overlap, refuge and virus-on-flowers rates are assumptions
 (see vignette 13). In the thistle community the two plant models are published; the
 weevil's winter survival is calibrated, and how the species share weevils rests on
-assumptions listed in vignette 14.
+assumptions listed in vignette 14. The forest models take their vital rates from the R
+package matreex and reproduce its kernels and runs; they leave out its harvesting rules,
+disturbances and changing climates, and vignette 15 lists where they and their sources
+part.
+The sea fan model is published; the size of its
+recruits is not given in the paper and is assumed, and infection passed among fans is an
+extension (see vignette 16).
 
 ## Data and licences
 
@@ -91,4 +106,7 @@ The package is MIT licensed. `data/verde_fish` is from Rogosch et al. (2019),
 <https://doi.org/10.5281/zenodo.1309024> (MIT). `data/riparian/maybell.csv` is from
 Lytle et al. (2017), <https://doi.org/10.6084/m9.figshare.4652608> (CC BY 4.0), with
 line endings converted. `data/cypripedium` holds matrices estimated with the R packages
-lefko3 and adapt3 from the datasets those packages distribute.
+lefko3 and adapt3 from the datasets those packages distribute. The fitted vital rates in
+`src/forests.jl` are those shipped with the R package matreex 0.4.0
+(<https://github.com/gowachin/matreex>, MIT, © 2022 Maxime Jaunatre; its notice is kept in
+that file), and `test/reference/forest_*.csv` were produced by running it.

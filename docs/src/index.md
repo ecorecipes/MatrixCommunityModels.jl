@@ -38,6 +38,12 @@ on Catlab.jl.
 - [Thistles and a weevil](tutorials/14_thistles_and_weevil.md): a published integral
   projection model of a native thistle, a published matrix model of an invasive thistle,
   and the weevil they share.
+- [A forest on a large mesh](tutorials/15_forest_basal_area.md): three tree species as
+  integral projection models on 700 cells each, coupled through stand basal area and
+  checked against the R package matreex.
+- [Sea fans and aspergillosis](tutorials/16_sea_fan_aspergillosis.md): a published
+  integral projection model stratified by infection status, with healthy, infected and
+  resistant colonies as strata of one life cycle.
 
 Each tutorial is a Quarto vignette, also available as
 [HTML and PDF in the repository](https://github.com/ecorecipes/MatrixCommunityModels.jl/tree/main/vignettes).

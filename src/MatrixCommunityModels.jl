@@ -484,4 +484,10 @@ include("thistles.jl")
 export platte_thistle, platte_thistle_stage, musk_thistle, flowerhead_weevil
 export PLATTE_THISTLE_PARAMETERS, MUSK_THISTLE_PARAMETERS, WEEVIL_PARAMETERS
 
+include("forests.jl")
+export forest_tree, forest_stage, forest_stand, forest_vital_rates
+export FOREST_PARAMETERS, FOREST_CLIMATE
+include("seafans.jl")
+export sea_fan, sea_fan_stage, SEA_FAN_PARAMETERS, SEA_FAN_PHASES
+
 end # module MatrixCommunityModels

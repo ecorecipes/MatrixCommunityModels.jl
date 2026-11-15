@@ -49,6 +49,17 @@ stages the net holds, and it stays right when the net is refined with `stratify`
 """
 Base.getindex(n::StageVector, stage::ContinuousStage) = Float64[n[c] for c in stage.cells]
 
+"""
+    n[stage::ContinuousStage, stratum]
+
+The numbers of individuals in the cells of `stage` that are in one `stratum` of a net
+made with `stratify`, in the order of `meshpoints(stage)`: `ctx.n[plant, :infected]` are
+the infected plants by size, where `ctx.n[plant]` are all plants by size. The cells are
+found by the names `stratify` gives them (`stratum_stage`, with its default separator).
+"""
+Base.getindex(n::StageVector, stage::ContinuousStage, stratum::Symbol) =
+    Float64[n[stratum_stage(c, stratum)] for c in stage.cells]
+
 stage_names(s::ContinuousStage) = s.cells
 meshpoints(s::ContinuousStage) = s.z
 step_size(s::ContinuousStage) = step_size(s.domain)
@@ -247,7 +258,7 @@ function by_trait(stage::ContinuousStage, factors::AbstractVector{<:Real})
 end
 
 """
-    trait_weights(stage, f)
+    trait_weights(stage, f; stratum = nothing)
 
 Pool weights given as a function of the trait: each individual of `stage` with trait `z`
 contributes `f(z)`. For the `occupies` argument of [`species`](@ref):
@@ -255,5 +266,14 @@ contributes `f(z)`. For the `occupies` argument of [`species`](@ref):
 ```julia
 species(:tree, net; occupies = [:basal_area => trait_weights(tree, d -> pi * (d / 2)^2)])
 ```
+
+In a net made with `stratify` the weights apply to the individuals of every stratum. With
+`stratum` they apply to that stratum alone, so that a pool can hold, say, the infected
+individuals only:
+
+```julia
+species(:host, net; occupies = [:infectious => trait_weights(plant, z -> z^2; stratum = :infected)])
+```
 """
-trait_weights(stage::ContinuousStage, f) = Pair{Symbol, Float64}[c => Float64(f(z)) for (c, z) in zip(stage.cells, stage.z)]
+trait_weights(stage::ContinuousStage, f; stratum::Union{Nothing, Symbol} = nothing) =
+    Pair{Symbol, Float64}[(stratum === nothing ? c : stratum_stage(c, stratum)) => Float64(f(z)) for (c, z) in zip(stage.cells, stage.z)]
