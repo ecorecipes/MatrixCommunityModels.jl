@@ -190,6 +190,69 @@ using Random
         @test to_matrix(split, context(split, n2, NamedTuple(), nothing)) == kron(Matrix(1.0I, 2, 2), A1)
     end
 
+    @testset "responses by trait in one stratum, attached after stratify" begin
+        plant = ContinuousStage(:plant, 0.0, 10.0, 6)
+        z, h = meshpoints(plant), step_size(plant)
+        life = kernel_net([:seed, plant], :sprouting => [(:seed => :plant) => y -> normpdf(y, 1.0, 0.5)],
+                          :growing => [(:plant => :plant) => P], :seeding => [(:plant => :seed) => x -> 2.0])
+        # growing plants stay healthy or are infected; coupling matrices are [to, from]
+        two = stratify(life, [:healthy, :infected]; coupling = Dict(:growing => [1 0; 1 1]))
+        @test Set(transition_names(two)) == Set([:sprouting_healthy, :sprouting_infected, :growing_healthy,
+            :growing_healthy_to_infected, :growing_infected, :seeding_healthy, :seeding_infected])
+        risk(x) = 0.01x
+        fewer(x) = exp(-0.2x)
+        sick = respond(two,
+            :growing_healthy => ctx -> by_trait(plant, x -> 1 - risk(x); stratum = :healthy),
+            :growing_healthy_to_infected => ctx -> by_trait(plant, risk; stratum = :healthy),
+            :seeding_infected => ctx -> by_trait(plant, fewer; stratum = :infected),
+            :sprouting_infected => ctx -> by_trait(plant, x -> 0.0; stratum = :infected))   # leaves entries from :seed alone
+        A = to_matrix(sick, context(sick, zeros(14), NamedTuple(), nothing))
+        at = Dict(s => i for (i, s) in enumerate(stage_names(sick)))
+        cell(i, stratum) = at[stratum_stage(stage_names(plant)[i], stratum)]
+        seed(stratum) = at[stratum_stage(:seed, stratum)]
+        expected = zeros(14, 14)
+        for stratum in (:healthy, :infected), i in 1:6
+            expected[cell(i, stratum), seed(stratum)] = h * normpdf(z[i], 1.0, 0.5)
+            expected[seed(stratum), cell(i, stratum)] = stratum === :healthy ? 2.0 : 2.0 * fewer(z[i])
+        end
+        for i in 1:6, j in 1:6
+            expected[cell(i, :healthy), cell(j, :healthy)] = h * P(z[i], z[j]) * (1 - risk(z[j]))
+            expected[cell(i, :infected), cell(j, :healthy)] = h * P(z[i], z[j]) * risk(z[j])
+            expected[cell(i, :infected), cell(j, :infected)] = h * P(z[i], z[j])
+        end
+        @test all(isapprox(A[i, j], expected[i, j]; rtol = 1e-14) for i in 1:14, j in 1:14)
+        @test iszero.(A) == iszero.(expected)
+        # called directly: entries leaving the cells of the stratum, and the rest
+        g = by_trait(plant, fewer; stratum = :infected)
+        @test g(:plant3_infected, :seed_infected) == fewer(z[3])
+        @test g(:seed_infected, :plant3_infected) == 1.0
+        @test by_trait(plant, fill(0.5, 6); stratum = :infected)(:plant6_infected, :seed_infected) == 0.5
+        @test_throws DimensionMismatch by_trait(plant, fill(0.5, 5); stratum = :infected)
+        # the response stays with its cells when the net is refined again
+        patches = stratify(sick, [:north, :south])
+        @test to_matrix(patches, context(patches, zeros(28), NamedTuple(), nothing)) == kron(Matrix(1.0I, 2, 2), A)
+
+        # without a stratum nothing changes: before stratify a response applies in every stratum, and after it a
+        # response written for the unstratified cells matches none of them
+        base = to_matrix(two)
+        before = stratify(respond(life, :seeding => ctx -> by_trait(plant, fewer)), [:healthy, :infected];
+                          coupling = Dict(:growing => [1 0; 1 1]))
+        B = to_matrix(before, context(before, zeros(14), NamedTuple(), nothing))
+        @test B[seed(:healthy), cell(4, :healthy)] == B[seed(:infected), cell(4, :infected)] == 2.0 * fewer(z[4])
+        after = respond(two, :seeding_infected => ctx -> by_trait(plant, fewer))
+        @test to_matrix(after, context(after, zeros(14), NamedTuple(), nothing)) == base
+
+        # an unknown stratum, the wrong one, or one on a net without strata is an error, raised when the
+        # response is evaluated, rather than a factor that silently does nothing
+        evaluated(net, k) = to_matrix(net, context(net, zeros(k), NamedTuple(), nothing))
+        @test_throws ArgumentError evaluated(respond(two, :seeding_infected => ctx -> by_trait(plant, fewer; stratum = :sick)), 14)
+        @test_throws ArgumentError evaluated(respond(two, :seeding_infected => ctx -> by_trait(plant, fewer; stratum = :healthy)), 14)
+        @test_throws ArgumentError evaluated(respond(life, :seeding => ctx -> by_trait(plant, fewer; stratum = :healthy)), 7)
+        # stage names that only look alike are other stages, and left alone
+        @test by_trait(plant, fewer; stratum = :sick)(:plantation_sick, :seed_sick) == 1.0
+        @test by_trait(plant, fewer; stratum = :sick)(:seed_infected, :seed_sick) == 1.0
+    end
+
     @testset "errors" begin
         plant = ContinuousStage(:plant, 0.0, 10.0, 10)
         @test_throws ArgumentError kernel_net([:seed, plant], :growing => P)                          # which stages?

@@ -2,8 +2,9 @@
 #
 # The model is that of Bruno, Ellner, Vu, Kim & Harvell (2011) for the Caribbean sea fan Gorgonia ventalina
 # and the fungus Aspergillus sydowii. A colony is described by its size and by whether it is infected. The
-# life cycle is written once, as five named transitions of one continuous stage; `stratify` makes the strata,
-# and coupling matrices say which stratum each transition leaves and which it enters.
+# life cycle of a healthy fan is written as one continuous stage, with the kernels of infected fans beside it;
+# `stratify` makes the strata, coupling matrices say which stratum each transition leaves and which it enters,
+# and the chance of each fate is then attached, by size, to the transitions that leave one stratum.
 #
 # Size is the cube root of the area of healthy tissue in cm², the time step is a year and numbers are colonies
 # per m² of suitable habitat. Equation, table, figure, page and appendix numbers below are the paper's.
@@ -102,23 +103,23 @@ Bruno et al. (2011): colonies are classified by size (see [`sea_fan_stage`](@ref
 infection status. Numbers are colonies per m² of suitable habitat and the time step is a
 year.
 
-A fan's year is one of five transitions. A healthy fan survives and grows, and has either
-escaped infection (`escaping`) or met the fungus (`encountering`); an infected fan
-survives and either recovers (`recovering`) or stays infected (`lingering`); and healthy
-fans of 20 cm or taller produce recruits (`recruiting`). Each is a kernel over size, with
-the chance of that fate at each size attached as a response by trait. `stratify` then makes
-the strata `healthy` and `infected`: `encountering` leads from the first to the second and
-`recovering` back, so the stages are `fan1_healthy`, ..., `fan1_infected`, ... and the
-transitions `escaping_healthy`, `encountering_healthy_to_infected`,
-`recovering_infected_to_healthy`, `lingering_infected` and `recruiting_healthy`.
+The life cycle is that of a healthy fan, which survives and grows (`growing`) and, if 20
+cm or taller, produces recruits (`recruiting`), with the kernels of an infected fan that
+survives beside it: one that recovers (`recovering`) and one that stays infected
+(`lingering`). `stratify` makes the strata `healthy` and `infected`: a healthy fan that
+grows stays healthy or is infected, and `recovering` leads back, so the stages are
+`fan1_healthy`, ..., `fan1_infected`, ... and the transitions `growing_healthy`,
+`growing_healthy_to_infected`, `recovering_infected_to_healthy`, `lingering_infected` and
+`recruiting_healthy`. The chance of each fate at each size is then attached to the
+transitions that leave one stratum, with `by_trait(...; stratum = ...)`.
 
 The environment of a time step is the phase of the epizootic, one of
 [`SEA_FAN_PHASES`](@ref) or a variant of one; with `nothing` the phase is `endemic`.
 
 - `resistant = true` adds a third stratum, `resistant`, of fans that cannot be infected
-  and whose recruits are resistant too: they are in other respects healthy fans, and a
-  resistant fan that meets the fungus stays as it is. `resistant = :only` gives resistant
-  fans alone, to be composed with the others as a species of their own.
+  and whose recruits are resistant too: they have the life cycle of a healthy fan
+  (`growing_resistant`, `recruiting_resistant`) and are never infected. `resistant = :only`
+  gives resistant fans alone, to be composed with the others as a species of their own.
 - The species adds its healthy tissue, in cm², to the pool `tissue`, and that of its
   infected fans to the pool `infectious`.
 - `outside` and `transmission` say where the infection comes from. The chance of infection
@@ -146,15 +147,26 @@ function sea_fan(; parameters = SEA_FAN_PARAMETERS, cells::Integer = 100, resist
     recruits(x) = height(x) >= p.reproductive_height ? p.fecundity * x^3 : 0.0
     recruit_size(y) = _normal_density(y, p.recruit_size[1], p.recruit_size[2])
 
-    # a fan's year without its fates: where each transition takes a fan of size x that follows it
-    life = kernel_net(fan,
-        :escaping => growth,                               # a healthy fan grows the same whether or not it is infected by the
-        :encountering => growth,                           # next census (p. 128)
-        :recovering => changing(p.recovering_growth),
-        :lingering => changing(p.infected_growth),
-        :recruiting => (y, x) -> recruits(x) * recruit_size(y))
-
     phase(ctx) = ctx.env === nothing ? SEA_FAN_PHASES.endemic : ctx.env
+    # the life cycle of a healthy fan, a model on its own, and beside it where an infected fan of size x that survives
+    # goes if it recovers or if it stays infected
+    life = kernel_net(fan,
+        :growing => (y, x) -> survival(x) * growth(y, x),
+        :recruiting => (y, x) -> recruits(x) * recruit_size(y),
+        :recovering => changing(p.recovering_growth),
+        :lingering => changing(p.infected_growth))
+    life = births(respond(life, :recruiting => ctx -> phase(ctx).recruitment), :recruiting)
+
+    strata = resistant === :only ? [:resistant] : resistant ? [:healthy, :infected, :resistant] : [:healthy, :infected]
+    # which stratum each transition leaves and which it enters; coupling matrices are [to, from]. A healthy fan grows
+    # the same whether or not it is infected by the next census (p. 128); a resistant fan is never infected
+    route(moves...) = Float64[(from => to) in moves for to in strata, from in strata]
+    net = stratify(life, strata; coupling = Dict{Symbol, Any}(
+        :growing => route(:healthy => :healthy, :healthy => :infected, :resistant => :resistant),
+        :recruiting => route(:healthy => :healthy, :resistant => :resistant),
+        :recovering => route(:infected => :healthy),
+        :lingering => route(:infected => :infected)))
+
     function risk(x, ph)                                   # chance that a healthy fan of size x is infected within the year
         x <= p.large_fan && return ph.small_fan_risk
         return clamp(ph.large_fan_risk + ph.risk_per_cm * max(0.0, height(x) - p.risk_height), 0.0, 1.0)
@@ -165,24 +177,16 @@ function sea_fan(; parameters = SEA_FAN_PARAMETERS, cells::Integer = 100, resist
         return outside + transmission * ctx.pool.infectious / ctx.pool.tissue
     end
     infection(x, ctx) = min(1.0, pressure(ctx) * risk(x, phase(ctx)))
-    # the chance of each fate at each size, written before the strata exist
-    net = respond(life,
-        :escaping => ctx -> by_trait(fan, x -> survival(x) * (1 - infection(x, ctx))),
-        :encountering => ctx -> by_trait(fan, x -> survival(x) * infection(x, ctx)),
-        :recovering => ctx -> by_trait(fan, x -> infected_survival(x, phase(ctx)) * phase(ctx).recovery),
-        :lingering => ctx -> by_trait(fan, x -> infected_survival(x, phase(ctx)) * (1 - phase(ctx).recovery)),
-        :recruiting => ctx -> phase(ctx).recruitment)
-    net = births(net, :recruiting)
-
-    strata = resistant === :only ? [:resistant] : resistant ? [:healthy, :infected, :resistant] : [:healthy, :infected]
-    # which stratum each transition leaves and which it enters; coupling matrices are [to, from]
-    route(moves...) = Float64[(from => to) in moves for to in strata, from in strata]
-    net = stratify(net, strata; coupling = Dict{Symbol, Any}(
-        :escaping => route(:healthy => :healthy, :resistant => :resistant),
-        :encountering => route(:healthy => :infected, :resistant => :resistant),
-        :recovering => route(:infected => :healthy),
-        :lingering => route(:infected => :infected),
-        :recruiting => route(:healthy => :healthy, :resistant => :resistant)))
+    # the chance of each fate at each size, attached to the transitions that leave one stratum
+    if :infected in strata
+        net = respond(net,
+            :growing_healthy => ctx -> by_trait(fan, x -> 1 - infection(x, ctx); stratum = :healthy),
+            :growing_healthy_to_infected => ctx -> by_trait(fan, x -> infection(x, ctx); stratum = :healthy),
+            :recovering_infected_to_healthy =>
+                ctx -> by_trait(fan, x -> infected_survival(x, phase(ctx)) * phase(ctx).recovery; stratum = :infected),
+            :lingering_infected =>
+                ctx -> by_trait(fan, x -> infected_survival(x, phase(ctx)) * (1 - phase(ctx).recovery); stratum = :infected))
+    end
 
     tissue(x) = x^3                                        # cm² of healthy tissue on a fan of size x
     occupies = Pair{Symbol, Any}[:tissue => trait_weights(fan, tissue)]                  # fans of every stratum

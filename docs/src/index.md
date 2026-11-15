@@ -44,6 +44,10 @@ on Catlab.jl.
 - [Sea fans and aspergillosis](tutorials/16_sea_fan_aspergillosis.md): a published
   integral projection model stratified by infection status, with healthy, infected and
   resistant colonies as strata of one life cycle.
+- [Four perennials of the sagebrush steppe](tutorials/17_sagebrush_steppe.md): the
+  integral projection models of Adler, Ellner & Levine (2010), coupled by crowding through
+  each species' cover and checked against the R package IPMdoit; coexistence, invasion when
+  rare and the removal of niche differences.
 
 Each tutorial is a Quarto vignette, also available as
 [HTML and PDF in the repository](https://github.com/ecorecipes/MatrixCommunityModels.jl/tree/main/vignettes).

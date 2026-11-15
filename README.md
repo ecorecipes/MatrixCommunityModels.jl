@@ -43,6 +43,11 @@ simulation loop.
 - A sea fan and its fungal disease (the IPM of Bruno et al. 2011, whose growth rates,
   elasticities and resistance scenario are reproduced): healthy, infected and resistant
   colonies are strata of one life cycle written by size.
+- Four perennial plants of the Idaho sagebrush steppe (`sagebrush_plant`,
+  `sagebrush_community`): the IPMs of Adler, Ellner & Levine (2010), coupled by
+  size-dependent crowding through each species' cover, with the parameters of the R
+  package IPMdoit, whose kernels, runs and invasion growth rates are reproduced; each
+  species invades the others when rare, and without niche differences none does.
 
 ## Installation
 
@@ -84,6 +89,7 @@ sol[:CACL]                                  # biomass by year and stage
 | 14 | [Thistles and a weevil](vignettes/14_thistles_and_weevil/14_thistles_and_weevil.md) ([PDF](vignettes/14_thistles_and_weevil/14_thistles_and_weevil.pdf)) | A published IPM of a native thistle, a published matrix model of a weed and the weevil they share |
 | 15 | [A forest on a large mesh](vignettes/15_forest_basal_area/15_forest_basal_area.md) ([PDF](vignettes/15_forest_basal_area/15_forest_basal_area.pdf)) | Three tree species as IPMs on 700 cells each, coupled through stand basal area and checked against the R package matreex |
 | 16 | [Sea fans and aspergillosis](vignettes/16_sea_fan_aspergillosis/16_sea_fan_aspergillosis.md) ([PDF](vignettes/16_sea_fan_aspergillosis/16_sea_fan_aspergillosis.pdf)) | A published IPM stratified by infection status: strata, responses by size and pools together |
+| 17 | [Four perennials of the sagebrush steppe](vignettes/17_sagebrush_steppe/17_sagebrush_steppe.md) ([PDF](vignettes/17_sagebrush_steppe/17_sagebrush_steppe.pdf)) | Four IPMs coupled by crowding through their covers, checked against the R package IPMdoit; coexistence, invasion when rare and the removal of niche differences |
 
 ## Status
 
@@ -99,6 +105,9 @@ part.
 The sea fan model is published; the size of its
 recruits is not given in the paper and is assumed, and infection passed among fans is an
 extension (see vignette 16).
+The sagebrush steppe models take their parameters and numerical scheme from the R package
+IPMdoit and reproduce it; how niche differences are removed is an assumption of this
+package, since the papers could not be read (see vignette 17).
 
 ## Data and licences
 
@@ -110,3 +119,7 @@ lefko3 and adapt3 from the datasets those packages distribute. The fitted vital 
 `src/forests.jl` are those shipped with the R package matreex 0.4.0
 (<https://github.com/gowachin/matreex>, MIT, © 2022 Maxime Jaunatre; its notice is kept in
 that file), and `test/reference/forest_*.csv` were produced by running it.
+`data/sagebrush` holds parameters copied or extracted from the R package IPMdoit
+(<https://github.com/atredennick/IPMdoit>, MIT, © 2015 Andrew Tredennick; its notice is in
+`data/sagebrush/LICENSE.txt`), and `test/reference/sagebrush_*.csv` were produced by
+running its functions.

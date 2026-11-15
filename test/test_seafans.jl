@@ -36,25 +36,25 @@ using Random
     change(shift) = (y, x) -> 0.95 * normal(y, x + shift, 0.57) + 0.05 * normal(y, x - 3.2, 0.52)
     recruits(x) = height(x) >= 20 ? P.fecundity * x^3 : 0.0
     recruit_size(y) = normal(y, P.recruit_size[1], P.recruit_size[2])
-    two_by_two = Dict(:escaping => [1 0; 0 0], :encountering => [0 0; 1 0], :recovering => [0 1; 0 0],
-                      :lingering => [0 0; 0 1], :recruiting => [1 0; 0 0])
-    # the model built by hand from those functions; `pressure` multiplies the risk of infection
+    two_by_two = Dict(:growing => [1 0; 1 0], :recruiting => [1 0; 0 0], :recovering => [0 1; 0 0], :lingering => [0 0; 0 1])
+    # the model built by hand from those functions: the life cycle of a healthy fan and the kernels of infected ones,
+    # stratified, with the fates attached by stratum; `pressure` multiplies the risk of infection
     function by_hand(pressure)
-        life = kernel_net(fan, :escaping => growth, :encountering => growth, :recovering => change(0.27),
-                          :lingering => change(-0.33), :recruiting => (y, x) -> recruits(x) * recruit_size(y))
-        fates = respond(life,
-            :escaping => ctx -> by_trait(fan, x -> survival(x) * (1 - pressure(ctx) * risk(x))),
-            :encountering => ctx -> by_trait(fan, x -> survival(x) * pressure(ctx) * risk(x)),
-            :recovering => ctx -> by_trait(fan, x -> infected_survival(x) * 0.38),
-            :lingering => ctx -> by_trait(fan, x -> infected_survival(x) * 0.62))
-        return stratify(births(fates, :recruiting), [:healthy, :infected]; coupling = two_by_two)
+        life = kernel_net(fan, :growing => (y, x) -> survival(x) * growth(y, x), :recruiting => (y, x) -> recruits(x) * recruit_size(y),
+                          :recovering => change(0.27), :lingering => change(-0.33))
+        net = stratify(births(life, :recruiting), [:healthy, :infected]; coupling = two_by_two)
+        return respond(net,
+            :growing_healthy => ctx -> by_trait(fan, x -> 1 - pressure(ctx) * risk(x); stratum = :healthy),
+            :growing_healthy_to_infected => ctx -> by_trait(fan, x -> pressure(ctx) * risk(x); stratum = :healthy),
+            :recovering_infected_to_healthy => ctx -> by_trait(fan, x -> infected_survival(x) * 0.38; stratum = :infected),
+            :lingering_infected => ctx -> by_trait(fan, x -> infected_survival(x) * 0.62; stratum = :infected))
     end
 
     @testset "strata" begin
         reef = sea_fan(; cells)
         net = system(reef)[:sea_fan]
         @test stage_names(reef, :sea_fan) == vcat(stratum_stage.(stage_names(fan), :healthy), stratum_stage.(stage_names(fan), :infected))
-        @test Set(transition_names(net)) == Set([:escaping_healthy, :encountering_healthy_to_infected,
+        @test Set(transition_names(net)) == Set([:growing_healthy, :growing_healthy_to_infected,
                                                  :recovering_infected_to_healthy, :lingering_infected, :recruiting_healthy])
         @test net.fecundity == [:recruiting_healthy]
         @test pool_names(reef) == [:tissue, :infectious]
@@ -147,16 +147,16 @@ using Random
         # Table E1: the elasticity of the growth rate, by kind of transition and by infection status
         @test sum(values(endemic.shares)) ≈ 100
         @test endemic.shares[:recruiting_healthy] ≈ 3.5 atol = 0.3
-        @test endemic.shares[:escaping_healthy] + endemic.shares[:recruiting_healthy] ≈ 91.1 atol = 0.6
-        @test endemic.shares[:encountering_healthy_to_infected] ≈ 2.8 atol = 0.2
-        @test endemic.shares[:recovering_infected_to_healthy] ≈ endemic.shares[:encountering_healthy_to_infected] rtol = 1e-6
+        @test endemic.shares[:growing_healthy] + endemic.shares[:recruiting_healthy] ≈ 91.1 atol = 0.6
+        @test endemic.shares[:growing_healthy_to_infected] ≈ 2.8 atol = 0.2
+        @test endemic.shares[:recovering_infected_to_healthy] ≈ endemic.shares[:growing_healthy_to_infected] rtol = 1e-6
         @test endemic.shares[:lingering_infected] ≈ 3.3 atol = 0.2
         @test pre.shares[:recruiting_healthy] ≈ 2.1 atol = 0.25
-        @test pre.shares[:escaping_healthy] + pre.shares[:recruiting_healthy] ≈ 100
+        @test pre.shares[:growing_healthy] + pre.shares[:recruiting_healthy] ≈ 100
         @test peak.shares[:recruiting_healthy] ≈ 3.3 atol = 0.2
-        @test peak.shares[:escaping_healthy] + peak.shares[:recruiting_healthy] ≈ 98.6 atol = 0.2
+        @test peak.shares[:growing_healthy] + peak.shares[:recruiting_healthy] ≈ 98.6 atol = 0.2
         # the table prints 0.05, 0.05 and 0.03 for the other three, which leaves the column summing to 98.7
-        @test peak.shares[:encountering_healthy_to_infected] ≈ 0.5 atol = 0.1
+        @test peak.shares[:growing_healthy_to_infected] ≈ 0.5 atol = 0.1
         @test peak.shares[:lingering_infected] ≈ 0.3 atol = 0.1
 
         # prevalence by size at the peak (Fig. 5D): 0.36, 0.55 and 0.62 at heights of 50, 80 and 100 cm
@@ -193,10 +193,10 @@ using Random
         reef, three = sea_fan(; cells), sea_fan(; cells, resistant = true)
         net = system(three)[:sea_fan]
         @test stage_names(three, :sea_fan)[[1, cells + 1, 2cells + 1]] == [:fan1_healthy, :fan1_infected, :fan1_resistant]
-        @test Set(transition_names(net)) == Set([:escaping_healthy, :encountering_healthy_to_infected, :recovering_infected_to_healthy,
-            :lingering_infected, :recruiting_healthy, :escaping_resistant, :encountering_resistant, :recruiting_resistant])
+        @test Set(transition_names(net)) == Set([:growing_healthy, :growing_healthy_to_infected, :recovering_infected_to_healthy,
+            :lingering_infected, :recruiting_healthy, :growing_resistant, :recruiting_resistant])
         @test Set(net.fecundity) == Set([:recruiting_healthy, :recruiting_resistant])
-        # a resistant fan that meets the fungus stays as it is: the stratum is closed, and is a fan that is never infected
+        # a resistant fan is never infected: the stratum is closed, and is a fan that is never infected
         A = community_matrix(three, zeros(3cells), phases.peak)
         healthy, infected, resistant = where(three, :healthy), where(three, :infected), where(three, :resistant)
         @test all(iszero, A[vcat(healthy, infected), resistant]) && all(iszero, A[resistant, vcat(healthy, infected)])

@@ -10,6 +10,8 @@ using MatrixCommunityModels
     include("test_bees.jl")
     include("test_thistles.jl")
     include("test_forests.jl")
+    include("test_tabulated.jl")
     include("test_seafans.jl")
+    include("test_sagebrush.jl")
     include("test_docstrings.jl")
 end

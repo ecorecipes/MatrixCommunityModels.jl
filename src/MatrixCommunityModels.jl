@@ -40,7 +40,7 @@ export ValuedProjectionNet, ResponsiveProjectionNet, ResponseContext, StageVecto
 export OpenCommunity, CommunityTrajectory
 export species, community, compose, system, species_names, pool_names, diagram
 export subcommunity, matrix_net
-export ContinuousStage, ContinuousDomain, meshpoints, step_size, kernel_net, responsive, by_trait, trait_weights
+export ContinuousStage, ContinuousDomain, meshpoints, step_size, kernel_net, responsive, tabulated, by_trait, trait_weights
 export project, advance, pool_totals, community_matrix, frozen_net, matrix_model, state_vector
 
 # A view of the pool totals under a component's own (local) pool names.
@@ -489,5 +489,7 @@ export forest_tree, forest_stage, forest_stand, forest_vital_rates
 export FOREST_PARAMETERS, FOREST_CLIMATE
 include("seafans.jl")
 export sea_fan, sea_fan_stage, SEA_FAN_PARAMETERS, SEA_FAN_PHASES
+include("sagebrush.jl")
+export sagebrush_plant, sagebrush_stage, sagebrush_community, sagebrush_crowding, sagebrush_state, SAGEBRUSH_PARAMETERS
 
 end # module MatrixCommunityModels

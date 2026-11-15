@@ -315,7 +315,8 @@ _cell_mean(f, x, h) = (5 * (f(x - _GAUSS3 * h) + f(x + _GAUSS3 * h)) + 8 * f(x))
 
 """
     forest_tree(kind; parameters = FOREST_PARAMETERS, climate = FOREST_CLIMATE, cells = 700,
-                  delay = parameters[kind].delay, harvest = 0.006, conspecific = nothing, name = kind)
+                  delay = parameters[kind].delay, harvest = 0.006, conspecific = nothing, name = kind,
+                  tabulate = nothing)
 
 A tree species (`:spruce`, `:fir` or `:beech`) as the integral projection model of the R
 package matreex (Kunstler et al. 2021; Guyennon et al. 2023). Trees are structured by trunk
@@ -349,6 +350,14 @@ Keywords:
   unit of basal area depend on how rare it is (Guyennon et al. 2023 used 0.1); it also
   finds the basal area at which a species alone replaces itself, where the growth rate
   with `conspecific` equal to the pool's total is one.
+- `tabulate`: `nothing` (the default) rebuilds the growth kernel every year at the basal
+  area of the stand. Give a grid of basal areas, such as `0:1:80`, to build it once at each
+  of them and interpolate linearly in between, as matreex does ([`tabulated`](@ref)); a
+  basal area outside the grid gets the kernel built for it. On 700 cells a year of
+  `advance` is then about five times faster. A kernel is kept for each grid value the
+  stand reaches, 0.2 to 0.9 MB each (at most about 40 MB per species for `0:1:80`). With
+  a grid of whole basal areas the basal area of the stand stays within 1e-4 of itself of
+  that of the exact run.
 
 Growth is integrated exactly over the cell a tree arrives in, and by a three-point rule
 over its place in the cell it leaves, which is the scheme of matreex. Trees that outgrow
@@ -356,7 +365,7 @@ the mesh are lost.
 """
 function forest_tree(kind::Symbol; parameters = FOREST_PARAMETERS, climate = FOREST_CLIMATE, cells::Integer = 700,
                      delay::Integer = _forest_species(parameters, kind).delay, harvest::Real = 0.006,
-                     conspecific = nothing, name::Symbol = kind)
+                     conspecific = nothing, name::Symbol = kind, tabulate = nothing)
     delay >= 2 || throw(ArgumentError("the delay must be at least 2 years, got $delay"))
     0 <= harvest < 1 || throw(ArgumentError("harvest is a share of the trees, got $harvest"))
     (conspecific === nothing || conspecific > 0) || throw(ArgumentError("conspecific must be a positive basal area"))
@@ -369,16 +378,31 @@ function forest_tree(kind::Symbol; parameters = FOREST_PARAMETERS, climate = FOR
     function growing(stand)
         mean_log(d) = rates.log_increment(d, stand)
         reach = exp(maximum(mean_log, sizes) + _FOREST_TAIL * sigma)      # more growth than this is left out
+        # What depends on the size `x` a tree leaves alone (its chance of surviving, and the mean of its growth
+        # at the three points of the rule) is kept from one entry to the next, since the kernel is evaluated
+        # column by column. The values are those of `_cell_mean`, computed in the same way.
+        # (x, alive, d1, d2, mean_log(x), mean_log(d1), mean_log(d2)) for the last x seen
+        column = fill(NaN, 7)
         return function (y, x)
             (y < x - h / 2 || y - x - h > reach) && return 0.0            # trees do not shrink
-            alive = 1 - _cell_mean(d -> rates.death(d, stand), x, h)
-            arriving = _cell_mean(d -> _increment_chance(y - h / 2 - d, y + h / 2 - d, mean_log(d), sigma), x, h)
+            if x != column[1]
+                d1, d2 = x - _GAUSS3 * h, x + _GAUSS3 * h
+                column .= (x, 1 - _cell_mean(d -> rates.death(d, stand), x, h), d1, d2, mean_log(x), mean_log(d1), mean_log(d2))
+            end
+            alive, d1, d2, m0, m1, m2 = column[2], column[3], column[4], column[5], column[6], column[7]
+            chance(d, m) = _increment_chance(y - h / 2 - d, y + h / 2 - d, m, sigma)
+            arriving = (5 * (chance(d1, m1) + chance(d2, m2)) + 8 * chance(x, m0)) / 18     # _cell_mean
             return kept * alive * arriving / h
         end
     end
+    growth = if tabulate === nothing
+        responsive(ctx -> growing(ctx.pool.basal_area))
+    else
+        tabulated(growing; pool = :basal_area, grid = tabulate, outside = :exact)
+    end
 
     life = kernel_net([:seedling, :sapling, tree],
-        :growing => [(:tree => :tree) => responsive(ctx -> growing(ctx.pool.basal_area))],
+        :growing => [(:tree => :tree) => growth],
         # recruits for each m² per hectare of the species; the response below supplies their number
         :recruiting => [(:tree => :seedling) => d -> _trunk_area(d) / 2, (:tree => :sapling) => d -> _trunk_area(d) / 2],
         :establishing => [(:seedling => :sapling) => 1.0],

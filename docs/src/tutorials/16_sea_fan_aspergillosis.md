@@ -90,40 +90,28 @@ the paper’s: it prints the constant for recruits with a misprint and to
 one figure, and does not give the size of a recruit. Both are taken up
 at the end.
 
-A fan’s year takes one of five courses, and each is a named transition.
-A healthy fan either escapes infection or meets the fungus; an infected
-fan either recovers or stays infected; and a healthy fan may produce
-recruits. Each transition has a *kernel*, which says how size changes
-over the year for a fan that follows it:
+The model starts from the life cycle of a healthy fan. Over a year it
+survives and grows, and if it is 20 cm or taller it produces recruits.
+Each of these is a named transition with a *kernel*, which says how size
+changes over the year for a fan that follows it. Beside them go the
+kernels of an infected fan that survives the year: one that recovers,
+and one that stays infected.
 
 ``` julia
 life = kernel_net(fan,
-    :escaping     => growth,                 # a healthy fan that is not infected during the year
-    :encountering => growth,                 # one that is: it grows the same in that year
-    :recovering   => change(0.27),           # an infected fan that recovers
-    :lingering    => change(-0.33),          # one that stays infected
-    :recruiting   => (y, x) -> recruits(x) * recruit_size(y))
+    :growing    => (y, x) -> survival(x) * growth(y, x),     # a healthy fan survives and grows
+    :recruiting => (y, x) -> recruits(x) * recruit_size(y),
+    :recovering => change(0.27),                             # an infected fan that recovers
+    :lingering  => change(-0.33))                            # one that stays infected
+life = births(life, :recruiting)
 ```
 
-    ResponsiveProjectionNet(100 stages, 5 transitions, 0 responses)
+    ResponsiveProjectionNet(100 stages, 4 transitions, 0 responses)
 
-The chance that a fan of size `x` follows a transition, which includes
-surviving the year, is attached to the transition as a response.
-`by_trait` writes a response as a function of size:
-
-``` julia
-fates = respond(life,
-    :escaping     => ctx -> by_trait(fan, x -> survival(x) * (1 - risk(x))),
-    :encountering => ctx -> by_trait(fan, x -> survival(x) * risk(x)),
-    :recovering   => ctx -> by_trait(fan, x -> infected_survival(x) * recovery),
-    :lingering    => ctx -> by_trait(fan, x -> infected_survival(x) * (1 - recovery)))
-fates = births(fates, :recruiting)
-```
-
-    ResponsiveProjectionNet(100 stages, 5 transitions, 4 responses)
-
-There is still only one stage, `fan`, which holds healthy and infected
-fans alike, so this net is not yet a model.
+`growing` and `recruiting` alone are a model: the life cycle of a fan
+that is never infected, which is checked below. There is still only one
+stage, `fan`, which holds healthy and infected fans alike, so this net
+is not yet a model of the disease.
 
 ## Two strata
 
@@ -132,24 +120,46 @@ transition a small matrix says which stratum the transition leaves, the
 column, and which it enters, the row:
 
 ``` julia
-routes = Dict(                               # rows and columns in the order healthy, infected
-    :escaping     => [1 0; 0 0],             # from healthy to healthy
-    :encountering => [0 0; 1 0],             # from healthy to infected
-    :recovering   => [0 1; 0 0],             # from infected to healthy
-    :lingering    => [0 0; 0 1],             # from infected to infected
-    :recruiting   => [1 0; 0 0])             # the recruits of healthy fans are healthy
-by_hand = stratify(fates, [:healthy, :infected]; coupling = routes)
-(stages = stage_names(by_hand)[[1, 100, 101, 200]], transitions = transition_names(by_hand))
+routes = Dict(                             # rows and columns in the order healthy, infected
+    :growing    => [1 0; 1 0],             # from healthy to healthy, and from healthy to infected
+    :recruiting => [1 0; 0 0],             # the recruits of healthy fans are healthy
+    :recovering => [0 1; 0 0],             # from infected to healthy
+    :lingering  => [0 0; 0 1])             # from infected to infected
+strata = stratify(life, [:healthy, :infected]; coupling = routes)
+(stages = stage_names(strata)[[1, 100, 101, 200]], transitions = transition_names(strata))
 ```
 
-    (stages = [:fan1_healthy, :fan100_healthy, :fan1_infected, :fan100_infected], transitions = [:encountering_healthy_to_infected, :escaping_healthy, :lingering_infected, :recovering_infected_to_healthy, :recruiting_healthy])
+    (stages = [:fan1_healthy, :fan100_healthy, :fan1_infected, :fan100_infected], transitions = [:growing_healthy, :growing_healthy_to_infected, :lingering_infected, :recovering_infected_to_healthy, :recruiting_healthy])
 
 Each cell of the mesh now exists twice, as `fan1_healthy` and
 `fan1_infected`, and the name of each transition says where it leads. A
-zero on the diagonal of a matrix removes the transition from that
-stratum: an infected fan neither escapes infection nor recruits. The
-responses were written before the strata existed, in terms of a fan’s
-size, and they still apply.
+healthy fan grows the same in a year whether or not it is infected
+during it, so `growing` has become two transitions with the same kernel:
+`growing_healthy` for a fan that stays healthy and
+`growing_healthy_to_infected` for one that is infected. A zero in a
+matrix removes the transition between those strata: an infected fan
+neither grows as a healthy one nor recruits.
+
+What remains is the chance of each fate, which depends on size. It is
+attached to the transitions of the stratified net as a response.
+`by_trait` writes a response as a function of size, and `stratum` says
+which stratum’s fans it applies to:
+
+``` julia
+by_hand = respond(strata,
+    :growing_healthy                => ctx -> by_trait(fan, x -> 1 - risk(x); stratum = :healthy),
+    :growing_healthy_to_infected    => ctx -> by_trait(fan, risk; stratum = :healthy),
+    :recovering_infected_to_healthy => ctx -> by_trait(fan, x -> infected_survival(x) * recovery; stratum = :infected),
+    :lingering_infected             => ctx -> by_trait(fan, x -> infected_survival(x) * (1 - recovery); stratum = :infected))
+```
+
+    ResponsiveProjectionNet(200 stages, 5 transitions, 4 responses)
+
+The fates can be attached here, after `stratify`, because a response can
+name the stratum whose cells it applies to. A response attached before
+`stratify` applies in every stratum alike, which suits a rate that does
+not depend on infection, such as the recruitment of a phase below; the
+chance of infection belongs to healthy fans only.
 
 `sea_fan()` builds the same net from `SEA_FAN_PARAMETERS`:
 
@@ -183,9 +193,9 @@ maximum(abs, A - to_matrix(four_kernels))
     2.7755575615628914e-17
 
 The two agree to rounding error. A second check is that a fan which
-cannot be infected has the life cycle of a healthy fan and nothing else.
-`sea_fan(resistant = :only)`, which is used again below, is a population
-of such fans:
+cannot be infected has the life cycle of a healthy fan, `growing` and
+`recruiting`, and nothing else. `sea_fan(resistant = :only)`, which is
+used again below, is a population of such fans:
 
 ``` julia
 never_infected = kernel_net(fan, :growing => (y, x) -> survival(x) * growth(y, x),
@@ -193,12 +203,12 @@ never_infected = kernel_net(fan, :growing => (y, x) -> survival(x) * growth(y, x
 maximum(abs, community_matrix(sea_fan(resistant = :only), zeros(100), endemic) - to_matrix(never_infected))
 ```
 
-    5.551115123125783e-17
+    0.0
 
 If four kernels give the same matrix, the strata have to earn their
 place. They do so in three ways below. The state can be read by stratum
 and by size. A response or a pool weight written by size applies to
-every stratum. And a third stratum needs one more name.
+every stratum or to one. And a third stratum needs one more name.
 
 ## Three phases of an epizootic
 
@@ -284,17 +294,17 @@ kinds of transition. Here it is by named transition, in percent, for the
 three phases:
 
 ``` julia
-transitions = [:escaping_healthy, :recruiting_healthy, :encountering_healthy_to_infected,
+transitions = [:growing_healthy, :recruiting_healthy, :growing_healthy_to_infected,
                :recovering_infected_to_healthy, :lingering_infected]
 [transitions [round(results[name].elasticity[t]; digits = 2) for t in transitions, name in keys(SEA_FAN_PHASES)]]
 ```
 
     5×4 Matrix{Any}:
-     :escaping_healthy                  98.02  95.35  87.96
-     :recruiting_healthy                 1.98   3.3    3.39
-     :encountering_healthy_to_infected   0.0    0.52   2.72
-     :recovering_infected_to_healthy     0.0    0.52   2.72
-     :lingering_infected                 0.0    0.31   3.22
+     :growing_healthy                 98.02  95.35  87.96
+     :recruiting_healthy               1.98   3.3    3.39
+     :growing_healthy_to_infected      0.0    0.52   2.72
+     :recovering_infected_to_healthy   0.0    0.52   2.72
+     :lingering_infected               0.0    0.31   3.22
 
 The table gives 2.1, 3.3 and 3.5 for reproduction in the three phases,
 and 100, 98.6 and 91.1 for transitions from healthy to healthy, which
@@ -347,12 +357,13 @@ three = sea_fan(resistant = true)
 (stages = stage_names(three, :sea_fan)[[1, 101, 201]], transitions = transition_names(system(three)[:sea_fan]))
 ```
 
-    (stages = [:fan1_healthy, :fan1_infected, :fan1_resistant], transitions = [:encountering_healthy_to_infected, :encountering_resistant, :escaping_healthy, :escaping_resistant, :lingering_infected, :recovering_infected_to_healthy, :recruiting_healthy, :recruiting_resistant])
+    (stages = [:fan1_healthy, :fan1_infected, :fan1_resistant], transitions = [:growing_healthy, :growing_healthy_to_infected, :growing_resistant, :lingering_infected, :recovering_infected_to_healthy, :recruiting_healthy, :recruiting_resistant])
 
-A resistant fan is a healthy fan that stays where it is when it meets
-the fungus, so `encountering` leads from `resistant` to `resistant`.
-Inside `sea_fan` this is one more name in the list of strata and one
-more entry in three of the routes.
+A resistant fan has the life cycle of a healthy fan and is never
+infected: `growing` and `recruiting` lead from `resistant` to
+`resistant`, and no chance of infection is attached to them. Inside
+`sea_fan` this is one more name in the list of strata and one more entry
+in two of the routes.
 
 The projection starts in 1994 from the stable state of the phase before
 the epizootic, with 15% of fans of every size resistant. From then on
@@ -457,21 +468,21 @@ the published risk is in proportion to the share of tissue infected,
 scaled so that the risk is the published one at the stable state. A
 response can read the reef’s own state to say so. `ctx.n[fan]` holds the
 fans in each cell whatever their stratum, and `ctx.n[fan, :infected]`
-the infected ones. The function below is a response by size that reads
-the numbers in the cells, on a net that is then stratified. `sea_fan`
-takes the same two totals from the pools instead, so that other hosts
-can add to them. For one population the two are the same:
+the infected ones. The function below gives the stratified net responses
+by size that read the numbers in the cells. `sea_fan` takes the same two
+totals from the pools instead, so that other hosts can add to them. For
+one population the two are the same:
 
 ``` julia
 area = x .^ 3                                # cm² of tissue on a fan of each size
 function passed_among_fans(q)
     pressure(ctx) = 1 - q + q / infected_tissue * sum(area .* ctx.n[fan, :infected]) / sum(area .* ctx.n[fan])
-    net = respond(life,
-        :escaping     => ctx -> by_trait(fan, survival.(x) .* (1 .- pressure(ctx) .* risk.(x))),
-        :encountering => ctx -> by_trait(fan, survival.(x) .* pressure(ctx) .* risk.(x)),
-        :recovering   => ctx -> by_trait(fan, x -> infected_survival(x) * recovery),
-        :lingering    => ctx -> by_trait(fan, x -> infected_survival(x) * (1 - recovery)))
-    return species(:sea_fan, stratify(births(net, :recruiting), [:healthy, :infected]; coupling = routes))
+    net = respond(strata,
+        :growing_healthy                => ctx -> by_trait(fan, 1 .- pressure(ctx) .* risk.(x); stratum = :healthy),
+        :growing_healthy_to_infected    => ctx -> by_trait(fan, pressure(ctx) .* risk.(x); stratum = :healthy),
+        :recovering_infected_to_healthy => ctx -> by_trait(fan, x -> infected_survival(x) * recovery; stratum = :infected),
+        :lingering_infected             => ctx -> by_trait(fan, x -> infected_survival(x) * (1 - recovery); stratum = :infected))
+    return species(:sea_fan, net)
 end
 
 disturbed = results.endemic.state .* (1 .+ 0.5 .* sin.(1:200))        # away from the stable state
