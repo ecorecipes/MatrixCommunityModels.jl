@@ -43,3 +43,10 @@ Pages = ["src/seafans.jl"]
 Modules = [MatrixCommunityModels]
 Pages = ["src/sagebrush.jl"]
 ```
+
+## North Sea fish by length (LeMans)
+
+```@autodocs
+Modules = [MatrixCommunityModels]
+Pages = ["src/lemans.jl"]
+```

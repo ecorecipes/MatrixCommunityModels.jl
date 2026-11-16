@@ -234,12 +234,15 @@ In a constant environment at the resident's equilibrium it equals
 function stochastic_invasion_rate(invader::OpenCommunity, resident::OpenCommunity, n0, envs; burnin::Integer = 0)
     sol = project(resident, n0, envs)
     names = Tuple(resident.ports)
+    # the pools of step t as the solver logged them, numbers or vectors
+    logged(t) = NamedTuple{names}(Tuple(haskey(sol.pool_vectors, p) ? sol.pool_vectors[p][t, :] : sol.pools[t, j]
+                                        for (j, p) in enumerate(names)))
     k = length(invader)
     v = fill(1.0 / k, k)
     total = 0.0
     steps = 0
     for (t, env) in enumerate(envs)
-        v = _rare_matrix(invader, NamedTuple{names}(Tuple(sol.pools[t, :])), env) * v
+        v = _rare_matrix(invader, logged(t), env) * v
         g = sum(v)
         g > 0 || return 0.0
         v ./= g

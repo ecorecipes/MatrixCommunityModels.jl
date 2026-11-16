@@ -1,0 +1,33 @@
+The files in this directory hold the North Sea data sets of the R package LeMaRns, version 0.1.2
+(Spence, Bannister, Ball, Dolder, Thorpe & Griffiths; CRAN, published 9 December 2019,
+https://CRAN.R-project.org/package=LeMaRns), written out at full precision by
+test/reference/R/run_lemans_reference.R:
+
+- north_sea_species.csv: the data frame NS_par (species_names, Linf, W_a, W_b, k, Lmat, a, b), with, for
+  each species, the fleet that catches it and its maximum catchability from NS_mixed_fish (gear_name,
+  max_catchability) and the selectivity parameters NS_eta and NS_L50 (as eta and L50).
+- north_sea_diet.csv: the predator-prey matrix NS_tau (rows are predators, columns prey).
+- north_sea_other_food.csv: NS_other, the biomass of food outside the model.
+
+LeMaRns gives as the source of NS_par and NS_tau: Thorpe, R.B., Le Quesne, W.J.F., Luxford, F., Collie,
+J.S. & Jennings, S. (2015). Evaluation and management implications of uncertainty in a multispecies
+size-structured model of population and community responses to fishing. Methods in Ecology and
+Evolution 6, 49-58. And of NS_mixed_fish, NS_eta and NS_L50: Thorpe, R.B., Dolder, P.J., Reeves, S.,
+Robinson, P. & Jennings, S. (2016). Assessing fishery and ecological consequences of alternative
+management options for multispecies fisheries. ICES Journal of Marine Science 73, 1503-1512.
+
+LeMaRns is distributed under the GNU General Public License, version 3 (its DESCRIPTION file:
+"License: GPL-3"). These data are taken from it and are therefore offered under the same licence:
+
+    This program is free software: you can redistribute it and/or modify it under the terms of the GNU
+    General Public License as published by the Free Software Foundation, version 3.
+
+    This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
+    the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public
+    License for more details.
+
+    You should have received a copy of the GNU General Public License along with this program. If not, see
+    <https://www.gnu.org/licenses/>.
+
+The rest of MatrixCommunityModels.jl is under its own licence (the LICENSE file at the root); whether
+GPL-3 data may be shipped with it is a decision for the package's owner.

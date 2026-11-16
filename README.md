@@ -53,6 +53,11 @@ simulation loop.
   size-dependent crowding through each species' cover, with the parameters of the R
   package IPMdoit, whose kernels, runs and invasion growth rates are reproduced; each
   species invades the others when rare, and without niche differences none does.
+- The length-based multispecies fish model LeMans for 21 species of the North Sea
+  (`lemans_community`; Hall et al. 2006, Thorpe et al. 2015): each species in length
+  classes, eaten by the others according to predator and prey size through pools with a
+  value for each predator length class, with the data and settings of the R package
+  LeMaRns, whose runs are reproduced.
 
 ## Installation
 
@@ -95,6 +100,7 @@ sol[:CACL]                                  # biomass by year and stage
 | 15 | [A forest on a large mesh](vignettes/15_forest_basal_area/15_forest_basal_area.md) ([PDF](vignettes/15_forest_basal_area/15_forest_basal_area.pdf)) | Three tree species as IPMs on 700 cells each, coupled through stand basal area and checked against the R package matreex |
 | 16 | [Sea fans and aspergillosis](vignettes/16_sea_fan_aspergillosis/16_sea_fan_aspergillosis.md) ([PDF](vignettes/16_sea_fan_aspergillosis/16_sea_fan_aspergillosis.pdf)) | A published IPM stratified by infection status: strata, responses by size and pools together |
 | 17 | [Four perennials of the sagebrush steppe](vignettes/17_sagebrush_steppe/17_sagebrush_steppe.md) ([PDF](vignettes/17_sagebrush_steppe/17_sagebrush_steppe.pdf)) | Four IPMs coupled by crowding through their covers, checked against the R package IPMdoit; coexistence, invasion when rare and the removal of niche differences |
+| 18 | [North Sea fish by length](vignettes/18_north_sea_lemans/18_north_sea_lemans.md) ([PDF](vignettes/18_north_sea_lemans/18_north_sea_lemans.pdf)) | The LeMans model of 21 species in 32 length classes, with predation by predator and prey size through pools indexed by size, checked against the R package LeMaRns; the unfished community and fishing by four fleets |
 
 ## Status
 
@@ -113,6 +119,9 @@ extension (see vignette 16).
 The sagebrush steppe models take their parameters and numerical scheme from the R package
 IPMdoit and reproduce it; how niche differences are removed is an assumption of this
 package, since the papers could not be read (see vignette 17).
+The LeMans model takes its equations, settings and North Sea data from the R package
+LeMaRns and reproduces its runs; it leaves out LeMaRns's other recruitment and mortality
+options and gives each species a single fleet (see vignette 18).
 
 ## Data and licences
 
@@ -128,3 +137,7 @@ that file), and `test/reference/forest_*.csv` were produced by running it.
 (<https://github.com/atredennick/IPMdoit>, MIT, © 2015 Andrew Tredennick; its notice is in
 `data/sagebrush/LICENSE.txt`), and `test/reference/sagebrush_*.csv` were produced by
 running its functions.
+`data/lemans` holds the North Sea data sets of the R package LeMaRns 0.1.2
+(<https://CRAN.R-project.org/package=LeMaRns>), which is distributed under the **GPL-3**,
+not MIT; their provenance and licence are in `data/lemans/LICENSE.txt`.
+`test/reference/lemans_*.csv` were produced by running LeMaRns.

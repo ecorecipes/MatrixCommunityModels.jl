@@ -49,6 +49,10 @@ CategoricalPopulationDynamics.jl, and on Catlab.jl.
   integral projection models of Adler, Ellner & Levine (2010), coupled by crowding through
   each species' cover and checked against the R package IPMdoit; coexistence, invasion when
   rare and the removal of niche differences.
+- [North Sea fish by length](tutorials/18_north_sea_lemans.md): the length-based
+  multispecies model LeMans (Hall et al. 2006) for 21 species, with predation by predator
+  and prey size through pools that hold a value for each predator length class, checked
+  against the R package LeMaRns; the unfished community and fishing by four fleets.
 
 Each tutorial is a Quarto vignette, also available as
 [HTML and PDF in the repository](https://github.com/ecorecipes/MatrixCommunityModels.jl/tree/main/vignettes).

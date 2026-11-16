@@ -113,6 +113,13 @@ weight` pairs, a number (weight on every stage), or a function `(n, env) -> numb
 grass = species(:grass, respond(life, :seeding => ctx -> max(0, 1 - ctx.pool.space / 1000));
                 occupies = [:space => [:seedling => 0.1, :adult => 1.0]])
 ```
+
+A pool can also hold one value for each of a set of classes, such as the prey on offer to
+predators of each size class: a contribution is then a matrix of weights, one row per
+class and one column per stage, or a function `(n, env) -> vector`, and a response reads
+the pool as `ctx.pool.name[i]`. Every contribution to such a pool is a vector of the same
+length (see `CategoricalPopulationDynamics.Pool`). [`project`](@ref) keeps its values in
+`pool_vectors` (see [`CommunityTrajectory`](@ref)).
 """
 function species(name::Symbol, net; occupies = Pair{Symbol, Any}[], reads = Symbol[])
     r = ResponsiveProjectionNet(net)
@@ -366,12 +373,33 @@ end
 Result of [`project`](@ref). `u[t + 1, :]` is the state at time `t`; `pools[t + 1, :]`
 holds the totals of the exposed pools used for the step from `t`. Index with a species
 name to get its stage-by-time matrix.
+
+A pool with a value for each of a set of classes (see [`species`](@ref)) has `NaN` in
+`pools`; its values are in `pool_vectors[name][t + 1, :]`, one column per class. The last
+row of both, for the final state, is `NaN`.
 """
 struct CommunityTrajectory
     t::Vector{Int}
     u::Matrix{Float64}
     pools::Matrix{Float64}
     community::OpenCommunity
+    pool_vectors::Dict{Symbol, Matrix{Float64}}
+end
+CommunityTrajectory(t, u, pools, community) = CommunityTrajectory(t, u, pools, community, Dict{Symbol, Matrix{Float64}}())
+
+# Record the pools used for step `k`: a number in its column of `pools`, a vector in `vectors`.
+function _log_pools!(pools::Matrix{Float64}, vectors::Dict{Symbol, Matrix{Float64}}, k::Int, ports, totals)
+    for (j, p) in enumerate(ports)
+        x = totals[p]
+        if x isa Number
+            pools[k, j] = x
+        else
+            rows = get!(() -> fill(NaN, size(pools, 1), length(x)), vectors, p)
+            size(rows, 2) == length(x) || throw(DimensionMismatch("pool :$p changed its number of classes"))
+            rows[k, :] = x
+        end
+    end
+    return pools
 end
 
 Base.getindex(sol::CommunityTrajectory, sp::Symbol) = sol.u[:, sol.community.layout[sp]]
@@ -415,8 +443,9 @@ function project(c::OpenCommunity, n0, envs; rng = nothing, solver::Symbol = :au
     T = length(envs)
     u = zeros(Float64, T + 1, length(c))
     pools = fill(NaN, T + 1, length(c.ports))
+    vectors = Dict{Symbol, Matrix{Float64}}()
     u[1, :] = start
-    T == 0 && return CommunityTrajectory([0], u, pools, c)
+    T == 0 && return CommunityTrajectory([0], u, pools, c, vectors)
     by_ipm = solver === :ipm || (solver === :auto && _continuous(c))
     if by_ipm || rng === nothing
         # only the trajectory and the pools are read from the solution, so each step's matrices are not kept
@@ -434,19 +463,18 @@ function project(c::OpenCommunity, n0, envs; rng = nothing, solver::Symbol = :au
             u[k, c.layout[sp]] = sol.u[k][sp]
         end
         logged = sol.substep_log[:pools]
-        for k in 1:T, (j, p) in enumerate(c.ports)
-            pools[k, j] = logged[k][p]
+        for k in 1:T
+            _log_pools!(pools, vectors, k, c.ports, logged[k])
         end
     else
         n = start
         for (k, env) in enumerate(envs)
-            totals = pool_totals(c, n, env)
-            pools[k, :] = collect(totals)
+            _log_pools!(pools, vectors, k, c.ports, pool_totals(c, n, env))
             n = advance(c, n, env; rng)
             u[k + 1, :] = n
         end
     end
-    return CommunityTrajectory(collect(0:T), u, pools, c)
+    return CommunityTrajectory(collect(0:T), u, pools, c, vectors)
 end
 
 # Whether a community holds a species with a continuous stage, and is therefore an integral projection model.
@@ -539,5 +567,8 @@ include("seafans.jl")
 export sea_fan, sea_fan_stage, SEA_FAN_PARAMETERS, SEA_FAN_PHASES
 include("sagebrush.jl")
 export sagebrush_plant, sagebrush_stage, sagebrush_community, sagebrush_crowding, sagebrush_state, SAGEBRUSH_PARAMETERS
+include("lemans.jl")
+export lemans_parameters, lemans_fish, lemans_community, lemans_state, lemans_environment, lemans_biomass,
+       lemans_predation, LEMANS_NORTH_SEA
 
 end # module MatrixCommunityModels

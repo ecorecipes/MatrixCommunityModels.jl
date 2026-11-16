@@ -13,6 +13,7 @@ using MatrixCommunityModels
     include("test_tabulated.jl")
     include("test_seafans.jl")
     include("test_sagebrush.jl")
+    include("test_lemans.jl")
     include("test_solvers.jl")
     include("test_docstrings.jl")
 end
