@@ -45,9 +45,11 @@ Each species has been described in the way that suits it:
 This vignette composes the three. The earlier [vignette on
 IPMs](06_composing_ipms.md) introduced the tools on
 an invented plant; here the models and almost all the numbers are
-published. The species meet only through three pools: the flower `heads`
-on offer to egg-laying weevils, the number of weevils those heads can
-rear (`rearing`), and the `eggs` laid.
+published. Since one of the three species is an IPM, the community is
+solved by IntegralProjectionModels.jl, with the musk thistle and the
+weevil as populations of discrete classes. The species meet only through
+three pools: the flower `heads` on offer to egg-laying weevils, the
+number of weevils those heads can rear (`rearing`), and the `eggs` laid.
 
 ## The native thistle is an integral projection model
 

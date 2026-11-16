@@ -697,7 +697,7 @@ function _add_stages(net::ResponsiveProjectionNet, stages::Symbol...)
     base = ValuedProjectionNet(vcat(stage_names(net), collect(stages)),
         (t => net.base.transition_values[t] for t in transition_names(net))...)
     return ResponsiveProjectionNet(base; responses = net.responses, inflows = net.inflows, after = net.after,
-                                   fecundity = net.fecundity, groups = copy(net.groups))
+                                   fecundity = net.fecundity, groups = copy(net.groups), meshes = meshes(net))
 end
 
 # ---------------------------------------------------------------- shared flowers

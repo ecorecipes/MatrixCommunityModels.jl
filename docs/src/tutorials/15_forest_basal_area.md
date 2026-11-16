@@ -49,7 +49,8 @@ and they can be written with the tools of the earlier IPM vignettes
 and a weevil](14_thistles_and_weevil.md)).
 What is new is the scale. Trunk diameter is cut into 700 mesh cells for
 each species, the mesh of matreex, and three species together have 2190
-states.
+states. Like every community with a continuous stage, the stand is
+solved by IntegralProjectionModels.jl.
 
 This vignette builds Norway spruce (*Picea abies*), silver fir (*Abies
 alba*) and European beech (*Fagus sylvatica*), composes them, and checks
@@ -503,10 +504,10 @@ end
 ```
 
     cells   states   ms per step   settled basal area: spruce     fir   beech
-      100      114           0.2                        37.51   43.96   40.51
+      100      114           0.3                        37.51   43.96   40.51
       200      214           0.9                        36.90   43.36   44.32
-      350      364           2.6                        36.69   42.76   43.53
-      700      714          10.5                        36.67   42.60   42.55
+      350      364           2.8                        36.69   42.76   43.53
+      700      714          10.9                        36.67   42.60   42.55
 
 The time is for one year of spruce alone, on the machine that rendered
 this page; the three species together take three times as long. Almost

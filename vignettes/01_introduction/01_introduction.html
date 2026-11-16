@@ -2308,7 +2308,7 @@ var requirejs,require,define;(function(global,setTimeout){var req,s,head,baseEle
 <pre><code>OpenCommunity(grass, shrub; pools = space)</code></pre>
 </div>
 </div>
-<p><code>community</code> joins species by pool name. The result is a <code>PooledProjectionSystem</code> from CategoricalPopulationDynamics.jl (see <code>system(com)</code>), with the wiring diagram it was built from: one box per species, one junction per pool. Projecting it lowers it to a <code>CoupledMPMProblem</code> and calls the solver of MatrixProjectionModels.jl.</p>
+<p><code>community</code> joins species by pool name. The result is a <code>PooledProjectionSystem</code> from CategoricalPopulationDynamics.jl (see <code>system(com)</code>), with the wiring diagram it was built from: one box per species, one junction per pool. Projecting it lowers it to a <code>CoupledMPMProblem</code> and calls the solver of MatrixProjectionModels.jl. A community with a species whose stages carry a continuous trait (an integral projection model, as in the <a href="../06_composing_ipms/06_composing_ipms.md">vignette on IPMs</a>) is lowered to a <code>CoupledIPMProblem</code> instead, and solved by IntegralProjectionModels.jl.</p>
 <div id="6" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">species_names</span>(com), <span class="fu">pool_names</span>(com)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="1">

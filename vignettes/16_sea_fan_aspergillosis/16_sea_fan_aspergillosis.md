@@ -18,7 +18,7 @@ Simon Frost
 ``` julia
 ENV["GKSwstype"] = "100"
 using MatrixCommunityModels
-using MatrixProjectionModels: eigenanalysis_full, damping_ratio
+using IntegralProjectionModels: solve, EigenAnalysis, damping_ratio
 using Plots
 ```
 
@@ -43,7 +43,9 @@ this for any life cycle. The [Varroa
 vignette](../11_varroa_and_dwv/11_varroa_and_dwv.md) used it on a matrix
 model of honey bees; this one uses it on an IPM. The model and nearly
 all its numbers are published, and the results are checked against the
-paper.
+paper. Like every community with a continuous stage, the reef is
+projected by IntegralProjectionModels.jl, which also analyses it frozen
+in one phase.
 
 ## A fan’s year
 
@@ -236,8 +238,8 @@ the recruits of 2003. In the `endemic` phase the infection persists at a
 low level.
 
 Within one phase the model is linear, so it has a growth rate and a
-stable state. `community_matrix` freezes the species in a phase as an
-ordinary matrix, which MatrixProjectionModels.jl analyses. The
+stable state. `ipm_problem` freezes the species in a phase as an
+`IPMProblem`, which IntegralProjectionModels.jl analyses. The
 *elasticity* of the growth rate to a transition is the proportional
 change in the growth rate when the transition changes by a given
 proportion. Over all transitions the elasticities sum to one, so each is
@@ -246,11 +248,11 @@ them:
 
 ``` julia
 function steady(sp, phase)
-    A = community_matrix(sp, zeros(length(sp)), phase)
-    e = eigenanalysis_full(A)                              # growth rate, stable state and reproductive values
+    frozen = solve(ipm_problem(sp, :sea_fan, zeros(length(sp)), phase), EigenAnalysis())
+    e = frozen.eigenanalysis                               # growth rate, stable state and reproductive values
     net = frozen_net(sp, :sea_fan, e.stable_dist, phase)   # the species in that phase, its transitions still named
     elasticity(t) = 100 * e.repro_value' * transition_matrix(net, t) * e.stable_dist / e.lambda
-    return (rate = e.lambda, state = e.stable_dist, second = 1 / damping_ratio(A),
+    return (rate = e.lambda, state = e.stable_dist, second = 1 / damping_ratio(frozen.kernel_matrices),
             elasticity = Dict(t => elasticity(t) for t in transition_names(net)))
 end
 results = map(phase -> steady(reef, phase), SEA_FAN_PHASES)
@@ -555,7 +557,7 @@ it, since it takes the infection below its threshold.
 ``` julia
 for cells in (50, 100, 200)
     sp = sea_fan(; cells)
-    e = eigenanalysis_full(community_matrix(sp, zeros(2cells), endemic))
+    e = solve(ipm_problem(sp, :sea_fan, zeros(2cells), endemic), EigenAnalysis()).eigenanalysis
     n = named(sp, e.stable_dist, endemic)
     println(cells, " cells: growth rate ", round(e.lambda; digits = 4), ", ", round(100 * n[:infected] / n[:fan]; digits = 2),
             "% of fans infected")

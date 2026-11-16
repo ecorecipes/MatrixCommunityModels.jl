@@ -57,7 +57,8 @@ In the model a species never refers to another species. A genet is
 crowded by the cover of each species around it, and a species’ recruits
 depend on the cover of each species. The four covers are therefore four
 pools: each species adds its basal area to its own pool, and reads all
-four, each with its own coefficients.
+four, each with its own coefficients. The community of four IPMs is
+solved by IntegralProjectionModels.jl.
 
 ## Crowding
 

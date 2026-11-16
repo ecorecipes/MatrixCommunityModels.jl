@@ -16,7 +16,7 @@ Simon Frost
 ``` julia
 ENV["GKSwstype"] = "100"
 using MatrixCommunityModels
-using IntegralProjectionModels: PKernel, FKernel, LinearSurvival, NormalGrowth, FecundityRate, materialize
+using IntegralProjectionModels: PKernel, FKernel, LinearSurvival, NormalGrowth, FecundityRate
 using Plots
 ```
 
@@ -69,19 +69,23 @@ life = kernel_net(plant,
 projection net with one stage per cell. Its state is the number of
 individuals in each cell.
 
-Kernels built elsewhere arrive as matrices and enter through
-`matrix_net`. The same vital rates built with
-IntegralProjectionModels.jl give the same net:
+The kernels can also be those of IntegralProjectionModels.jl: a
+`PKernel` of survival and growth and an `FKernel` of fecundity on the
+stage’s mesh, which `kernel_net` discretises with that package’s own
+`materialize`. The same vital rates built from its rate types give the
+same net:
 
 ``` julia
-domain = ContinuousDomain(0.0, 10.0, 50)
-P = materialize(PKernel(LinearSurvival(-0.5, 0.4), NormalGrowth(1.2, 0.85, 0.7), domain))
-F = materialize(FKernel(FecundityRate(-1.0, 0.5, 1.0, 0.5, 0.2), domain))
-ready_made = matrix_net(stage_names(plant), :growing => P, :seeding => F)
+P = PKernel(LinearSurvival(-0.5, 0.4), NormalGrowth(1.2, 0.85, 0.7), plant.domain)
+F = FKernel(FecundityRate(-1.0, 0.5, 1.0, 0.5, 0.2), plant.domain)
+ready_made = kernel_net(plant, :growing => P, :seeding => F)
 maximum(abs, to_matrix(ready_made) - to_matrix(life))
 ```
 
     1.1102230246251565e-16
+
+Kernels built elsewhere that arrive as matrices enter through
+`matrix_net` instead.
 
 Recruitment is limited by space, a response on the `seeding` transition,
 and an individual of size `x` occupies `0.02 x²` units of space.
@@ -119,7 +123,10 @@ plot(z, eq.n; xlabel = "Size", ylabel = "Individuals per mesh cell", label = "eq
 ## Adding a stage-structured competitor
 
 The shrub is the three-stage matrix model of the introduction. The two
-species are composed exactly as two matrix models would be.
+species are composed exactly as two matrix models would be. Because the
+perennial has a continuous stage, `project` solves the community with
+IntegralProjectionModels.jl, the shrub being a population of three
+discrete classes.
 
 ``` julia
 shrub_life = ValuedProjectionNet([:seedling, :juvenile, :adult],

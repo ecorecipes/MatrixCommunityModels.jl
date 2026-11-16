@@ -20,13 +20,14 @@ using Random
         # other packages are loaded alongside
         upstream = MatrixCommunityModels.CategoricalPopulationDynamics
         @test meshpoints === upstream.meshpoints && step_size === upstream.step_size
-        for other in (upstream, MatrixCommunityModels.StructuredPopulationCore, MatrixCommunityModels.MatrixProjectionModels)
+        for other in (upstream, MatrixCommunityModels.StructuredPopulationCore, MatrixCommunityModels.MatrixProjectionModels,
+                      MatrixCommunityModels.IntegralProjectionModels)
             common = intersect(names(MatrixCommunityModels), names(other))
             @test all(name -> getfield(MatrixCommunityModels, name) === getfield(other, name), common)
         end
         together = Module()
         Core.eval(together, :(using MatrixCommunityModels, MatrixCommunityModels.CategoricalPopulationDynamics,
-                              MatrixCommunityModels.MatrixProjectionModels))
+                              MatrixCommunityModels.MatrixProjectionModels, MatrixCommunityModels.IntegralProjectionModels))
         @test Core.eval(together, :meshpoints) === meshpoints && Core.eval(together, :step_size) === step_size
         @test Core.eval(together, :stratify) === stratify && Core.eval(together, :quasi_extinction) === quasi_extinction
     end

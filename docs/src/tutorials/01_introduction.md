@@ -73,7 +73,11 @@ com = community(grass, shrub)
 `PooledProjectionSystem` from CategoricalPopulationDynamics.jl (see
 `system(com)`), with the wiring diagram it was built from: one box per
 species, one junction per pool. Projecting it lowers it to a
-`CoupledMPMProblem` and calls the solver of MatrixProjectionModels.jl.
+`CoupledMPMProblem` and calls the solver of MatrixProjectionModels.jl. A
+community with a species whose stages carry a continuous trait (an
+integral projection model, as in the [vignette on
+IPMs](06_composing_ipms.md)) is lowered to a
+`CoupledIPMProblem` instead, and solved by IntegralProjectionModels.jl.
 
 ``` julia
 species_names(com), pool_names(com)

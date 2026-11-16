@@ -5,11 +5,12 @@ population models linked by aggregate density dependence. This package builds th
 composition: each species is a projection net of named transitions, with responses to
 shared pools (space, biomass, aggregate density), and a community is the composite of
 species along an undirected wiring diagram whose junctions are the pools. Communities are
-projected by MatrixProjectionModels.jl.
+projected by MatrixProjectionModels.jl, or, when a species has a continuous stage (an
+integral projection model), by IntegralProjectionModels.jl.
 
 It is built on the [ecorecipes](https://github.com/ecorecipes) packages
-MatrixProjectionModels.jl, ProjectionModels.jl and CategoricalPopulationDynamics.jl, and
-on Catlab.jl.
+MatrixProjectionModels.jl, IntegralProjectionModels.jl, ProjectionModels.jl and
+CategoricalPopulationDynamics.jl, and on Catlab.jl.
 
 ## Tutorials
 

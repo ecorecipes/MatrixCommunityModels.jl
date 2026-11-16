@@ -276,4 +276,15 @@ using Random
         @test all(isinteger, random.u) && all(>=(0), random.u)
         @test stage_total(random, :sea_fan, :infected)[end] > 0
     end
+
+    @testset "a phase as an IPMProblem" begin
+        IPM = MatrixCommunityModels.IntegralProjectionModels
+        reef = sea_fan(; cells)
+        for phase in phases
+            frozen = IPM.solve(ipm_problem(reef, :sea_fan, zeros(2cells), phase), IPM.EigenAnalysis()).eigenanalysis
+            direct = IPM.eigenanalysis_full(community_matrix(reef, zeros(2cells), phase))
+            @test frozen.lambda ≈ direct.lambda rtol = 1e-12
+            @test frozen.stable_dist ≈ direct.stable_dist rtol = 1e-12
+        end
+    end
 end

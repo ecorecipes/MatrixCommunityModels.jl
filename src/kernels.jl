@@ -179,6 +179,27 @@ function _kernel_block(kernel, to::Symbol, from::Symbol, ::Symbol)
     return fill(Float64(kernel), 1, 1)
 end
 
+# A survival-growth or fecundity kernel of IntegralProjectionModels.jl, with any eviction correction it
+# carries. It is discretised there, by the midpoint rule on its own domain, which must be the mesh of the
+# continuous stages it joins.
+const _SubKernel = Union{IntegralProjectionModels.PKernel, IntegralProjectionModels.FKernel}
+
+function _kernel_block(kernel::_SubKernel, to::ContinuousStage, from::ContinuousStage, rule::Symbol)
+    rule === :midpoint || throw(ArgumentError("a $(nameof(typeof(kernel))) of IntegralProjectionModels.jl is " *
+        "discretised by the midpoint rule; it cannot be used with rule = :$rule"))
+    d = kernel.domain
+    same(a) = (Float64(d.lower), Float64(d.upper), d.n_meshpoints) == (a.domain.lower, a.domain.upper, a.domain.n_meshpoints)
+    same(to) && same(from) || throw(ArgumentError("the $(nameof(typeof(kernel))) from :$(from.name) to :$(to.name) " *
+        "is on the domain $(d.lower) to $(d.upper) with $(d.n_meshpoints) cells, which is not the mesh of both stages"))
+    return Matrix{Float64}(IntegralProjectionModels.materialize(kernel))
+end
+# elsewhere it is an error: such a kernel goes between two continuous stages
+_subkernel_error(kernel, to, from) = _kernel_error(to, from,
+    "a function or a number: a $(nameof(typeof(kernel))) of IntegralProjectionModels.jl goes between two continuous stages")
+_kernel_block(kernel::_SubKernel, to::ContinuousStage, from::Symbol, ::Symbol) = _subkernel_error(kernel, to, from)
+_kernel_block(kernel::_SubKernel, to::Symbol, from::ContinuousStage, ::Symbol) = _subkernel_error(kernel, to, from)
+_kernel_block(kernel::_SubKernel, to::Symbol, from::Symbol, ::Symbol) = _subkernel_error(kernel, to, from)
+
 """
     kernel_net(stages, transition => kernels, ...; rule = :midpoint)
     kernel_net(stage::ContinuousStage, transition => kernel, ...; rule = :midpoint)
@@ -196,6 +217,11 @@ form used by `ValuedProjectionNet`, where the kernel is
 - from a continuous stage to an ordinary one, a function `z -> number`;
 - between two ordinary stages, a number.
 
+Between two continuous stages on the same mesh the kernel can also be a `PKernel` or an
+`FKernel` of IntegralProjectionModels.jl (with any eviction correction it carries), whose
+domain is that mesh; it is discretised there by `materialize`, which uses the midpoint rule,
+so `rule` must be `:midpoint`.
+
 With a single continuous stage a transition can be written `name => kernel`.
 
 Kernels are evaluated at the middle of each cell (`rule`, passed to
@@ -204,7 +230,12 @@ continuous stages). Individuals that a kernel sends outside the range of a trait
 so the range should be wide enough to hold the population.
 
 A kernel wrapped in [`responsive`](@ref) is rebuilt each time step from the context; one
-wrapped in [`tabulated`](@ref) is interpolated between kernels built at values of a pool.
+wrapped in [`tabulated`](@ref) is interpolated between kernels built at values of a pool. The
+kernels they return may be any of the above, `PKernel` and `FKernel` included.
+
+The continuous stages are kept with the net as its meshes (`meshes(net)`), so a community
+that holds the species is solved as a coupled IPM by IntegralProjectionModels.jl (see
+[`project`](@ref)).
 
 The result is a responsive projection net, so `respond`, `births`, `inflow`, `⊕`,
 [`species`](@ref) and the rest apply. [`by_trait`](@ref) writes a response in terms of the
@@ -273,7 +304,9 @@ function kernel_net(stages::AbstractVector, transitions::Pair{Symbol}...; rule::
         isempty(varying) || push!(responses, tname => _kernel_response(varying, k))
     end
     groups = Dict{Symbol, Vector{Int}}(s.name => collect(ranges[s.name]) for s in stages if s isa ContinuousStage)
-    return ResponsiveProjectionNet(matrix_net(cells, matrices...); responses, groups)
+    # the continuous stages are recorded as meshes, so that the net can be lowered to a coupled IPM
+    meshes = [(name = s.name, domain = s.domain, cells = s.cells) for s in stages if s isa ContinuousStage]
+    return ResponsiveProjectionNet(matrix_net(cells, matrices...); responses, groups, meshes)
 end
 kernel_net(stage::ContinuousStage, transitions::Pair{Symbol}...; kwargs...) = kernel_net([stage], transitions...; kwargs...)
 

@@ -20,11 +20,16 @@ simulation loop.
 - Composition along Catlab undirected wiring diagrams (`compose`), or by pool name
   (`community`). Composites nest. The result is a `PooledProjectionSystem`.
 - Integral projection models in the same communities: a stage may carry a continuous
-  trait (`ContinuousStage`), with kernels as its named transitions (`kernel_net`). Such a
+  trait (`ContinuousStage`), with kernels as its named transitions (`kernel_net`), given as
+  functions or as the `PKernel` and `FKernel` of IntegralProjectionModels.jl. Such a
   species composes with matrix models through the same pools.
-- Projection (`project`) lowers the community to a `CoupledMPMProblem` and solves it with
-  MatrixProjectionModels.jl. A species frozen at any state is an ordinary
-  `MatrixProjectionModel` (`matrix_model`) or net (`frozen_net`).
+- Projection (`project`) lowers the community to a coupled problem and solves it with the
+  stack's own solvers: a community with a continuous stage is an integral projection model,
+  lowered to a `CoupledIPMProblem` and solved by IntegralProjectionModels.jl; any other is
+  lowered to a `CoupledMPMProblem` and solved by MatrixProjectionModels.jl. Both give the
+  same projection, deterministic or with demographic stochasticity. A species frozen at any
+  state is an ordinary `MatrixProjectionModel` (`matrix_model`), an `IPMProblem`
+  (`ipm_problem`) or a net (`frozen_net`).
 - Analysis: `equilibrium`, `jacobian`, `invasion_growth_rate`, `stochastic_invasion_rate`,
   analytic `equilibrium_sensitivity`, the simulation-based cross-species sensitivity of
   Lytle & Tonkin (`abundance_sensitivity`), `InteractionNetwork`, seasonal models

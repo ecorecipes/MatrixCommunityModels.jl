@@ -32,7 +32,8 @@ a single pool, and they can be written with the tools of the earlier IPM vignett
 ([composing IPMs](../06_composing_ipms/06_composing_ipms.md),
 [thistles and a weevil](../14_thistles_and_weevil/14_thistles_and_weevil.md)). What is new
 is the scale. Trunk diameter is cut into 700 mesh cells for each species, the mesh of
-matreex, and three species together have 2190 states.
+matreex, and three species together have 2190 states. Like every community with a
+continuous stage, the stand is solved by IntegralProjectionModels.jl.
 
 This vignette builds Norway spruce (*Picea abies*), silver fir (*Abies alba*) and European
 beech (*Fagus sylvatica*), composes them, and checks every step against matreex. It leaves

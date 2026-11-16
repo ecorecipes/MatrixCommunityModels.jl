@@ -2277,7 +2277,7 @@ var requirejs,require,define;(function(global,setTimeout){var req,s,head,baseEle
 <section id="trees-that-meet-only-through-basal-area" class="level2">
 <h2 class="anchored" data-anchor-id="trees-that-meet-only-through-basal-area">Trees that meet only through basal area</h2>
 <p>Forest inventories record the trunk diameter of every tree on a plot, and return to the plot some years later. From such records in five European countries, Kunstler et al. (2021) fitted how fast a tree grows and how likely it is to die, for 27 species, as functions of its diameter, of the climate and of the <em>basal area</em> of the stand. Basal area is the cross-sectional area of the trunks at breast height, added up over the trees of a stand and given in m² per hectare. It is the forester’s measure of how crowded a stand is. Guyennon et al. (2023) added recruitment, and the R package matreex (Jaunatre et al. 2024) packages the whole as integral projection models (IPMs) of species that can be run together.</p>
-<p>In these models a species never refers to another species. Growth, death and recruitment depend on basal area, to which every tree of every species adds. A total that species add to and read is what this package calls a pool, so these are matrix community models with a single pool, and they can be written with the tools of the earlier IPM vignettes (<a href="../06_composing_ipms/06_composing_ipms.md">composing IPMs</a>, <a href="../14_thistles_and_weevil/14_thistles_and_weevil.md">thistles and a weevil</a>). What is new is the scale. Trunk diameter is cut into 700 mesh cells for each species, the mesh of matreex, and three species together have 2190 states.</p>
+<p>In these models a species never refers to another species. Growth, death and recruitment depend on basal area, to which every tree of every species adds. A total that species add to and read is what this package calls a pool, so these are matrix community models with a single pool, and they can be written with the tools of the earlier IPM vignettes (<a href="../06_composing_ipms/06_composing_ipms.md">composing IPMs</a>, <a href="../14_thistles_and_weevil/14_thistles_and_weevil.md">thistles and a weevil</a>). What is new is the scale. Trunk diameter is cut into 700 mesh cells for each species, the mesh of matreex, and three species together have 2190 states. Like every community with a continuous stage, the stand is solved by IntegralProjectionModels.jl.</p>
 <p>This vignette builds Norway spruce (<em>Picea abies</em>), silver fir (<em>Abies alba</em>) and European beech (<em>Fagus sylvatica</em>), composes them, and checks every step against matreex. It leaves out the parts of matreex that manage or disturb a stand: its harvesting rules, storms, fires and pests, and climates that change through time. A constant rate of felling, which is part of the published model, is kept.</p>
 </section>
 <section id="the-vital-rates-of-one-species" class="level2">
@@ -2609,10 +2609,10 @@ fir holding 10.00 m²/ha in the spruce stand: growth rate 1.0080</code></pre>
 <span id="cb38-9"><a href="#cb38-9" aria-hidden="true" tabindex="-1"></a><span class="cf">end</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>cells   states   ms per step   settled basal area: spruce     fir   beech
-  100      114           0.3                        37.51   43.96   40.51
+  100      114           0.2                        37.51   43.96   40.51
   200      214           0.9                        36.90   43.36   44.32
   350      364           2.8                        36.69   42.76   43.53
-  700      714          10.8                        36.67   42.60   42.55</code></pre>
+  700      714          11.4                        36.67   42.60   42.55</code></pre>
 </div>
 </div>
 <p>The time is for one year of spruce alone, on the machine that rendered this page; the three species together take three times as long. Almost all of it goes on rebuilding the growth kernel: 490,000 entries for each species each year, of which those within reach of a year’s growth are computed and the rest are zero.</p>

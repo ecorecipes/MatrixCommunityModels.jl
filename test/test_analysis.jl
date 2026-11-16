@@ -6,6 +6,7 @@ using Random
 using Catlab: @relation
 import CategoricalPopulationDynamics
 import MatrixProjectionModels
+import IntegralProjectionModels
 import Graphs
 
 const TOY_K = 1000.0
@@ -112,6 +113,12 @@ end
     # the default (:generation) sums the life table only until survivorship falls below 0.01,
     # here seven ages, so it gives 2.16 x (1 - 0.5^6)
     @test MatrixProjectionModels.net_repro_rate(mpm.U, mpm.F) ≈ 2.16 * (1 - 0.5^6)
+    # the same moment as a problem of IntegralProjectionModels.jl
+    prob = ipm_problem(com, :grass, n, nothing)
+    @test prob isa IntegralProjectionModels.IPMProblem && prob.n0 == n[1:2]
+    @test IntegralProjectionModels.materialize(prob.kernel) == mpm.A
+    frozen = IntegralProjectionModels.solve(prob, IntegralProjectionModels.EigenAnalysis()).eigenanalysis
+    @test frozen.lambda ≈ MatrixProjectionModels.lambda(mpm) rtol = 1e-12
 end
 
 @testset "equilibrium, stability, invasion" begin
