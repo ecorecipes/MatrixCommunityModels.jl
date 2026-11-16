@@ -539,7 +539,8 @@ const BUMBLEBEE_PARAMETERS = (
     founding_mortality = 0.04,    # per day for a queen foraging alone (calibrated to establishment of about 0.12)
     first_workers = 8.0,          # workers in the first brood (Cresswell 2017: 8.25)
     queen_mortality = 0.0154,     # per day in the nest (Banks et al. 2017)
-    eggs = 1.6,                   # eggs per colony per day = eggs x (workers per colony)^husbandry (after Cresswell 2017)
+    eggs = 1.6,                   # eggs per colony per day = eggs x (workers per colony)^husbandry (after Cresswell 2017);
+                                  # calibrated to 76-86 workers, 19-25 new queens, 22-30 males per colony (Becher et al. 2018, Table 3)
     husbandry = 0.54,             # (Cresswell 2017)
     worker_brood = (4, 9, 9),     # days as egg, larva, pupa (Banks et al. 2020)
     male_brood = (4, 11, 11),

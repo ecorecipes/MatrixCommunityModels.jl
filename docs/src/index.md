@@ -29,7 +29,8 @@ CategoricalPopulationDynamics.jl, and on Catlab.jl.
 - [Metacommunity](tutorials/07_metacommunity.md): patches as nested communities, with
   dispersal as a pool.
 - [Equilibria, invasion and chance](tutorials/08_equilibria_invasion_chance.md): analytic
-  sensitivities, invasion rates in fluctuating environments, demographic stochasticity.
+  sensitivities, invasion rates in fluctuating environments, what would let an excluded
+  species persist (the sensitivity of its invasion rate), demographic stochasticity.
 - [Seasons and phenology](tutorials/09_seasons_and_phenology.md): within-year steps, a
   lottery for space, coexistence by timing, and drift.
 - Bees: [a honey bee colony](tutorials/10_honeybee_colony.md),
@@ -53,6 +54,34 @@ CategoricalPopulationDynamics.jl, and on Catlab.jl.
   multispecies model LeMans (Hall et al. 2006) for 21 species, with predation by predator
   and prey size through pools that hold a value for each predator length class, checked
   against the R package LeMaRns; the unfished community and fishing by four fleets.
+- [Corals of Mo'orea](tutorials/19_corals_moorea.md): the open-population integral
+  projection models of Kayal et al. (2018) for three coral genera recolonising four reefs,
+  with recruits arriving as inflows in numbers set by crowding, checked against the
+  authors' kernel functions and the published simulations of reef recovery.
+- [Five grasslands](tutorials/20_grasslands_synchrony.md): the multispecies integral
+  projection models of Chu & Adler (2015) for five sites, built with the sagebrush
+  machinery and checked against the authors' Kansas runs; coexistence, invasion in drawn
+  years and the synchrony of growth rates (Tredennick et al. 2017).
+- [Two flour beetles](tutorials/21_flour_beetles.md): the competition LPA model of Edmunds
+  et al. (2003) and Desharnais et al. (2005), two larva-pupa-adult models coupled by eating
+  each other's eggs and pupae; the published equilibria, bifurcations, coexistence two-cycle
+  and stochastic outcomes.
+- [Designed flow regimes](tutorials/22_designed_flow_regimes.md): riparian plants, fish and
+  three aquatic invertebrates under flows designed for each and under the natural regime
+  (Tonkin et al. 2021), checked against the authors' R code.
+- [Predator and prey](tutorials/23_predator_and_prey.md): the two-species, two-stage
+  matrix model of Barraquand & Gimenez (2019), checked against the authors' difference
+  equations; fixed points, oscillations and demographic noise.
+- [Chytrid fungus in leopard frogs](tutorials/24_chytrid_leopard_frogs.md): the full
+  host-parasite integral projection model of Wilber et al. (2022), with Bd load as the
+  continuous trait, a zoospore component joined by pools, and seasonal temperature and
+  breeding at four locations, checked against the authors' Python code; persistence with
+  demographic stochasticity.
+- [A size-spectrum fish community](tutorials/25_size_spectrum_mizer.md): the North Sea
+  model of the R package mizer, its implicit upwind step written exactly as a projection
+  matrix, with predation through pools that hold a value for each of 1200 predator
+  classes, checked against mizer's runs and steady states; fishing, the size spectrum and
+  a comparison with LeMans.
 
 Each tutorial is a Quarto vignette, also available as
 [HTML and PDF in the repository](https://github.com/ecorecipes/MatrixCommunityModels.jl/tree/main/vignettes).

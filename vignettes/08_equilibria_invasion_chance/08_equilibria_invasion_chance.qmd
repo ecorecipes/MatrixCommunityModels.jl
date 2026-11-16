@@ -110,6 +110,55 @@ this answer from properties of each species and the community it meets, which is
 what makes them useful for asking what would have to change for a native species to
 persist.
 
+## What would let an excluded species persist?
+
+In a constant environment the invasion growth rate `λ` is the dominant eigenvalue of the
+invader's matrix with the pools held at the residents' values, so its sensitivity to each
+vital rate follows from the eigenvectors of that matrix, as for a single species.
+`invasion_sensitivity` gives it for every entry and for every named transition, together
+with the elasticity (the proportional change in `λ` for a proportional change in the
+rate). The residents are held fixed: a small change to a rare invader does not change them.
+
+Take a grass that cannot invade the shrub of the first section at its equilibrium:
+
+```{julia}
+function grass(f; persisting = 0.5)
+    life = ValuedProjectionNet([:seedling, :adult],
+        :establishing => [(:seedling => :adult) => 0.30], :persisting => [(:adult => :adult) => persisting],
+        :seeding => [(:adult => :seedling) => f])
+    species(:grass, births(respond(life, :seeding => crowding), :seeding); occupies = [:space => [0.1, 1.0]])
+end
+resident = shrub(3.0)
+s = invasion_sensitivity(grass(6.0), resident, direct.n, nothing)
+@printf("invasion growth rate %.4f\n", s.lambda)
+for row in s.transitions
+    @printf("%-13s sensitivity %.4f   elasticity %.4f\n", row.transition, row.sensitivity, row.elasticity)
+end
+```
+
+The sensitivity of a transition here is the change in `λ` per proportional change in all
+of its values, so it is comparable across transitions. Seed production and establishment
+lie on the same loop and have the same elasticity; the survival of adults has nearly
+twice as much. A proportional change to adult survival is the most effective way to raise
+the grass's invasion rate.
+
+For a parameter, `invasion_sensitivity(build, θ)` differentiates the invasion rate by
+central differences, rebuilding the invader (and, if `build` says so, the residents) at
+each value. With adult survival as the parameter:
+
+```{julia}
+d = invasion_sensitivity(p -> (invader = grass(6.0; persisting = p), resident = resident, n = direct.n, env = nothing), 0.5)
+needed = 0.5 + (1 - d.lambda) / d.derivative       # first-order estimate of the survival that gives λ = 1
+(derivative = round(d.derivative; digits = 4), estimate = round(needed; digits = 3),
+ at_estimate = round(invasion_growth_rate(grass(6.0; persisting = needed), resident, direct.n, nothing); digits = 4),
+ at_0_8 = round(invasion_growth_rate(grass(6.0; persisting = 0.8), resident, direct.n, nothing); digits = 4))
+```
+
+The first-order estimate overshoots a little because `λ` is convex in adult survival (it
+rises faster than its tangent); the exact threshold is 0.8, where `λ² - 0.8λ - 0.3 × 6/9 = 0` has the root one. Raising
+seed production alone would take it from 6 to 15 seeds per adult, two and a half times
+as many, while survival needs to rise by three fifths.
+
 ## Chance: whole individuals
 
 Deterministic projection tracks fractions of individuals. The adapt3 orchid example

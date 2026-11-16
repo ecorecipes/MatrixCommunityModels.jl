@@ -161,10 +161,16 @@ end
 # affected by the cover of every species as by its own: in recruitment, which reads the covers, every coefficient
 # becomes its own; in growth and survival, where crowding by species j is π Cⱼ / alpha[j] on the scale of j, the
 # coefficient of j becomes the species' own times alpha[j] / alpha[i].
-function _sagebrush_effects(effects, i, niche::Bool; alpha = nothing)
-    niche && return collect(Float64, effects)
-    scale = alpha === nothing ? ones(length(effects)) : alpha ./ alpha[i]
-    return Float64(effects[i]) .* scale
+function _sagebrush_effects(effects, i, niche::Bool; alpha = nothing, interactions::Bool = true)
+    β = if niche
+        collect(Float64, effects)
+    else
+        scale = alpha === nothing ? ones(length(effects)) : alpha ./ alpha[i]
+        Float64(effects[i]) .* scale
+    end
+    # without interspecific interactions a species responds to its own species alone
+    interactions || (β = [j == i ? b : 0.0 for (j, b) in enumerate(β)])
+    return β
 end
 
 """
@@ -259,19 +265,26 @@ plant as a unit of its own species' cover would at its own scale. The rule that
 conspecific genets do not overlap is kept. `niche_differences` can also list the vital
 rates that keep their niche differences, for example `(:growth, :survival)` to remove them
 from recruitment alone.
+
+With `interactions = false` every coefficient of another species is set to zero, in all
+three vital rates, so that the species responds to its own crowding and cover alone (the
+"no competition" simulations of Tredennick et al. 2017).
+
+`parameters` can be any set in the form of `SAGEBRUSH_PARAMETERS`, such as a site of
+[`GRASSLAND_PARAMETERS`](@ref); `kind` is then one of its species.
 """
 function sagebrush_plant(kind::Symbol; parameters = SAGEBRUSH_PARAMETERS,
                          cells::Integer = _sagebrush_species(parameters, kind).cells,
-                         niche_differences = true, name::Symbol = kind)
+                         niche_differences = true, interactions::Bool = true, name::Symbol = kind)
     p = _sagebrush_species(parameters, kind)
     kinds = collect(keys(parameters))
     i = findfirst(==(kind), kinds)
     plant = sagebrush_stage(kind; parameters, cells)
     g, s, r = p.growth, p.survival, p.recruitment
     kept = _sagebrush_kept(niche_differences)
-    βg = _sagebrush_effects(g.crowding, i, :growth in kept; alpha = g.alpha)
-    βs = _sagebrush_effects(s.crowding, i, :survival in kept; alpha = s.alpha)
-    βr = _sagebrush_effects(r.crowding, i, :recruitment in kept)
+    βg = _sagebrush_effects(g.crowding, i, :growth in kept; alpha = g.alpha, interactions)
+    βs = _sagebrush_effects(s.crowding, i, :survival in kept; alpha = s.alpha, interactions)
+    βr = _sagebrush_effects(r.crowding, i, :recruitment in kept; interactions)
     years = length(r.intercept_year)
     z = meshpoints(plant)
     sd = sqrt(r.size_variance)
@@ -313,13 +326,15 @@ function sagebrush_plant(kind::Symbol; parameters = SAGEBRUSH_PARAMETERS,
 end
 
 """
-    sagebrush_community(; parameters = SAGEBRUSH_PARAMETERS, niche_differences = true, kinds = keys(parameters))
+    sagebrush_community(; parameters = SAGEBRUSH_PARAMETERS, niche_differences = true,
+                          interactions = true, kinds = keys(parameters))
 
 The four plants of [`sagebrush_plant`](@ref) composed through their cover pools, or those
 named in `kinds`.
 """
-sagebrush_community(; parameters = SAGEBRUSH_PARAMETERS, niche_differences = true, kinds = keys(parameters)) =
-    community((sagebrush_plant(k; parameters, niche_differences) for k in kinds)...)
+sagebrush_community(; parameters = SAGEBRUSH_PARAMETERS, niche_differences = true, interactions::Bool = true,
+                    kinds = keys(parameters)) =
+    community((sagebrush_plant(k; parameters, niche_differences, interactions) for k in kinds)...)
 
 """
     sagebrush_state(kind; density = 0.001, cover = nothing, parameters = SAGEBRUSH_PARAMETERS,

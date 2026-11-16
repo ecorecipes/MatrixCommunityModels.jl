@@ -11,16 +11,16 @@ a `PooledProjectionSystem`, which is lowered to a coupled problem: a `CoupledIPM
 solved by IntegralProjectionModels.jl when a species has a continuous stage (an integral
 projection model), a `CoupledMPMProblem` solved by MatrixProjectionModels.jl otherwise.
 
-This package adds the composition along wiring diagrams, the analysis of the composed
-community, and a set of published models.
+The open communities and their composition along wiring diagrams (`species`, `community`,
+`compose`, ...) are those of CategoricalPopulationDynamics.jl, re-exported here. This
+package adds their projection, the analysis of the composed community, continuous stages
+and kernels, and a set of published models.
 """
 module MatrixCommunityModels
 
 using LinearAlgebra
-using Catlab: Catlab, UndirectedWiringDiagram, RelationDiagram, nparts, subpart, ports,
-              junction, add_box!, add_junctions!, set_junction!
 import StructuredPopulationCore
-using StructuredPopulationCore: StateBlockLayout, ContinuousDomain
+using StructuredPopulationCore: ContinuousDomain
 import StructuredPopulationCore: meshpoints, step_size, quasi_extinction   # extended here, not redefined
 import MatrixProjectionModels
 using MatrixProjectionModels: MatrixProjectionModel, DirectIteration
@@ -32,6 +32,10 @@ using CategoricalPopulationDynamics: ValuedProjectionNet, ResponsiveProjectionNe
     stratum_stage, stratum_transition, transition_names, transition_matrix, to_matrix,
     evaluate, survival_fecundity_matrices, ⊕, left_kan_extension, meshes, CoupledIPMTarget
 import CategoricalPopulationDynamics: stage_names, pool_names, pool_totals, advance
+# open communities and their composition (CategoricalPopulationDynamics issue #4), re-exported
+# below; `_state` and `_split` read the state of a community as a flat vector and by species
+using CategoricalPopulationDynamics: OpenCommunity, species, community, compose, system, species_names,
+    diagram, subcommunity, state_vector, _state, _split
 
 # the modelling vocabulary of CategoricalPopulationDynamics.jl, re-exported
 export ValuedProjectionNet, ResponsiveProjectionNet, ResponseContext, StageVector, Pool,
@@ -44,108 +48,6 @@ export species, community, compose, system, species_names, pool_names, diagram
 export subcommunity, matrix_net
 export ContinuousStage, ContinuousDomain, meshpoints, step_size, kernel_net, responsive, tabulated, by_trait, trait_weights
 export project, advance, pool_totals, community_matrix, frozen_net, matrix_model, ipm_problem, state_vector
-
-# A view of the pool totals under a component's own (local) pool names.
-struct PoolView{P <: NamedTuple}
-    pool::P
-    alias::Dict{Symbol, Symbol}
-end
-Base.getproperty(v::PoolView, name::Symbol) =
-    getfield(getfield(v, :pool), get(getfield(v, :alias), name, name))
-Base.getindex(v::PoolView, name::Symbol) = getproperty(v, name)
-Base.haskey(v::PoolView, name::Symbol) = haskey(getfield(v, :pool), get(getfield(v, :alias), name, name))
-
-"""
-    OpenCommunity
-
-One or more species with exposed pools (its ports). Build one species with
-[`species`](@ref), and join them with [`community`](@ref) or [`compose`](@ref).
-
-The flattened model is a `CategoricalPopulationDynamics.PooledProjectionSystem`, available
-from [`system`](@ref). The state of a community is a flat vector: one block of stages per
-species, in the order of [`species_names`](@ref).
-"""
-struct OpenCommunity
-    names::Vector{Symbol}
-    nets::Dict{Symbol, ResponsiveProjectionNet}
-    aliases::Dict{Symbol, Dict{Symbol, Symbol}}
-    contributions::Vector{Tuple{Symbol, Symbol, Any}}
-    ports::Vector{Symbol}
-    diagram::Any
-    system::PooledProjectionSystem
-    layout::StateBlockLayout
-end
-
-function _open(names, nets, aliases, contributions, ports, diagram)
-    components = map(names) do name
-        net, alias = nets[name], aliases[name]
-        if all(k == v for (k, v) in alias)
-            name => net
-        else
-            # responses were written with the species' own pool names: translate them
-            local_view(f) = ctx -> f(ResponseContext(ctx.n, PoolView(ctx.pool, alias), ctx.env))
-            name => ResponsiveProjectionNet(net.base;
-                responses = Pair{Symbol, Any}[t => local_view(f) for (t, f) in net.responses],
-                inflows = Pair{Symbol, Any}[s => local_view(f) for (s, f) in net.inflows],
-                after = net.after, fecundity = net.fecundity, groups = net.groups, meshes = meshes(net))
-        end
-    end
-    pool_order = copy(ports)
-    for (pool, _, _) in contributions
-        pool in pool_order || push!(pool_order, pool)
-    end
-    pools = [Pool(p, Pair{Symbol, Any}[c => w for (q, c, w) in contributions if q === p]) for p in pool_order]
-    sys = PooledProjectionSystem(components...; pools = pools)
-    layout = StateBlockLayout(collect(Symbol, names), [length(stage_names(nets[n])) for n in names])
-    return OpenCommunity(collect(Symbol, names), nets, aliases, contributions, collect(Symbol, ports), diagram, sys, layout)
-end
-
-"""
-    species(name, net; occupies = [], reads = [])
-
-A single species as an [`OpenCommunity`](@ref). `net` is a valued or responsive projection
-net. `occupies` lists `pool => contribution` pairs saying how much of each pool the species
-occupies; a contribution is a vector of weights (one per stage), a list of `stage =>
-weight` pairs, a number (weight on every stage), or a function `(n, env) -> number`.
-`reads` names pools that the species' responses read without contributing to them.
-
-```julia
-grass = species(:grass, respond(life, :seeding => ctx -> max(0, 1 - ctx.pool.space / 1000));
-                occupies = [:space => [:seedling => 0.1, :adult => 1.0]])
-```
-
-A pool can also hold one value for each of a set of classes, such as the prey on offer to
-predators of each size class: a contribution is then a matrix of weights, one row per
-class and one column per stage, or a function `(n, env) -> vector`, and a response reads
-the pool as `ctx.pool.name[i]`. Every contribution to such a pool is a vector of the same
-length (see `CategoricalPopulationDynamics.Pool`). [`project`](@ref) keeps its values in
-`pool_vectors` (see [`CommunityTrajectory`](@ref)).
-"""
-function species(name::Symbol, net; occupies = Pair{Symbol, Any}[], reads = Symbol[])
-    r = ResponsiveProjectionNet(net)
-    pools = Symbol[p.first for p in occupies]
-    allunique(pools) || throw(ArgumentError("species :$name lists a pool twice"))
-    ports = vcat(pools, [p for p in reads if !(p in pools)])
-    contributions = Tuple{Symbol, Symbol, Any}[(p.first, name, p.second) for p in occupies]
-    return _open([name], Dict(name => r), Dict(name => Dict(p => p for p in ports)), contributions, ports, nothing)
-end
-
-"""
-    subcommunity(c, names...)
-
-The named species of community `c` as a community of their own, keeping the pools they
-are attached to: for example the natives of a fish community without the non-natives, or
-one species on its own as an invader.
-"""
-function subcommunity(c::OpenCommunity, names::Symbol...)
-    all(n -> n in c.names, names) || throw(ArgumentError("not all of $(names) are species of this community"))
-    keep = [n for n in c.names if n in names]
-    aliases = Dict(n => c.aliases[n] for n in keep)
-    contributions = Tuple{Symbol, Symbol, Any}[x for x in c.contributions if x[2] in keep]
-    used = unique(vcat([collect(values(aliases[n])) for n in keep]..., [x[1] for x in contributions]))
-    ports = [p for p in pool_names(c.system) if p in used]
-    return _open(keep, Dict(n => c.nets[n] for n in keep), aliases, contributions, ports, nothing)
-end
 
 """
     matrix_net(stages, name => matrix, ...)
@@ -162,209 +64,6 @@ function matrix_net(stages::AbstractVector{Symbol}, matrices::Pair{Symbol, <:Abs
         name => [(stages[j] => stages[i]) => Float64(M[i, j]) for j in 1:k for i in 1:k if M[i, j] != 0]
     end
     return ValuedProjectionNet(collect(Symbol, stages), transitions...)
-end
-
-"""
-    system(c)
-
-The `PooledProjectionSystem` of a community: its species as responsive projection nets,
-and its pools.
-"""
-system(c::OpenCommunity) = c.system
-
-"""
-    species_names(c)
-
-Names of the species of a community, in state order.
-"""
-species_names(c::OpenCommunity) = c.names
-
-"""
-    stage_names(c, species)
-
-Stage names of `species` in a community.
-"""
-stage_names(c::OpenCommunity, sp::Symbol) = stage_names(c.nets[sp])
-
-"""
-    pool_names(c; internal = false)
-
-Names of the pools a community exposes; with `internal = true`, all of its pools,
-including those shared only inside it.
-"""
-pool_names(c::OpenCommunity; internal::Bool = false) = internal ? pool_names(c.system) : c.ports
-
-"""
-    diagram(c)
-
-The undirected wiring diagram a community was composed along, or `nothing` for a single
-species.
-"""
-diagram(c::OpenCommunity) = c.diagram
-
-Base.length(c::OpenCommunity) = length(c.layout)
-Base.getindex(c::OpenCommunity, sp::Symbol) = c.system[sp]
-
-function Base.show(io::IO, c::OpenCommunity)
-    print(io, "OpenCommunity(", join(c.names, ", "), "; pools = ", join(c.ports, ", "), ")")
-end
-
-const _JUNCTION_COUNTER = Ref(0)
-
-"""
-    compose(diagram, components)
-
-Compose open communities along an undirected wiring diagram. Box `b` is filled by
-`components[b]`, whose pools are matched to the box's ports in order. Each junction is one
-pool: its total is the sum of what every attached species contributes. Outer ports of the
-diagram are the pools of the composite; junctions that are not exposed are shared only
-inside it.
-"""
-function compose(d::UndirectedWiringDiagram, components::AbstractVector)
-    nb = nparts(d, :Box)
-    nb == length(components) ||
-        throw(DimensionMismatch("diagram has $nb boxes, got $(length(components)) components"))
-    comps = OpenCommunity[c for c in components]
-    boxports = [collect(ports(d, b)) for b in 1:nb]
-    for b in 1:nb
-        length(boxports[b]) == length(comps[b].ports) || throw(DimensionMismatch(
-            "box $b has $(length(boxports[b])) ports but its component exposes $(length(comps[b].ports))"))
-    end
-    nj = nparts(d, :Junction)
-    portjunction = [[junction(d, p) for p in boxports[b]] for b in 1:nb]
-    outer = [junction(d, q; outer = true) for q in 1:nparts(d, :OuterPort)]
-    jnames = _junction_names(d, comps, portjunction, nj)
-    for j in 1:nj
-        # a junction that is not exposed gets a name nothing outside can clash with
-        j in outer || (jnames[j] = Symbol(jnames[j], "#", _JUNCTION_COUNTER[] += 1))
-    end
-
-    names = Symbol[]
-    nets = Dict{Symbol, ResponsiveProjectionNet}()
-    aliases = Dict{Symbol, Dict{Symbol, Symbol}}()
-    contributions = Tuple{Symbol, Symbol, Any}[]
-    for b in 1:nb
-        c = comps[b]
-        rename = Dict(c.ports[i] => jnames[j] for (i, j) in enumerate(portjunction[b]))
-        for name in c.names
-            name in names && throw(ArgumentError("species :$name appears twice in the composite"))
-            push!(names, name)
-            nets[name] = c.nets[name]
-            aliases[name] = Dict(k => get(rename, v, v) for (k, v) in c.aliases[name])
-        end
-        for (pool, name, w) in c.contributions
-            push!(contributions, (get(rename, pool, pool), name, w))
-        end
-    end
-    return _open(names, nets, aliases, contributions, Symbol[jnames[j] for j in outer], d)
-end
-
-function _junction_names(d, comps, portjunction, nj)
-    vars = try
-        subpart(d, :variable)
-    catch
-        nothing
-    end
-    vars !== nothing && eltype(vars) == Symbol && return collect(Symbol, vars)
-    names = Vector{Symbol}(undef, nj)
-    for (b, js) in enumerate(portjunction), (i, j) in enumerate(js)
-        isassigned(names, j) || (names[j] = comps[b].ports[i])
-    end
-    return names
-end
-
-"""
-    community(components...)
-
-Compose open communities that share pools by name: every pool named by any component
-becomes one junction, exposed as a pool of the result. The wiring diagram that was
-generated is available from [`diagram`](@ref).
-"""
-function community(components::OpenCommunity...)
-    pools = Symbol[]
-    for c in components, p in c.ports
-        p in pools || push!(pools, p)
-    end
-    d = RelationDiagram(length(pools))
-    js = add_junctions!(d, length(pools); variable = pools)
-    for c in components
-        b = add_box!(d, length(c.ports); name = first(c.names))
-        set_junction!(d, ports(d, b), [findfirst(==(p), pools) for p in c.ports])
-    end
-    set_junction!(d, js; outer = true)
-    return compose(d, collect(components))
-end
-
-# ---------------------------------------------------------------- state
-
-_split(c::OpenCommunity, n::AbstractVector) =
-    Dict{Symbol, Vector{Float64}}(sp => collect(Float64, n[c.layout[sp]]) for sp in c.names)
-_join(c::OpenCommunity, state::AbstractDict) = reduce(vcat, [state[sp] for sp in c.names])
-
-"""
-    state_vector(c, species => stages, ...)
-
-The flat state vector of a community from one stage vector per species.
-"""
-function state_vector(c::OpenCommunity, blocks::Pair{Symbol}...)
-    d = Dict(blocks)
-    Set(keys(d)) == Set(c.names) || throw(ArgumentError("need one stage vector for each of $(c.names)"))
-    n = reduce(vcat, [collect(Float64, d[sp]) for sp in c.names])
-    length(n) == length(c) || throw(DimensionMismatch("stage vectors do not match the community's stages"))
-    return n
-end
-
-_state(c::OpenCommunity, n::AbstractVector{<:Real}) =
-    length(n) == length(c) ? collect(Float64, n) :
-    throw(DimensionMismatch("state has length $(length(n)), community has $(length(c)) states"))
-_state(c::OpenCommunity, n::AbstractVector{<:Pair}) = state_vector(c, n...)
-
-"""
-    pool_totals(c, n, env)
-
-Totals of the pools a closed community exposes, in state `n`, as a `NamedTuple`.
-"""
-function pool_totals(c::OpenCommunity, n::AbstractVector, env; internal::Bool = false)
-    all_pools = pool_totals(c.system, _split(c, _state(c, n)), env)
-    internal && return all_pools
-    return NamedTuple{Tuple(c.ports)}(Tuple(all_pools[p] for p in c.ports))
-end
-
-"""
-    advance(c, n, env; rng = nothing)
-
-Advance a closed community one time step. With `rng`, the step has demographic
-stochasticity (see [`project`](@ref)).
-"""
-function advance(c::OpenCommunity, n::AbstractVector, env; rng = nothing)
-    state = _split(c, _state(c, n))
-    rng === nothing && return _join(c, advance(c.system, state, env))
-    return _join(c, _demographic_advance(c.system, state, env, rng))
-end
-
-# One step with demographic stochasticity: individuals are whole, survival and movement are
-# a multinomial draw down each column of U, births and inflows are Poisson.
-function _demographic_advance(sys::PooledProjectionSystem, state, env, rng)
-    pool = pool_totals(sys, state, env)
-    next = Dict{Symbol, Vector{Float64}}()
-    for name in CategoricalPopulationDynamics.component_names(sys)
-        net, n = sys[name], state[name]
-        all(isinteger, n) || throw(ArgumentError(
-            "demographic stochasticity needs whole numbers of individuals in :$name"))
-        ctx = context(net, n, pool, env)
-        U, F = survival_fecundity_matrices(net, ctx)
-        worst = maximum(sum(U; dims = 1))
-        worst <= 1 + 1e-6 || throw(ArgumentError(
-            "survival matrix of :$name has a column summing to $worst; demographic stochasticity needs " *
-            "survival probabilities (column sums at most 1). Mark births with `births(net, ...)`"))
-        counts = StructuredPopulationCore.demographic_step!(rng, zeros(Int, length(n)), round.(Int, n), U, F)
-        stepped = Float64.(counts)
-        for (i, r) in enumerate(CategoricalPopulationDynamics._inflows(net, ctx))
-            r > 0 && (stepped[i] += StructuredPopulationCore.rand_poisson(rng, r))
-        end
-        next[name] = collect(Float64, CategoricalPopulationDynamics._after(net, stepped))
-    end
-    return next
 end
 
 """
@@ -541,8 +240,11 @@ end
 
 include("kernels.jl")
 
+include("recruitment.jl")
+export lottery, lottery_demand
+
 include("analysis.jl")
-export equilibrium, jacobian, invasion_growth_rate, mean_abundance, abundance_sensitivity
+export equilibrium, jacobian, invasion_growth_rate, invasion_sensitivity, mean_abundance, abundance_sensitivity
 export equilibrium_sensitivity, stochastic_invasion_rate
 export InteractionNetwork, links, connectance, link_density, reciprocity, out_degree, in_degree
 export periodic_matrix, abundance, stage_total, CommunityEnsemble, ensemble, extinction_times, quasi_extinction
@@ -570,5 +272,22 @@ export sagebrush_plant, sagebrush_stage, sagebrush_community, sagebrush_crowding
 include("lemans.jl")
 export lemans_parameters, lemans_fish, lemans_community, lemans_state, lemans_environment, lemans_biomass,
        lemans_predation, LEMANS_NORTH_SEA
+include("corals.jl")
+export coral, coral_stage, coral_community, coral_recruits, CORAL_PARAMETERS, CORAL_RECRUITMENT_CAP
+include("grasslands.jl")
+export grassland_plant, grassland_community, grassland_state, synchrony, GRASSLAND_PARAMETERS
+include("tribolium.jl")
+export flour_beetle, flour_beetle_competition, periodic_point, TRIBOLIUM_EDMUNDS_2003, TRIBOLIUM_DESHARNAIS_2005
+include("flowregimes.jl")
+export flood_invertebrate, flow_invertebrates, invertebrate_flows, pulses, tonkin_scenario, tonkin_fish_start,
+       FLOW_INVERTEBRATES, TONKIN_SCENARIOS, TONKIN_FISH_INITIAL
+include("predatorprey.jl")
+export predator_prey, BARRAQUAND_GIMENEZ_2019, BARRAQUAND_GIMENEZ_2019_SET2
+include("chytrid.jl")
+export CHYTRID_SITES, CHYTRID_ZOOSPORE_SURVIVAL, chytrid_temperature, chytrid_environment, chytrid_load_stage,
+       leopard_frog, chytrid_zoospores, chytrid_community
+include("mizer.jl")
+export MIZER_NORTH_SEA, mizer_parameters, mizer_fish, mizer_resource, mizer_community, mizer_state,
+       mizer_environment, mizer_biomass, mizer_rates
 
 end # module MatrixCommunityModels

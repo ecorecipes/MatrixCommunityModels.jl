@@ -1,0 +1,13 @@
+gear,species,sel_func,knife_edge_size,catchability,initial_effort
+Industrial,Sprat,knife_edge,13,1,0
+Industrial,Sandeel,knife_edge,4,1,0
+Industrial,N.pout,knife_edge,23,1,0
+Pelagic,Herring,knife_edge,99,1,1
+Beam,Dab,knife_edge,21,1,0.5
+Otter,Whiting,knife_edge,75,1,0.5
+Beam,Sole,knife_edge,78,1,0.5
+Otter,Gurnard,knife_edge,39,1,0.5
+Beam,Plaice,knife_edge,105,1,0.5
+Otter,Haddock,knife_edge,165,1,0.5
+Otter,Cod,knife_edge,1606,1,0.5
+Otter,Saithe,knife_edge,1076,1,0.5

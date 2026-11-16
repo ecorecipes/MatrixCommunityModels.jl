@@ -93,9 +93,11 @@
         total(stage, r) = sum(stage_total(sol, :bumblebee, stage)[r[1:(end - 1)]])
         founded = total(:founding28, year(1))
         @test 0.08 < founded / 30 < 0.16                             # establishment of about 0.12
-        @test 60 < total(:worker_brood22, year(1)) / founded + 8 < 95   # workers reared per colony
-        @test 14 < total(:gyne_brood30, year(1)) / founded < 28         # new queens per colony
-        @test 18 < total(:male_brood26, year(1)) / founded < 34         # males per colony
+        # per colony, between the simulated and empirical means of Becher et al. (2018), Table 3:
+        # workers 76.2 and 86.3, new queens 19.1 and 24.8, males 21.8 and 30.1
+        @test 76 < total(:worker_brood22, year(1)) / founded + 8 < 86   # workers reared per colony
+        @test 19 < total(:gyne_brood30, year(1)) / founded < 25         # new queens per colony
+        @test 22 < total(:male_brood26, year(1)) / founded < 30         # males per colony
         # only hibernating queens survive the winter
         hib = stage_total(sol, :bumblebee, :hibernating)
         @test abundance(sol, :bumblebee)[310] ≈ hib[310] && hib[366] > 30

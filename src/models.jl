@@ -37,12 +37,15 @@ function _verde_species(sp, rate, modifier, K)
         :adult_growth => [(:s2 => :s3) => r("a$(sp)2") * r("den$(sp)2") * (1 / r("den$(sp)3"))],
         :adult_stasis => [(:s3 => :s3) => 1 - r("a$(sp)3")],
         :spawning => [(stage => :s1) => 0.5 * mult * r("GSI.$sp") * (1 - r("S0Mort$sp")) for (stage, mult) in spawners])
-    # each kind of year takes its toll on juveniles and adults
-    toll(stage) = [ctx -> 1 - getfield(ctx.env, flag) * r("STMort$sp") * modifier["$(sp)_$(stage)_$yt"]
-                   for (yt, flag) in _VERDE_YEAR_TYPES]
+    # each kind of year takes its toll on juveniles and adults (rates looked up once, not every step)
+    mortality = r("STMort$sp")
+    toll(stage) = [let m = modifier["$(sp)_$(stage)_$yt"]
+                       ctx -> 1 - getfield(ctx.env, flag) * mortality * m
+                   end for (yt, flag) in _VERDE_YEAR_TYPES]
     # the dependency assumption: egg survival falls to zero as total biomass approaches K
     room(ctx) = max((K - ctx.pool.biomass) / K, 0)
-    eggs_to_biomass = (ctx -> r("den$(sp)1"), ctx -> 1 / r("den$(sp)J"))
+    egg_density, juvenile_mass = r("den$(sp)1"), 1 / r("den$(sp)J")
+    eggs_to_biomass = (ctx -> egg_density, ctx -> juvenile_mass)
     fish = respond(life,
         (:juvenile_growth .=> toll("J"))..., (:adult_growth .=> toll("A"))..., (:adult_stasis .=> toll("A"))...,
         :spawning => room, (:spawning .=> eggs_to_biomass)...)

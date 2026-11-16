@@ -1,0 +1,52 @@
+The files in this directory hold the fitted vital-rate parameters of the multispecies integral projection models
+of five western North American grasslands (Arizona, Idaho, Kansas, Montana, New Mexico), as used by
+
+    Tredennick, A.T., de Mazancourt, C., Loreau, M. & Adler, P.B. (2017). Environmental responses, not species
+    interactions, determine synchrony of dominant species in semiarid grasslands. Ecology 98, 971-981.
+    https://doi.org/10.1002/ecy.1757
+
+whose models follow
+
+    Chu, C. & Adler, P.B. (2015). Large niche differences emerge at the recruitment stage to stabilize grassland
+    coexistence. Ecological Monographs 85, 373-392. https://doi.org/10.1890/14-1741.1
+
+They were written out at full precision by test/reference/R/run_grassland_reference.R from the repository
+https://github.com/atredennick/community_synchrony (commit d01b584, 10 March 2017):
+
+- species.csv: for each site and species, the mesh (cells, largest genet in cm², as set in
+  runscripts/run_ipm_simulations.R), the intercept, slope, crowding coefficients and spatial scales (alpha) of
+  growth and survival, the variance parameters of growth, the mean recruitment intercept and recruitment
+  crowding coefficients (crowding_j: the effect of species j on the row species), from results/
+  growth_params_list.RDS, surv_params_list.RDS and recruit_parameters.RDS as formatted by the repository's
+  R/import_regression_params_fxns.R; and the mean and variance of the log area of recruits, computed from
+  data/<site>/<species>/recSize.csv as that file's format_recruitment_params computes them.
+- years.csv: the year effects of growth, survival and recruitment, by site, species and year.
+
+The parameters were fitted by the authors to the mapped-quadrat data of the five sites, deposited by Chu & Adler
+on Dryad (https://doi.org/10.5061/dryad.37n6f) under CC0 1.0. The Dryad files themselves could not be
+downloaded (the file requires a login) and were not used.
+
+The repository's DESCRIPTION file states "License: MIT" and names Andrew Tredennick as author and maintainer; the
+repository has no LICENSE file and no copyright line. The numbers here are taken from it on the strength of that
+statement, with this notice:
+
+    MIT License (the repository gives no copyright line; its DESCRIPTION names Andrew Tredennick as author).
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+    documentation files (the "Software"), to deal in the Software without restriction, including without
+    limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+    Software, and to permit persons to whom the Software is furnished to do so, subject to the following
+    conditions:
+
+    The above copyright notice and this permission notice shall be included in all copies or substantial
+    portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+    TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+    THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+    CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+    DEALINGS IN THE SOFTWARE.
+
+Whether a "License: MIT" field without a LICENSE file is enough to ship these numbers is a decision for the
+package's owner. No code of the repository is included in this package; the reference script reads it at run
+time from a path given on its command line.

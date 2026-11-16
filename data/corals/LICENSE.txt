@@ -1,0 +1,16 @@
+kayal2018_table_s1.csv holds the parameter estimates of Table S1 of the Supporting Information of
+
+    Kayal, M., Lenihan, H.S., Brooks, A.J., Holbrook, S.J., Schmitt, R.J. & Kendall, B.E. (2018). Predicting coral
+    community recovery using multi-species population dynamics models. Ecology Letters 21, 1790-1799.
+    https://doi.org/10.1111/ele.13153
+
+typed by hand from the copy of the Supporting Information on eScholarship
+(https://escholarship.org/uc/item/7nm875tr, file Kayal_etal_Appendices.pdf): for each reef (LTER 1, 2, 4, 5) and
+taxon (Acropora, Pocillopora, Porites), the intercept and slope of recruitment, survival and growth, and the
+standard deviation of growth. They are published numbers (facts), cited here; no file of the authors was copied.
+
+The authors' R code (https://github.com/MohsenKayal/Coral-assemblage-IPM, Zenodo doi:10.5281/zenodo.573772) carries
+no licence and is not included in this package. test/reference/R/run_coral_reference.R reads it at run time from a
+path given on its command line.
+
+The field data behind the estimates (MCR LTER, Environmental Data Initiative) are not included.

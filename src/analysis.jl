@@ -128,13 +128,90 @@ function invasion_growth_rate(invader::OpenCommunity, resident::OpenCommunity, n
     return invasion_growth_rate(invader, pool_totals(resident, n, env), env)
 end
 
-# the matrix of a single rare species when the pools are held at `pool`
-function _rare_matrix(invader::OpenCommunity, pool::NamedTuple, env)
+# the net and response context of a single rare species when the pools are held at `pool`
+function _rare_context(invader::OpenCommunity, pool::NamedTuple, env)
     length(invader.names) == 1 || throw(ArgumentError("the invader must be a single species"))
     all(p -> haskey(pool, p), invader.ports) ||
         throw(ArgumentError("invader :$(only(invader.names)) needs pools $(Tuple(invader.ports)), got $(keys(pool))"))
     net = invader.system[only(invader.names)]
-    return to_matrix(net, context(net, zeros(length(stage_names(net))), pool, env))
+    return net, context(net, zeros(length(stage_names(net))), pool, env)
+end
+
+# the matrix of a single rare species when the pools are held at `pool`
+function _rare_matrix(invader::OpenCommunity, pool::NamedTuple, env)
+    net, ctx = _rare_context(invader, pool, env)
+    return to_matrix(net, ctx)
+end
+
+"""
+    invasion_sensitivity(invader, pool, env)
+    invasion_sensitivity(invader, resident, n, env)
+
+Sensitivity and elasticity of the [`invasion_growth_rate`](@ref) `λ` of a rare `invader` to
+its own vital rates, with the pools held at the totals `pool` (a `NamedTuple`) or at the
+totals of the `resident` community in state `n`. It answers the question: which change to
+an excluded species (`λ < 1`) would let it persist?
+
+They follow from the invader's matrix `A` at those pools by the eigenvector formula
+`∂λ/∂a_ij = v_i w_j / ⟨v, w⟩`, with `w` and `v` the right and left eigenvectors of `λ`.
+The pools are held fixed: a small change to a rare invader does not change the
+residents. Returns a `NamedTuple` with
+
+- `lambda`: the invasion growth rate;
+- `sensitivity` and `elasticity`: matrices over the invader's stages (rows are
+  destinations, columns sources), `∂λ/∂a_ij` and `(a_ij/λ) ∂λ/∂a_ij`; the elasticities sum
+  to one;
+- `transitions`: one row per named transition, `(transition, sensitivity, elasticity)`,
+  where `sensitivity` is `∂λ/∂m` for a factor `m` multiplying every value of the
+  transition (at `m = 1`), that is the sum of `a_ij ∂λ/∂a_ij` over its entries, and
+  `elasticity` is `sensitivity / λ`, the proportional change in `λ` per proportional change
+  in the transition;
+- `entries`: one row per entry of each transition, `(transition, from, to, value,
+  sensitivity, elasticity)`, with `value` the entry evaluated at the pools,
+  `sensitivity = ∂λ/∂a_ij` and `elasticity = (value/λ) ∂λ/∂a_ij`.
+
+Two transitions that share an entry each get its contribution in full. For the
+sensitivity to a parameter that enters several rates, or the residents too, use the
+method below.
+
+    invasion_sensitivity(build, θ; h = 1e-6)
+
+Derivative of the invasion growth rate with respect to a parameter `θ`, by central
+differences with step `h * max(|θ|, 1)`. `build(θ)` returns a `NamedTuple`, either
+`(invader, pool, env)` or `(invader, resident, n, env)`; whether the residents' state `n`
+is recomputed for each `θ` (for example by [`equilibrium`](@ref)) is up to `build`.
+Returns `(lambda, derivative, elasticity)` with `elasticity = θ/λ × derivative`.
+"""
+function invasion_sensitivity(invader::OpenCommunity, pool::NamedTuple, env)
+    net, ctx = _rare_context(invader, pool, env)
+    A = to_matrix(net, ctx)
+    λ = StructuredPopulationCore.lambda(A)
+    S = StructuredPopulationCore.sensitivity(A)
+    E = (A .* S) ./ λ
+    frozen = evaluate(net, ctx)
+    idx = Dict(s => i for (i, s) in enumerate(stage_names(net)))
+    entries = [(transition = t, from = e.first.first, to = e.first.second, value = Float64(e.second),
+                sensitivity = S[idx[e.first.second], idx[e.first.first]],
+                elasticity = e.second * S[idx[e.first.second], idx[e.first.first]] / λ)
+               for t in transition_names(net) for e in frozen.transition_values[t]]
+    transitions = map(transition_names(net)) do t
+        s = sum((x.value * x.sensitivity for x in entries if x.transition === t); init = 0.0)
+        (transition = t, sensitivity = s, elasticity = s / λ)
+    end
+    return (lambda = λ, sensitivity = S, elasticity = E, transitions = transitions, entries = entries)
+end
+
+function invasion_sensitivity(invader::OpenCommunity, resident::OpenCommunity, n::AbstractVector, env)
+    return invasion_sensitivity(invader, pool_totals(resident, n, env), env)
+end
+
+function invasion_sensitivity(build, θ::Real; h::Real = 1e-6)
+    rate(m) = haskey(m, :pool) ? invasion_growth_rate(m.invader, m.pool, m.env) :
+                                 invasion_growth_rate(m.invader, m.resident, m.n, m.env)
+    λ = rate(build(θ))
+    d = h * max(abs(θ), 1.0)
+    derivative = (rate(build(θ + d)) - rate(build(θ - d))) / (2d)
+    return (lambda = λ, derivative = derivative, elasticity = θ / λ * derivative)
 end
 
 """

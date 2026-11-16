@@ -1,0 +1,37 @@
+The files in this directory hold the North Sea parameters of the R package mizer, version 3.4.0 (Delius,
+Scott, Blanchard, Andersen, Southwell and others; CRAN, https://CRAN.R-project.org/package=mizer): the
+MizerParams object NS_params that ships with it, written out at full precision by
+test/reference/R/run_mizer_reference.R:
+
+- north_sea_species.csv: the species parameters of NS_params (its species_params slot, after mizer's
+  validParams), the columns w_min, w_mat, w_mat25, w_max, w_repro_max, beta, sigma, alpha, gamma, q, h, n,
+  ks, p, k, m, z0, erepro, R_max, interaction_resource and k_vb, for the 12 species.
+- north_sea_interaction.csv: the interaction matrix of NS_params (rows are predators, columns prey).
+- north_sea_gears.csv: its gear parameters (the fleet that catches each species, knife-edge selectivity,
+  the weight from which it is caught, catchability) and the fishing effort stored with it (initial_effort).
+- north_sea_resource.csv: the weight grid (smallest and largest fish weight class, number of fish classes,
+  smallest resource class) and the resource parameters (kappa, lambda, r_pp, n, w_pp_cutoff).
+- north_sea_initial_state.csv: the state stored with NS_params (initial_n and initial_n_pp), numbers per g
+  in each weight class; mizer documents it as "the steady state obtained from fishing with an effort
+  effort = c(Industrial = 0, Pelagic = 1, Beam = 0.5, Otter = 0.5)".
+
+mizer gives as the source of these data "Blanchard et al.", that is: Blanchard, J.L., Andersen, K.H.,
+Scott, F., Hintzen, N.T., Piet, G. & Jennings, S. (2014). Evaluating targets and trade-offs among fisheries
+and conservation objectives using a multispecies size spectrum model. Journal of Applied Ecology 51,
+612-622.
+
+mizer is distributed under the GNU General Public License, version 3 (its DESCRIPTION file: "License:
+GPL-3"). These data are taken from it and are therefore offered under the same licence:
+
+    This program is free software: you can redistribute it and/or modify it under the terms of the GNU
+    General Public License as published by the Free Software Foundation, version 3.
+
+    This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
+    the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public
+    License for more details.
+
+    You should have received a copy of the GNU General Public License along with this program. If not, see
+    <https://www.gnu.org/licenses/>.
+
+The rest of MatrixCommunityModels.jl is under its own licence (the LICENSE file at the root); whether
+GPL-3 data may be shipped with it is a decision for the package's owner.

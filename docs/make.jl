@@ -19,8 +19,21 @@ function tutorial_pages()
     end
 end
 
+# The open communities (`species`, `compose`, ...) are defined in CategoricalPopulationDynamics.jl
+# and re-exported; their docstrings are listed in api/communities.md. That module is passed to
+# `modules` so that `@docs` finds them, and ignored by `checkdocs`, which covers this package's
+# own exports. Their source links need the remote of that package when it is installed from
+# GitHub rather than checked out (its commit is then unknown, so links point at `main`).
+const CPD = MatrixCommunityModels.CategoricalPopulationDynamics
+const CPD_DIR = pkgdir(CPD)
+const CPD_REMOTE = Documenter.Remotes.GitHub("ecorecipes", "CategoricalPopulationDynamics.jl")
+const REMOTES = isdir(joinpath(CPD_DIR, ".git")) || isfile(joinpath(CPD_DIR, ".git")) ? Dict() :
+                Dict(CPD_DIR => (CPD_REMOTE, "main"))
+
 makedocs(;
-         modules = [MatrixCommunityModels],
+         modules = [MatrixCommunityModels, CPD],
+         checkdocs_ignored_modules = [CPD],
+         remotes = REMOTES,
          authors = "Simon Frost",
          sitename = "MatrixCommunityModels.jl",
          checkdocs = :exports,

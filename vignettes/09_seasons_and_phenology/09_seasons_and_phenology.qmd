@@ -30,6 +30,10 @@ plants. `demand` is the number of seeds trying to germinate this season, across 
 species. If demand exceeds the free space, each germinating seed establishes with
 probability `free space / demand`: a lottery in which every seed has the same chance.
 
+`lottery` attaches this rule to the `germination` transition. Each species adds its
+germinating seeds to the `demand` pool with `lottery_demand`, which counts what passes
+through `germination` with its other responses (here, the season) evaluated.
+
 ```{julia}
 function annual(name; germinate, seed, K = 1000.0, flood = 1, seeds_per_plant = 20.0, g = 0.5)
     life = ValuedProjectionNet([:seed, :plant],
@@ -38,14 +42,14 @@ function annual(name; germinate, seed, K = 1000.0, flood = 1, seeds_per_plant = 
         :growth => [(:plant => :plant) => 0.9],
         :seed_set => [(:plant => :seed) => seeds_per_plant])
     during(season) = ctx -> ctx.env == season ? 1.0 : 0.0
-    establishment(ctx) = min(1.0, max(K - ctx.pool.space, 0.0) / max(ctx.pool.demand, 1e-12))
     plant = respond(life,
         :dormancy => ctx -> ctx.env == germinate ? 1 - g : 1.0,          # germinating seeds leave the seed bank
-        :germination => during(germinate), :germination => establishment, # the lottery for free space
+        :germination => during(germinate),
         :seed_set => during(seed),
         :growth => ctx -> ctx.env == seed ? 0.0 : (ctx.env == flood ? 0.1 / 0.9 : 1.0))   # plants die after seeding; floods kill
+    plant = lottery(plant, :germination; capacity = K, space = :space, demand = :demand)  # the lottery for free space
     species(name, births(plant, :seed_set);
-            occupies = [:space => [:plant => 1.0], :demand => (n, env) -> env == germinate ? g * n[:seed] : 0.0])
+            occupies = [:space => [:plant => 1.0], :demand => lottery_demand(plant, :germination)])
 end
 
 seasons = [1, 2, 3, 4]

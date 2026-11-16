@@ -50,3 +50,52 @@ Pages = ["src/sagebrush.jl"]
 Modules = [MatrixCommunityModels]
 Pages = ["src/lemans.jl"]
 ```
+
+## Corals of Mo'orea
+
+```@autodocs
+Modules = [MatrixCommunityModels]
+Pages = ["src/corals.jl"]
+```
+
+## Grasslands
+
+```@autodocs
+Modules = [MatrixCommunityModels]
+Pages = ["src/grasslands.jl"]
+```
+
+## Flour beetles (competition LPA)
+
+```@autodocs
+Modules = [MatrixCommunityModels]
+Pages = ["src/tribolium.jl"]
+```
+
+## Designed flow regimes
+
+```@autodocs
+Modules = [MatrixCommunityModels]
+Pages = ["src/flowregimes.jl"]
+```
+
+## Predator and prey
+
+```@autodocs
+Modules = [MatrixCommunityModels]
+Pages = ["src/predatorprey.jl"]
+```
+
+## Chytrid fungus in leopard frogs
+
+```@autodocs
+Modules = [MatrixCommunityModels]
+Pages = ["src/chytrid.jl"]
+```
+
+## A size-spectrum fish community (mizer)
+
+```@autodocs
+Modules = [MatrixCommunityModels]
+Pages = ["src/mizer.jl"]
+```
