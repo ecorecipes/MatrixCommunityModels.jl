@@ -58,10 +58,12 @@ using LinearAlgebra, Random
             end
         end
         M = permutedims(reduce(hcat, [parse.(Float64, r[3:9]) for r in fish_mean if r[1] == code[s]]))
-        # achieved 3.0e-15, 1.4e-15, 1.5e-15, 1.3e-15 (2026-11-17; the vignette, dividing by 100 once, gets 0.0)
-        @test maximum(abs.(acc .- M) ./ max.(M, 1e-6)) < 3e-13
+        # achieved 3.0e-15, 1.4e-15, 1.5e-15, 1.3e-15 on aarch64 macOS and on Linux x64 (2026-11-17; the vignette,
+        # dividing by 100 once, gets 0.0), but 4.7e-8 and 2.8e-7 on Windows and macOS x64 CI: 200 years of a
+        # nonlinear model amplify last-bit differences in the platform's maths library
+        @test maximum(abs.(acc .- M) ./ max.(M, 1e-6)) < 1e-5
         fish_target = average(100 .* (acc[11:200, 1] .+ acc[11:200, 2] .+ acc[11:200, 4]) ./ 47660)
-        @test fish_target ≈ targets[code[s]][2] rtol = 1e-13            # achieved <= 4.4e-16 (2026-11-17)
+        @test fish_target ≈ targets[code[s]][2] rtol = 1e-9             # achieved <= 4.4e-16 locally, 2.3e-12 on x64 CI (2026-11-17)
         T[s] = (plants = plant_target, fish = fish_target, invertebrates = invertebrate_target)
     end
     # the targets as vignette 22 prints them (equal to R to two decimals)
