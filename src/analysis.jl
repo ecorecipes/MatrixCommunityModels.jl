@@ -10,7 +10,7 @@ change in any state, relative to `max(|n|, 1)`, falls below `tol`. Returns
 converges to one; cycles and chaos return `converged = false`.
 """
 function equilibrium(c::OpenCommunity, n0::AbstractVector, env; maxiter::Integer = 100_000, tol::Real = 1e-10)
-    n = _state(c, n0)
+    n = state_vector(c, n0)
     for k in 1:maxiter
         n1 = advance(c, n, env)
         if maximum(abs.(n1 .- n) ./ max.(abs.(n), 1.0)) < tol
@@ -45,7 +45,7 @@ function equilibrium(c::OpenCommunity, bracket::Pair{Symbol, <:Tuple{Real, Real}
     length(c.names) == 1 || throw(ArgumentError("equilibrium by pool value needs a single species"))
     pool = bracket.first
     held(n) = getproperty(pool_totals(c, n, env), pool)
-    start = _state(c, n0)
+    start = state_vector(c, n0)
     held(start) > 0 || throw(ArgumentError("the starting state contributes nothing to the pool :$pool"))
     # the state with the stable shape of the matrix at pool value `x`, and its growth rate
     function at(x)
@@ -519,4 +519,43 @@ below `threshold` at or before that time, estimated as the fraction of replicate
 function quasi_extinction(ens::CommunityEnsemble, sp::Symbol; threshold::Real = 1)
     times = extinction_times(ens, sp; threshold)
     return [count(x -> x !== nothing && x <= t, times) / length(times) for t in ens.t]
+end
+
+"""
+    periodic_point(c, n0, env; period = 1, tol = 1e-12, maxiter = 100)
+
+A point of a closed community that returns to itself after `period` steps in the constant environment `env`, found
+by Newton's method from `n0`: an equilibrium for `period = 1`, a point of a two-cycle for `period = 2`. Unlike
+[`equilibrium`](@ref), which iterates the dynamics, this also finds unstable equilibria and cycles. Returns `(n,
+converged, iterations, multipliers)`; `multipliers` are the eigenvalues of the Jacobian of the `period`-step map at
+`n` (the product of the one-step Jacobians around the cycle), so the point is locally stable if all have modulus
+below one. If Newton's method leaves the region where the model is finite, it stops with `converged = false`.
+"""
+function periodic_point(c::OpenCommunity, n0::AbstractVector, env; period::Integer = 1, tol::Real = 1e-12,
+                        maxiter::Integer = 100)
+    n = state_vector(c, n0)
+    k = length(n)
+    function along(x)                       # the period-step map and its Jacobian
+        J, y = Matrix{Float64}(I, k, k), x
+        for _ in 1:period
+            J = jacobian(c, y, env) * J
+            y = advance(c, y, env)
+        end
+        return y, J
+    end
+    converged, iterations = false, maxiter
+    for it in 1:maxiter
+        y, J = along(n)
+        all(isfinite, J) && all(isfinite, y) || break
+        step = (J - I) \ (y .- n)
+        all(isfinite, step) || break
+        n = n .- step
+        if maximum(abs.(step) ./ max.(abs.(n), 1.0)) < tol
+            converged, iterations = true, it
+            break
+        end
+    end
+    _, J = along(n)
+    multipliers = all(isfinite, J) ? eigvals(J) : fill(complex(NaN), k)
+    return (n = n, converged = converged, iterations = iterations, multipliers = multipliers)
 end

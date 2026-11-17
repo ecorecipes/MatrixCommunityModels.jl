@@ -19,8 +19,8 @@ larvae of species `j` eat eggs of species `i`, `c_ea` the same for adults, and `
 adults of `j` eat pupae of `i`. The model divides each coefficient by `V`.
 
 The paper varies the interspecific egg-eating by larvae, `c_el[1, 2] = c_el[2, 1]` (its `ceL = cEl`), from
-0.016 to 0.032; the value here, 0.01, is the one it lists before doing so (a coexistence equilibrium; see
-vignette 21).
+0.016 to 0.032; the value here, 0.01, is the one it lists before doing so. Vignette 21 explores the paper's
+range.
 """
 const TRIBOLIUM_EDMUNDS_2003 = (
     species = (:confusum, :castaneum),
@@ -100,43 +100,4 @@ function flour_beetle_competition(parameters = TRIBOLIUM_EDMUNDS_2003)
         eats = [names[i] => (larvae_eggs = p.c_el[i, j] / p.V, adults_eggs = p.c_ea[i, j] / p.V,
                              adults_pupae = p.c_pa[i, j] / p.V) for i in 1:2])
     return community(beetle(1), beetle(2))
-end
-
-"""
-    periodic_point(c, n0, env; period = 1, tol = 1e-12, maxiter = 100)
-
-A point of a closed community that returns to itself after `period` steps in the constant environment `env`, found
-by Newton's method from `n0`: an equilibrium for `period = 1`, a point of a two-cycle for `period = 2`. Unlike
-[`equilibrium`](@ref), which iterates the dynamics, this also finds unstable equilibria and cycles. Returns `(n,
-converged, iterations, multipliers)`; `multipliers` are the eigenvalues of the Jacobian of the `period`-step map at
-`n` (the product of the one-step Jacobians around the cycle), so the point is locally stable if all have modulus
-below one. If Newton's method leaves the region where the model is finite, it stops with `converged = false`.
-"""
-function periodic_point(c::OpenCommunity, n0::AbstractVector, env; period::Integer = 1, tol::Real = 1e-12,
-                        maxiter::Integer = 100)
-    n = _state(c, n0)
-    k = length(n)
-    function along(x)                       # the period-step map and its Jacobian
-        J, y = Matrix{Float64}(I, k, k), x
-        for _ in 1:period
-            J = jacobian(c, y, env) * J
-            y = advance(c, y, env)
-        end
-        return y, J
-    end
-    converged, iterations = false, maxiter
-    for it in 1:maxiter
-        y, J = along(n)
-        all(isfinite, J) && all(isfinite, y) || break
-        step = (J - I) \ (y .- n)
-        all(isfinite, step) || break
-        n = n .- step
-        if maximum(abs.(step) ./ max.(abs.(n), 1.0)) < tol
-            converged, iterations = true, it
-            break
-        end
-    end
-    _, J = along(n)
-    multipliers = all(isfinite, J) ? eigvals(J) : fill(complex(NaN), k)
-    return (n = n, converged = converged, iterations = iterations, multipliers = multipliers)
 end

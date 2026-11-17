@@ -56,6 +56,6 @@ using LinearAlgebra, Random
     starts = [tonkin_fish_start(Random.Xoshiro(k)) for k in 1:2000]
     @test average(s[4].second[3] for s in starts) ≈ TONKIN_FISH_INITIAL.CAIN[2] rtol = 0.05
     # the corrected carrying capacity relaxes towards Kb between floods
-    c = invertebrate_flows(pulses(91.25, 50, 3650)...; corrected = true)
-    @test c[end].Kpre.dragonfly < invertebrate_flows(pulses(91.25, 50, 3650)...)[end].Kpre.dragonfly
+    c = invertebrate_flows(flood_pulses(91.25, 50, 3650)...; corrected = true)
+    @test c[end].Kpre.dragonfly < invertebrate_flows(flood_pulses(91.25, 50, 3650)...)[end].Kpre.dragonfly
 end

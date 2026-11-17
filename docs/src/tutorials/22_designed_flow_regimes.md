@@ -256,7 +256,7 @@ gm(x) = exp(sum(log.(x[x .> 0])) / length(x))
 found = csv("flow_findopt.csv")
 for (name, x, Q) in (("Dragonfly", :dragonfly, 1000), ("Mayfly", :mayfly, 1000), ("Ostracod", :ostracod, 30))
     for (k, every) in enumerate((365 / 4, 365 / 3, 365 / 2, 365, 730))
-        envs = invertebrate_flows(pulses(every, Q, 3650)...)
+        envs = invertebrate_flows(flood_pulses(every, Q, 3650)...)
         n = project(flood_invertebrate(x), [50.0], envs)[x][367:end, 1]
         r = only(r for r in found if r[1] == name && r[2] == "freq$k")
         @printf("%-9s every %3d days: mean %6.2f (R %6.2f), geometric mean %9.3g (R %9.3g)\n",
@@ -291,7 +291,7 @@ frequency together, for the mean of the two targets over the last 20 of
 everys = [30, 61, 91, 182, 365]
 sizes = [10, 25, 50, 100, 250]
 grid = [begin
-            envs = invertebrate_flows(pulses(e, q, 365 * 30)...)
+            envs = invertebrate_flows(flood_pulses(e, q, 365 * 30)...)
             sol = project(bugs, [50.0, 50, 50], envs)
             mean((sol[:mayfly][3652:end, 1] .+ sol[:dragonfly][3652:end, 1]) ./ 2)
         end for q in sizes, e in everys]

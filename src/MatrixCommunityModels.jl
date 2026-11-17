@@ -33,9 +33,9 @@ using CategoricalPopulationDynamics: ValuedProjectionNet, ResponsiveProjectionNe
     evaluate, survival_fecundity_matrices, ⊕, left_kan_extension, meshes, CoupledIPMTarget
 import CategoricalPopulationDynamics: stage_names, pool_names, pool_totals, advance
 # open communities and their composition (CategoricalPopulationDynamics issue #4), re-exported
-# below; `_state` and `_split` read the state of a community as a flat vector and by species
+# below, with `species_states` (state by species), used internally
 using CategoricalPopulationDynamics: OpenCommunity, species, community, compose, system, species_names,
-    diagram, subcommunity, state_vector, _state, _split
+    diagram, subcommunity, state_vector, species_states
 
 # the modelling vocabulary of CategoricalPopulationDynamics.jl, re-exported
 export ValuedProjectionNet, ResponsiveProjectionNet, ResponseContext, StageVector, Pool,
@@ -47,7 +47,7 @@ export OpenCommunity, CommunityTrajectory
 export species, community, compose, system, species_names, pool_names, diagram
 export subcommunity, matrix_net
 export ContinuousStage, ContinuousDomain, meshpoints, step_size, kernel_net, responsive, tabulated, by_trait, trait_weights
-export project, advance, pool_totals, community_matrix, frozen_net, matrix_model, ipm_problem, state_vector
+export project, advance, pool_totals, community_matrix, frozen_net, matrix_model, ipm_problem, state_vector, species_states
 
 """
     matrix_net(stages, name => matrix, ...)
@@ -138,7 +138,7 @@ whichever solver is used.
 """
 function project(c::OpenCommunity, n0, envs; rng = nothing, solver::Symbol = :auto)
     solver in (:auto, :ipm, :mpm) || throw(ArgumentError("solver must be :auto, :ipm or :mpm, got :$solver"))
-    start = _state(c, n0)
+    start = state_vector(c, n0)
     T = length(envs)
     u = zeros(Float64, T + 1, length(c))
     pools = fill(NaN, T + 1, length(c.ports))
@@ -150,11 +150,11 @@ function project(c::OpenCommunity, n0, envs; rng = nothing, solver::Symbol = :au
         # only the trajectory and the pools are read from the solution, so each step's matrices are not kept
         sol = if by_ipm
             stochasticity = rng === nothing ? IntegralProjectionModels.Deterministic() : IntegralProjectionModels.Demographic()
-            target = CoupledIPMTarget(_split(c, start), (0, T); p = collect(envs), stochasticity)
+            target = CoupledIPMTarget(species_states(c, start), (0, T); p = collect(envs), stochasticity)
             IntegralProjectionModels.solve(CategoricalPopulationDynamics.lower(c.system, target),
                 IntegralProjectionModels.DirectIteration(); save_matrices = false, rng)
         else
-            target = StateDependentMPMTarget(_split(c, start), (0, T); p = collect(envs))
+            target = StateDependentMPMTarget(species_states(c, start), (0, T); p = collect(envs))
             MatrixProjectionModels.solve(CategoricalPopulationDynamics.lower(c.system, target), DirectIteration();
                 save_matrices = false)
         end
@@ -180,7 +180,7 @@ end
 _continuous(c::OpenCommunity) = any(sp -> !isempty(meshes(c.system[sp])), c.names)
 
 _context(c::OpenCommunity, sp::Symbol, n::AbstractVector, env) =
-    context(c.system[sp], _state(c, n)[c.layout[sp]], pool_totals(c.system, _split(c, _state(c, n)), env), env)
+    context(c.system[sp], state_vector(c, n)[c.layout[sp]], pool_totals(c.system, species_states(c, n), env), env)
 
 """
     frozen_net(c, species, n, env)
@@ -235,7 +235,7 @@ function ipm_problem(c::OpenCommunity, sp::Symbol, n::AbstractVector, env; tspan
     net = c.system[sp]
     U, F = survival_fecundity_matrices(net, _context(c, sp, n, env))
     states = CategoricalPopulationDynamics.state_layout(net)
-    return IPM.IPMProblem(IPM.GeneralIPM(), IPM.DiscretizedKernel(U, F, states), states, _state(c, n)[c.layout[sp]], tspan)
+    return IPM.IPMProblem(IPM.GeneralIPM(), IPM.DiscretizedKernel(U, F, states), states, state_vector(c, n)[c.layout[sp]], tspan)
 end
 
 include("kernels.jl")
@@ -245,7 +245,7 @@ export lottery, lottery_demand
 
 include("analysis.jl")
 export equilibrium, jacobian, invasion_growth_rate, invasion_sensitivity, mean_abundance, abundance_sensitivity
-export equilibrium_sensitivity, stochastic_invasion_rate
+export equilibrium_sensitivity, stochastic_invasion_rate, periodic_point
 export InteractionNetwork, links, connectance, link_density, reciprocity, out_degree, in_degree
 export periodic_matrix, abundance, stage_total, CommunityEnsemble, ensemble, extinction_times, quasi_extinction
 
@@ -277,9 +277,9 @@ export coral, coral_stage, coral_community, coral_recruits, CORAL_PARAMETERS, CO
 include("grasslands.jl")
 export grassland_plant, grassland_community, grassland_state, synchrony, GRASSLAND_PARAMETERS
 include("tribolium.jl")
-export flour_beetle, flour_beetle_competition, periodic_point, TRIBOLIUM_EDMUNDS_2003, TRIBOLIUM_DESHARNAIS_2005
+export flour_beetle, flour_beetle_competition, TRIBOLIUM_EDMUNDS_2003, TRIBOLIUM_DESHARNAIS_2005
 include("flowregimes.jl")
-export flood_invertebrate, flow_invertebrates, invertebrate_flows, pulses, tonkin_scenario, tonkin_fish_start,
+export flood_invertebrate, flow_invertebrates, invertebrate_flows, flood_pulses, tonkin_scenario, tonkin_fish_start,
        FLOW_INVERTEBRATES, TONKIN_SCENARIOS, TONKIN_FISH_INITIAL
 include("predatorprey.jl")
 export predator_prey, BARRAQUAND_GIMENEZ_2019, BARRAQUAND_GIMENEZ_2019_SET2

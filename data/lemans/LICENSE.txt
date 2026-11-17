@@ -29,5 +29,6 @@ LeMaRns is distributed under the GNU General Public License, version 3 (its DESC
     You should have received a copy of the GNU General Public License along with this program. If not, see
     <https://www.gnu.org/licenses/>.
 
-The rest of MatrixCommunityModels.jl is under its own licence (the LICENSE file at the root); whether
-GPL-3 data may be shipped with it is a decision for the package's owner.
+The rest of MatrixCommunityModels.jl is under the MIT licence (the LICENSE file at the root). The package
+is therefore under mixed licences: these data files are GPL-3, the code and the other data MIT. The package
+owner chose to ship them on these terms (2026-11-16).

@@ -47,7 +47,11 @@ makedocs(;
                   "API Reference" => ["Composing communities" => "api/communities.md",
                                       "Analysis" => "api/analysis.md",
                                       "IPMs and kernels" => "api/kernels.md",
-                                      "Published models" => "api/models.md"]])
+                                      "Published models" => ["Rivers and orchids" => "api/models_rivers.md",
+                                                             "Bees and flowers" => "api/models_bees.md",
+                                                             "Plants and trees" => "api/models_plants.md",
+                                                             "Reefs and seas" => "api/models_marine.md",
+                                                             "Competitors, predators and pathogens" => "api/models_animals.md"]]])
 
 if get(ENV, "CI", "false") == "true"
     deploydocs(; repo = "github.com/ecorecipes/MatrixCommunityModels.jl.git", push_preview = true)

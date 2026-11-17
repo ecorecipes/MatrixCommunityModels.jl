@@ -90,8 +90,8 @@ end
 ## Recruitment and its reading
 
 Each year $r$ recruits arrive, with sizes normal with mean 0.6 and
-standard deviation 0.2 (about 1 cm across). The paper writes the number
-as
+standard deviation 0.2 (about 3 cm² of tissue, 2 cm across). The paper
+writes the number as
 
 $$\log r = R_0 + R_\gamma\,\gamma ,$$
 
@@ -104,11 +104,13 @@ per 10 m² a year, and a model step is a year on 10 m² of reef.
 
 The units of this equation are not stated. The authors’ R script uses
 the natural logarithm, and its density and summed sizes are per 10 m²,
-the area of a model iteration. Read that way (`reading = :as_written`),
-the model does not give the published simulations: *Acropora* and
-*Porites* end up with several times the share of the assemblage that the
-paper shows. A reading that does reproduce them is the default
-(`reading = :calibrated`):
+the area of a model iteration. This is the package’s default
+(`reading = :as_written`), since it is what the authors’ code does. Read
+that way, the model does not give the published simulations: *Acropora*
+and *Porites* end up with several times the share of the assemblage that
+the paper shows. A reading that does reproduce them is offered as
+`reading = :calibrated`, and the comparisons with the published figures
+below use it:
 
 - the logarithm is to base 10;
 - $R_0$ is for the 25 m² plots in which recruits were counted, so that
@@ -123,7 +125,7 @@ figures below. It is a reconstruction, not something the paper states.
 ``` julia
 for t in taxa
     @printf("%-12s  at γ = 0: calibrated %6.1f, as written %5.1f recruits per 10 m² (LTER 1)\n", label[t],
-            coral_recruits(t, 0.0), coral_recruits(t, 0.0; reading = :as_written))
+            coral_recruits(t, 0.0; reading = :calibrated), coral_recruits(t, 0.0))
 end
 ```
 
@@ -153,7 +155,7 @@ two pools. *Acropora* and *Porites* read their own colonies.
 composes the three genera:
 
 ``` julia
-c = coral_community(:lter1)
+c = coral_community(:lter1; reading = :calibrated)
 (species = species_names(c), pools = pool_names(c), states = length(c))
 ```
 
@@ -364,7 +366,7 @@ plot!()
 ``` julia
 for r in reefs
     c, sol = recovery(r; steps = 40)
-    capped = findfirst(row -> coral_recruits(:acropora, pool_totals(c, row, nothing).acropora_colonies; reef = r) >= CORAL_RECRUITMENT_CAP,
+    capped = findfirst(row -> coral_recruits(:acropora, pool_totals(c, row, nothing).acropora_colonies; reef = r, reading = :calibrated) >= CORAL_RECRUITMENT_CAP,
                        collect(eachrow(sol.u)))
     @printf("%-6s Acropora recruitment reaches the cap of 348 in %s; colonies in 2049: %s\n", r,
             capped === nothing ? "none of these years" : string(2009 + capped - 1), fmt(colonies(c, sol.u[end, :])))
@@ -419,11 +421,12 @@ model, not of the reef.
 ## Where the model and its sources part
 
 - The units of the recruitment equation are a reconstruction. The
-  default reading reproduces the published shares of the assemblage
-  (Fig. 3, Fig. S4) and, roughly, the densities (Fig. S2). It does not
-  reproduce the shape of the published size distributions: in Fig. 3a
-  the youngest cohorts of *Pocillopora* are about a fifth of the oldest,
-  while here they are about as large. Nor does it reproduce the
+  package’s default follows the authors’ script; the calibrated reading
+  used for the comparisons here reproduces the published shares of the
+  assemblage (Fig. 3, Fig. S4) and, roughly, the densities (Fig. S2). It
+  does not reproduce the shape of the published size distributions: in
+  Fig. 3a the youngest cohorts of *Pocillopora* are about a fifth of the
+  oldest, while here they are about as large. Nor does it reproduce the
   elasticities to recruitment of Table S2, which are three to seven
   times larger than here. Both point to a stronger density dependence of
   *Pocillopora* recruitment in the published model than in any reading

@@ -14,8 +14,8 @@
 #   acropora_colonies, pocillopora_colonies, porites_colonies      colonies per 10 m²
 #   acropora_log_size, pocillopora_log_size, porites_log_size      Σ z over colonies, per 10 m²
 #
-# Two readings of the recruitment function, log r = R0 + Rγ γ (Appendix S3, eq. iii), are offered: the one that
-# reproduces the published figures (`:calibrated`) and the one written in the authors' script (`:as_written`).
+# Two readings of the recruitment function, log r = R0 + Rγ γ (Appendix S3, eq. iii), are offered: the one written
+# in the authors' script (`:as_written`, the default) and one that reproduces the published figures (`:calibrated`).
 # See `coral`.
 #
 # The parameters are read from data/corals, typed from Table S1; see data/corals/LICENSE.txt.
@@ -23,7 +23,7 @@
 const _CORAL_TAXA = (acropora = "Acr", pocillopora = "Poc", porites = "Por")
 const _CORAL_NAMES = (acropora = "Acropora", pocillopora = "Pocillopora", porites = "Porites")
 const _CORAL_REEFS = (lter1 = 1, lter2 = 2, lter4 = 4, lter5 = 5)
-const _CORAL_READINGS = (:calibrated, :as_written)
+const _CORAL_READINGS = (:as_written, :calibrated)
 
 function _coral_parameters(file)
     lines = [split(l, ",") for l in readlines(file)]
@@ -90,23 +90,25 @@ _coral_check(name, value, allowed) = value in allowed ? value :
 
 """
     coral_recruits(taxon, γ; reef = :lter1, parameters = CORAL_PARAMETERS,
-                   reading = :calibrated, cap = CORAL_RECRUITMENT_CAP)
+                   reading = :as_written, cap = CORAL_RECRUITMENT_CAP)
 
 Recruits per 10 m² in a year of `taxon` on `reef`, when its crowding is `γ` per 10 m²
 (colonies of the taxon itself for *Acropora* and *Porites*, summed sizes z of the colonies of
 all three taxa for *Pocillopora*). The recruitment function of Kayal et al. (2018, Appendix
 S3) is log r = R0 + Rγ γ; `reading` says how its units are read:
 
-- `:calibrated` (the default): the logarithm is to base 10, R0 is for the 25 m² plots in
+- `:as_written` (the default): the natural logarithm, as in the authors' R script, with r and γ
+  per 10 m². Read this way, *Acropora* and *Porites* hold far more of the recovering
+  assemblage than the paper's figures show.
+- `:calibrated`: the logarithm is to base 10, R0 is for the 25 m² plots in
   which recruits were counted (so r = 0.4 × 10^(R0 + Rγ γ/10) per 10 m²), and γ is per m².
   This reading reproduces the compositions and densities published for the simulations
   (Fig. 3, Fig. S2 and Fig. S4 of the paper); it is a reconstruction (see the vignette).
-- `:as_written`: the natural logarithm, as in the authors' R script, with r and γ per 10 m².
 
 Either is capped at `cap`.
 """
 function coral_recruits(taxon::Symbol, γ::Real; reef::Symbol = :lter1, parameters = CORAL_PARAMETERS,
-                        reading::Symbol = :calibrated, cap::Real = CORAL_RECRUITMENT_CAP)
+                        reading::Symbol = :as_written, cap::Real = CORAL_RECRUITMENT_CAP)
     _coral_check("reef", reef, keys(parameters))
     _coral_check("taxon", taxon, keys(_CORAL_TAXA))
     _coral_check("reading", reading, _CORAL_READINGS)
@@ -116,7 +118,7 @@ function coral_recruits(taxon::Symbol, γ::Real; reef::Symbol = :lter1, paramete
 end
 
 """
-    coral(taxon; reef = :lter1, parameters = CORAL_PARAMETERS, reading = :calibrated,
+    coral(taxon; reef = :lter1, parameters = CORAL_PARAMETERS, reading = :as_written,
           recruit_size = (0.6, 0.2), cap = CORAL_RECRUITMENT_CAP, cells = 100, name = taxon)
 
 A coral genus (`:acropora`, `:pocillopora` or `:porites`) on one fore reef of Mo'orea
@@ -139,7 +141,7 @@ the summed sizes of all three taxa (`acropora_log_size`, `pocillopora_log_size`,
 `porites_log_size`), which a community of the three supplies (see
 [`coral_community`](@ref)). The environment of a step is not used.
 """
-function coral(taxon::Symbol; reef::Symbol = :lter1, parameters = CORAL_PARAMETERS, reading::Symbol = :calibrated,
+function coral(taxon::Symbol; reef::Symbol = :lter1, parameters = CORAL_PARAMETERS, reading::Symbol = :as_written,
                recruit_size = (0.6, 0.2), cap::Real = CORAL_RECRUITMENT_CAP, cells::Integer = 100, name::Symbol = taxon)
     _coral_check("reef", reef, keys(parameters))
     _coral_check("taxon", taxon, keys(_CORAL_TAXA))

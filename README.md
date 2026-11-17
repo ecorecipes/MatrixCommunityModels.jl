@@ -67,9 +67,9 @@ simulation loop.
   LeMaRns, whose runs are reproduced.
 - Three coral genera recolonising four fore reefs of Mo'orea (`coral_community`): the
   open-population IPMs of Kayal et al. (2018), with recruits arriving as inflows in
-  numbers set by crowding through pools; the published compositions of the recovering
-  reefs are reproduced, with a reading of the units of recruitment that is reconstructed
-  from the published figures.
+  numbers set by crowding through pools. By default recruitment is read as in the authors'
+  script; a reading of its units reconstructed from the published figures
+  (`reading = :calibrated`) reproduces the published compositions of the recovering reefs.
 - The dominant perennials of five grasslands of the western United States
   (`grassland_community`): the IPMs of Chu & Adler (2015) as run by Tredennick et al.
   (2017), built with the sagebrush steppe machinery; the authors' Kansas runs and the
@@ -164,8 +164,9 @@ The LeMans model takes its equations, settings and North Sea data from the R pac
 LeMaRns and reproduces its runs; it leaves out LeMaRns's other recruitment and mortality
 options and gives each species a single fleet (see vignette 18).
 The coral models use the published parameters of Kayal et al. (2018); the units of their
-recruitment function are not stated, and the reading used reproduces the published
-compositions but not the published elasticities to recruitment (see vignette 19).
+recruitment function are not stated. The default follows the authors' script, which does
+not reproduce the published compositions; the calibrated reading reproduces them, but not
+the published elasticities to recruitment (see vignette 19).
 The grassland models take their parameters from the repository of Tredennick et al.
 (2017) and reproduce its Kansas runs; they are not the refitted values printed by Chu &
 Adler (2015) (see vignette 20).
@@ -187,7 +188,8 @@ written (see vignette 25).
 
 ## Data and licences
 
-The package is MIT licensed. `data/verde_fish` is from Rogosch et al. (2019),
+The package is under mixed licences: the code and most data are MIT, and two data
+directories, `data/lemans` and `data/mizer`, are GPL-3 (see below). `data/verde_fish` is from Rogosch et al. (2019),
 <https://doi.org/10.5281/zenodo.1309024> (MIT). `data/riparian/maybell.csv` is from
 Lytle et al. (2017), <https://doi.org/10.6084/m9.figshare.4652608> (CC BY 4.0), with
 line endings converted. `data/cypripedium` holds matrices estimated with the R packages

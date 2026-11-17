@@ -23,8 +23,8 @@ coral_reference(file) = [split(l, ",") for l in readlines(joinpath(@__DIR__, "re
         @test CORAL_PARAMETERS.lter2.pocillopora.recruitment.crowding === :assemblage_log_size
         stage = coral_stage()
         @test length(stage) == 100 && step_size(stage) ≈ 0.07 && meshpoints(stage)[1] ≈ 0.035
-        @test coral_recruits(:pocillopora, 0.0) ≈ 0.4 * 10^2.688
-        @test coral_recruits(:pocillopora, 0.0; reading = :as_written) ≈ exp(2.688)
+        @test coral_recruits(:pocillopora, 0.0) ≈ exp(2.688)
+        @test coral_recruits(:pocillopora, 0.0; reading = :calibrated) ≈ 0.4 * 10^2.688
         @test coral_recruits(:acropora, 1000.0) == CORAL_RECRUITMENT_CAP
         @test_throws ArgumentError coral(:montipora)
         @test_throws ArgumentError coral(:acropora; reef = :lter3)
@@ -61,7 +61,7 @@ coral_reference(file) = [split(l, ",") for l in readlines(joinpath(@__DIR__, "re
         end
         # the size distributions after four steps (2013)
         states = coral_reference("coral_state.csv")
-        c = coral_community(:lter1)
+        c = coral_community(:lter1; reading = :calibrated)
         sol = project(c, zeros(length(c)), fill(nothing, 4))
         for k in taxa
             theirs = [number(r[6]) for r in states if r[1] == "calibrated" && r[2] == "1" && r[3] == "4" && codes[r[4]] == k]
@@ -77,15 +77,15 @@ coral_reference(file) = [split(l, ",") for l in readlines(joinpath(@__DIR__, "re
         figS2 = Dict(:lter1 => 612, :lter2 => 428, :lter4 => 82, :lter5 => 128)
         shares(c, n) = (p = pool_totals(c, n, nothing); x = [getproperty(p, Symbol(k, :_log_size)) for k in taxa]; 100 .* x ./ sum(x))
         for reef in keys(fig3)
-            c = coral_community(reef)
+            c = coral_community(reef; reading = :calibrated)
             sol = project(c, zeros(length(c)), fill(nothing, 6))
             @test maximum(abs.(shares(c, sol.u[5, :]) .- fig3[reef])) < 1.5
             @test maximum(abs.(shares(c, sol.u[7, :]) .- figS4[reef])) < 3.5
             @test abs(pool_totals(c, sol.u[5, :], nothing).pocillopora_colonies / figS2[reef] - 1) < 0.3
             # the cap of 348 recruits is not reached in these runs (Appendix S3)
-            @test project(coral_community(reef; cap = Inf), zeros(length(c)), fill(nothing, 6)).u ≈ sol.u
-            # read as written (natural logarithm, per 10 m²), Acropora and Porites hold far more of the assemblage
-            w = coral_community(reef; reading = :as_written)
+            @test project(coral_community(reef; reading = :calibrated, cap = Inf), zeros(length(c)), fill(nothing, 6)).u ≈ sol.u
+            # by default, read as written (natural logarithm, per 10 m²), Acropora and Porites hold far more of the assemblage
+            w = coral_community(reef)
             @test shares(w, project(w, zeros(length(w)), fill(nothing, 4)).u[end, :])[2] < fig3[reef][2] - 15
         end
     end

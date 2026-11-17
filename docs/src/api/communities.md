@@ -19,6 +19,7 @@ stage_names(::OpenCommunity, ::Symbol)
 pool_names(::OpenCommunity)
 diagram(::OpenCommunity)
 state_vector
+species_states
 pool_totals(::OpenCommunity, ::AbstractVector, ::Any)
 advance(::OpenCommunity, ::AbstractVector, ::Any)
 ```

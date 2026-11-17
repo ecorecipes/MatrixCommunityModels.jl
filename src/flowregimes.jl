@@ -99,13 +99,13 @@ function invertebrate_flows(t::AbstractVector{<:Integer}, Q::AbstractVector{<:Re
 end
 
 """
-    pulses(every, Q, days)
+    flood_pulses(every, Q, days)
 
 Days since the last flood and peak flow for `days` days with a flood of `Q` m³/s every `every` days, the first on
 day 1: the arguments `t` and `Q` of [`invertebrate_flows`](@ref). `every` is truncated to whole days, as in the
 authors' code (four pulses a year come every 91 days).
 """
-function pulses(every::Real, Q::Real, days::Integer)
+function flood_pulses(every::Real, Q::Real, days::Integer)
     n = floor(Int, every)
     return [mod(k - 1, n) + 1 for k in 1:days], fill(Float64(Q), days)
 end
@@ -169,9 +169,9 @@ function tonkin_scenario(scenario::Symbol; years::Integer = 200, invertebrate_ye
                  nonflood = flood[k] + drought[k] == 1 ? 0.0 : 1.0,
                  cprop = 0.9, tprop = 0.4, decline = 1.0, tdecline = 1.0) for k in 1:years]
     days = 365 * invertebrate_years
-    t, Q = scenario === :invertebrates ? pulses(365 / 4, 50, days) :
-           scenario === :fish ? pulses(365, 700 * 0.35, days) :
-           scenario === :plants ? pulses(365 * 6, 700 * 0.35, days) :
+    t, Q = scenario === :invertebrates ? flood_pulses(365 / 4, 50, days) :
+           scenario === :fish ? flood_pulses(365, 700 * 0.35, days) :
+           scenario === :plants ? flood_pulses(365 * 6, 700 * 0.35, days) :
            ([mod(k - 1, 365) < 200 ? mod(k - 1, 365) + 1 : mod(k - 1, 365) - 199 for k in 1:days],
             [mod(k - 1, 365) < 200 ? 1134 * 0.35 : 459 * 0.35 for k in 1:days])
     riparian_n0 = [g => 3978 .* RIPARIAN_GUILDS[g].den for g in (:C, :T, :W, :S, :M)]

@@ -47,6 +47,5 @@ statement, with this notice:
     CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
     DEALINGS IN THE SOFTWARE.
 
-Whether a "License: MIT" field without a LICENSE file is enough to ship these numbers is a decision for the
-package's owner. No code of the repository is included in this package; the reference script reads it at run
+The package owner chose (2026-11-16) to ship these numbers under the MIT licence the repository declares. No code of the repository is included in this package; the reference script reads it at run
 time from a path given on its command line.
