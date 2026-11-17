@@ -23,5 +23,6 @@ using MatrixCommunityModels
     include("test_chytrid.jl")
     include("test_mizer.jl")
     include("test_solvers.jl")
+    include("test_resilience.jl")
     include("test_docstrings.jl")
 end

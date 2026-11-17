@@ -36,6 +36,10 @@ import CategoricalPopulationDynamics: stage_names, pool_names, pool_totals, adva
 # below, with `species_states` (state by species), used internally
 using CategoricalPopulationDynamics: OpenCommunity, species, community, compose, system, species_names,
     diagram, subcommunity, state_vector, species_states
+# resilience metrics: `jacobian` and `linearise` are ResilienceCore's functions, extended here
+# (resilience.jl), so that the two packages can be loaded together
+import ResilienceCore
+import ResilienceCore: jacobian, linearise
 
 # the modelling vocabulary of CategoricalPopulationDynamics.jl, re-exported
 export ValuedProjectionNet, ResponsiveProjectionNet, ResponseContext, StageVector, Pool,
@@ -248,6 +252,9 @@ export equilibrium, jacobian, invasion_growth_rate, invasion_sensitivity, mean_a
 export equilibrium_sensitivity, stochastic_invasion_rate, periodic_point
 export InteractionNetwork, links, connectance, link_density, reciprocity, out_degree, in_degree
 export periodic_matrix, abundance, stage_total, CommunityEnsemble, ensemble, extinction_times, quasi_extinction
+
+include("resilience.jl")
+export linearise, periodic_operator, MCMState
 
 include("models.jl")
 export verde_fish_model, riparian_model, cypripedium_model, with_rate, VERDE_SPECIES, RIPARIAN_GUILDS

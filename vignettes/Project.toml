@@ -7,9 +7,11 @@ MatrixProjectionModels = "521f12cc-5854-454d-93a2-8be28ae7cee2"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+ResilienceCore = "e31f93f6-99b1-4a70-b0c5-c402beffe4e1"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [sources]
 IntegralProjectionModels = {url = "https://github.com/ecorecipes/IntegralProjectionModels.jl"}
 MatrixCommunityModels = {path = ".."}
 MatrixProjectionModels = {url = "https://github.com/ecorecipes/MatrixProjectionModels.jl"}
+ResilienceCore = {url = "https://github.com/ecorecipes/ResilienceCore.jl"}

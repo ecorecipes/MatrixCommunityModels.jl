@@ -41,6 +41,11 @@ simulation loop.
   simulation-based cross-species sensitivity of Lytle & Tonkin (`abundance_sensitivity`),
   `InteractionNetwork`, seasonal models (`periodic_matrix`), demographic stochasticity
   (`project(...; rng)`, `ensemble`).
+- Resilience metrics through [ResilienceCore.jl](https://github.com/ecorecipes/ResilienceCore.jl):
+  `linearise` gives the Jacobian at a fixed point or around a cycle as a `DiscreteJacobian`,
+  `periodic_operator` a rare invader over a cycle of environments as a `PeriodicOperator`, and
+  `MCMState` the community interface on which ResilienceCore's press, removal and extinction
+  experiments run. `jacobian` and `linearise` are ResilienceCore's functions, extended here.
 - Published models rebuilt and checked against their original implementations: the Verde
   River fish model (identical output), the Yampa River riparian guild model (within 4e-16,
   plus a corrected variant), and the adapt3 Cypripedium community (within 2e-15).
@@ -142,6 +147,7 @@ sol[:CACL]                                  # biomass by year and stage
 | 23 | [Predator and prey](vignettes/23_predator_and_prey/23_predator_and_prey.md) ([PDF](vignettes/23_predator_and_prey/23_predator_and_prey.pdf)) | Two species with juveniles and adults linked by predation on juveniles, checked against the authors' difference equations; fixed points, oscillations and demographic noise |
 | 24 | [Chytrid fungus in leopard frogs](vignettes/24_chytrid_leopard_frogs/24_chytrid_leopard_frogs.md) ([PDF](vignettes/24_chytrid_leopard_frogs/24_chytrid_leopard_frogs.pdf)) | The full host-parasite IPM of Wilber et al. (2022): Bd load as the trait, a zoospore component joined by pools, seasonal temperature and breeding at four locations, checked against the authors' Python code; persistence with demographic stochasticity |
 | 25 | [A size-spectrum fish community](vignettes/25_size_spectrum_mizer/25_size_spectrum_mizer.md) ([PDF](vignettes/25_size_spectrum_mizer/25_size_spectrum_mizer.pdf)) | The North Sea model of the R package mizer, its implicit upwind step written as a projection matrix, checked against mizer's runs and steady states; fishing, the size spectrum and a comparison with LeMans |
+| 26 | [Resilience metrics](vignettes/26_resilience/26_resilience.md) ([PDF](vignettes/26_resilience/26_resilience.pdf)) | ResilienceCore.jl on matrix communities: a reactive beetle equilibrium, the stability of cycles on the way to chaos, presses and removals in competing beetles and in riparian guilds under a constant flood regime |
 
 ## Status
 
