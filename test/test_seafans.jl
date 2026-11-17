@@ -122,7 +122,7 @@ using Random
         reef = sea_fan(; cells)
         infected = where(reef, :infected)
         # 22% of recruits die in their first year (p. 128): this sets the mean size of a recruit
-        @test sum(h * recruit_size(x) * logistic(-0.55 - 0.62x) for x in z) ≈ 0.22 atol = 2e-3
+        @test sum(h * recruit_size(x) * logistic(-0.55 - 0.62x) for x in z) ≈ 0.22 atol = 1e-4    # achieved 2.7e-5 (2026-11-17)
         # a fan of size 5.6 is about 17.5 cm tall; sizes 7 and 10 are heights of about 25 and 40 cm (Appendix B)
         @test height(5.6) ≈ 17.5 atol = 0.5
         @test height(7.0) ≈ 25 atol = 1.5
@@ -130,34 +130,39 @@ using Random
 
         pre, peak, endemic = steady(reef, phases.pre_epizootic), steady(reef, phases.peak), steady(reef, phases.endemic)
         # growth rates read from Figs. E2 and E3: 0.95 before the epizootic, 0.851 at its peak, 1.009 afterwards, and
-        # 0.935 at the peak if recruitment were that of 2003
-        @test pre.rate ≈ 0.95 atol = 4e-3
-        @test peak.rate ≈ 0.851 atol = 4e-3
-        @test endemic.rate ≈ 1.009 atol = 5e-3
-        @test steady(reef, merge(phases.peak, (recruitment = 1.0,))).rate ≈ 0.935 atol = 4e-3
+        # 0.935 at the peak if recruitment were that of 2003. The tolerances here and below are a little above the
+        # differences found on 2026-11-17, given in the comments; the published values are read from figures or printed
+        # to the digits shown.
+        @test pre.rate ≈ 0.95 atol = 2e-3               # 1.1e-3
+        @test peak.rate ≈ 0.851 atol = 1e-3             # 1.2e-4
+        @test endemic.rate ≈ 1.009 atol = 4e-3          # 3.2e-3
+        @test steady(reef, merge(phases.peak, (recruitment = 1.0,))).rate ≈ 0.935 atol = 4e-3   # 3.3e-3
+        # vignette 16 prints 1.0058 for the endemic phase on 50 cells, with 6.61% of fans infected
+        @test endemic.rate ≈ 1.0058 atol = 5e-5
+        @test 100 * sum(endemic.state[infected]) ≈ 6.61 atol = 5e-3
         # without infection 1.01, and the second eigenvalue is 0.86 of the first (p. 136); 0.84 in the endemic phase (p. 132)
         none = steady(reef, merge(phases.pre_epizootic, (recruitment = 1.0,)))
-        @test none.rate ≈ 1.01 atol = 6e-3
-        @test none.second ≈ 0.86 atol = 0.015
-        @test endemic.second ≈ 0.84 atol = 0.01
+        @test none.rate ≈ 1.01 atol = 5e-3             # 4.4e-3
+        @test none.second ≈ 0.86 atol = 0.01            # 7.5e-3
+        @test endemic.second ≈ 0.84 atol = 5e-3         # 2.3e-3
         # prevalence in the endemic phase: 7.05% (Fig. E3D)
-        @test 100 * sum(endemic.state[infected]) ≈ 7.05 atol = 0.6
+        @test 100 * sum(endemic.state[infected]) ≈ 7.05 atol = 0.5   # 0.44
         @test sum(pre.state[infected]) < 1e-12
 
         # Table E1: the elasticity of the growth rate, by kind of transition and by infection status
         @test sum(values(endemic.shares)) ≈ 100
-        @test endemic.shares[:recruiting_healthy] ≈ 3.5 atol = 0.3
-        @test endemic.shares[:growing_healthy] + endemic.shares[:recruiting_healthy] ≈ 91.1 atol = 0.6
-        @test endemic.shares[:growing_healthy_to_infected] ≈ 2.8 atol = 0.2
-        @test endemic.shares[:recovering_infected_to_healthy] ≈ endemic.shares[:growing_healthy_to_infected] rtol = 1e-6
-        @test endemic.shares[:lingering_infected] ≈ 3.3 atol = 0.2
-        @test pre.shares[:recruiting_healthy] ≈ 2.1 atol = 0.25
+        @test endemic.shares[:recruiting_healthy] ≈ 3.5 atol = 0.1          # 0.083
+        @test endemic.shares[:growing_healthy] + endemic.shares[:recruiting_healthy] ≈ 91.1 atol = 0.4   # 0.28
+        @test endemic.shares[:growing_healthy_to_infected] ≈ 2.8 atol = 0.15 # 0.096
+        @test endemic.shares[:recovering_infected_to_healthy] ≈ endemic.shares[:growing_healthy_to_infected] rtol = 1e-12  # 3.3e-16
+        @test endemic.shares[:lingering_infected] ≈ 3.3 atol = 0.15          # 0.090
+        @test pre.shares[:recruiting_healthy] ≈ 2.1 atol = 0.15              # 0.11
         @test pre.shares[:growing_healthy] + pre.shares[:recruiting_healthy] ≈ 100
-        @test peak.shares[:recruiting_healthy] ≈ 3.3 atol = 0.2
-        @test peak.shares[:growing_healthy] + peak.shares[:recruiting_healthy] ≈ 98.6 atol = 0.2
+        @test peak.shares[:recruiting_healthy] ≈ 3.3 atol = 0.05             # 0.018
+        @test peak.shares[:growing_healthy] + peak.shares[:recruiting_healthy] ≈ 98.6 atol = 0.1   # 0.061
         # the table prints 0.05, 0.05 and 0.03 for the other three, which leaves the column summing to 98.7
-        @test peak.shares[:growing_healthy_to_infected] ≈ 0.5 atol = 0.1
-        @test peak.shares[:lingering_infected] ≈ 0.3 atol = 0.1
+        @test peak.shares[:growing_healthy_to_infected] ≈ 0.5 atol = 0.05    # 0.014
+        @test peak.shares[:lingering_infected] ≈ 0.3 atol = 0.05             # 0.011
 
         # prevalence by size at the peak (Fig. 5D): 0.36, 0.55 and 0.62 at heights of 50, 80 and 100 cm
         function infected_by_size(steady_state, phase)
@@ -166,27 +171,29 @@ using Random
         end
         at(curve, height_cm) = curve[argmin(abs.(height.(z) .- height_cm))]
         at_peak = infected_by_size(peak, phases.peak)
-        @test at(at_peak, 50) ≈ 0.36 atol = 0.05
-        @test at(at_peak, 80) ≈ 0.55 atol = 0.05
-        @test at(at_peak, 100) ≈ 0.62 atol = 0.06
+        @test at(at_peak, 50) ≈ 0.36 atol = 0.04        # 0.029
+        @test at(at_peak, 80) ≈ 0.55 atol = 0.01        # 0.0013
+        @test at(at_peak, 100) ≈ 0.62 atol = 0.05       # 0.039
         @test issorted(at_peak[20 .< height.(z) .< 100])                # prevalence rises with size among large fans
         # and under the risks of the endemic phase (Fig. 5B, the asymptotic curve): 0.14, 0.105, 0.095 and 0.09 at 22, 40, 60
         # and 75 cm. The curve is matched with the recruitment of the epizootic years, which the paper does not state
         few_recruits = merge(phases.endemic, (recruitment = 1 / 11,))
         at_few = infected_by_size(steady(reef, few_recruits), few_recruits)
-        @test at(at_few, 22) ≈ 0.14 atol = 0.015
-        @test at(at_few, 40) ≈ 0.105 atol = 0.01
-        @test at(at_few, 60) ≈ 0.095 atol = 0.01
-        @test at(at_few, 75) ≈ 0.09 atol = 0.01
+        @test at(at_few, 22) ≈ 0.14 atol = 5e-3         # 1.7e-3
+        @test at(at_few, 40) ≈ 0.105 atol = 5e-3        # 7.6e-5
+        @test at(at_few, 60) ≈ 0.095 atol = 5e-3        # 3.2e-3
+        @test at(at_few, 75) ≈ 0.09 atol = 5e-3         # 7.9e-4
         @test at(infected_by_size(endemic, phases.endemic), 22) < 0.115  # with the recruits of 2003 the hump is lower
 
         # the recruitment constant as printed, 2 x 10^-4: growth rates lower by up to 0.01
         printed = sea_fan(; cells, parameters = merge(P, (fecundity = 2e-4,)))
-        @test 0.004 < endemic.rate - steady(printed, phases.endemic).rate < 0.008
-        # the mesh does not matter
+        @test 0.005 < endemic.rate - steady(printed, phases.endemic).rate < 0.007   # 0.0061
+        # the mesh does not matter (vignette 16: 1.0054 and 6.63% on 100 cells)
         fine = steady(sea_fan(), phases.endemic)
-        @test fine.rate ≈ endemic.rate rtol = 1e-3
-        @test sum(fine.state[101:200]) ≈ sum(endemic.state[infected]) rtol = 5e-3
+        @test fine.rate ≈ endemic.rate rtol = 6e-4      # 4.1e-4, the error of the mesh
+        @test sum(fine.state[101:200]) ≈ sum(endemic.state[infected]) rtol = 5e-3   # 3.2e-3
+        @test fine.rate ≈ 1.0054 atol = 5e-5
+        @test 100 * sum(fine.state[101:200]) ≈ 6.63 atol = 5e-3
     end
 
     @testset "resistant fans" begin
@@ -215,11 +222,11 @@ using Random
         infected_share = 100 .* stage_total(sol, :sea_fan, :infected) ./ fans
         resistant_share = 100 .* stage_total(sol, :sea_fan, :resistant) ./ fans
         published = [18, 20, 19, 17, 14.5, 12.5, 11, 9.5, 8.5, 7.5, 6.5, 6, 5.5, 5]      # % infected, 1995 to 2008, read from the figure
-        @test maximum(abs, infected_share[2:end] .- published) < 1.5
+        @test maximum(abs, infected_share[2:end] .- published) < 1.2                  # 0.98 (2026-11-17)
         @test argmax(infected_share) == 3                                              # the peak is in 1996
         # in the first year nothing tells the resistant fans from the others: those newly infected are still alive
         @test resistant_share[1] ≈ 15 && resistant_share[2] ≈ 15
-        @test 50 < resistant_share[end] < 60                                           # about 53% in 2008
+        @test resistant_share[end] ≈ 53 atol = 3                                       # about 53% in 2008; 55.8 here
         @test issorted(resistant_share[2:end])
 
         # resistant fans as a species of their own give the same numbers
@@ -234,7 +241,7 @@ using Random
         endemic = steady(reef, phases.endemic)
         pools = pool_totals(reef, endemic.state, phases.endemic)
         share = pools.infectious / pools.tissue                       # of tissue that is infected, in the published model
-        @test 0.08 < share < 0.10
+        @test share ≈ 0.092 atol = 5e-4                               # 0.0919 here; vignette 16 prints 0.092 on 100 cells
         # the same dependence in a response that reads the reef's own state, written before the strata exist: the tissue
         # in each cell whatever its stratum (`ctx.n[fan]`), and that of its infected fans (`ctx.n[fan, :infected]`)
         area = z .^ 3
@@ -246,27 +253,27 @@ using Random
             @test advance(passed, endemic.state, phases.endemic) ≈ advance(reef, endemic.state, phases.endemic)
             hand = species(:sea_fan, by_hand(own(q)))
             start = endemic.state .* (1 .+ 0.5 .* sin.(1:(2cells)))   # away from the stable state
-            @test project(hand, start, fill(nothing, 30)).u ≈ project(passed, start, fill(phases.endemic, 30)).u rtol = 1e-10
+            @test project(hand, start, fill(nothing, 30)).u ≈ project(passed, start, fill(phases.endemic, 30)).u rtol = 1e-13  # achieved 1.6e-16 (2026-11-17)
         end
         # with all infection passed among fans there is a threshold: at nine tenths of the published risk the infection
         # dies out, where infection from outside only falls in proportion
         scaled(m) = merge(phases.endemic, (small_fan_risk = m * phases.endemic.small_fan_risk, large_fan_risk = m * phases.endemic.large_fan_risk))
         prevalence(sp, m; years = 400) = (n = project(sp, endemic.state, fill(scaled(m), years)).u[end, :]; sum(n[infected]) / sum(n))
         among = sea_fan(; cells, outside = 0.0, transmission = 1 / share)
-        @test prevalence(among, 1.0) ≈ sum(endemic.state[infected]) rtol = 1e-6
-        @test prevalence(among, 0.9) < 1e-3
+        @test prevalence(among, 1.0) ≈ sum(endemic.state[infected]) rtol = 1e-12     # achieved 6.1e-15 (2026-11-17)
+        @test prevalence(among, 0.9) < 1.5e-4                                         # 7.3e-5
         @test prevalence(among, 1.1) > 1.8 * sum(endemic.state[infected])
-        @test 0.85 < prevalence(reef, 0.9) / sum(endemic.state[infected]) < 0.95
+        @test 0.89 < prevalence(reef, 0.9) / sum(endemic.state[infected]) < 0.92      # 0.904
         # resistant fans, a species of their own, dilute infection passed among fans and leave infection from outside alone
         resistant = sea_fan(; cells, resistant = :only, name = :resistant_fans)
         n0 = [endemic.state; (endemic.state[healthy] .+ endemic.state[infected]) ./ 3]      # a quarter of all fans
         later(sp) = (sol = project(community(sp, resistant), n0, fill(phases.endemic, 100));
                      stage_total(sol, :sea_fan, :infected)[end] / abundance(sol, :sea_fan)[end])
-        @test later(reef) ≈ sum(endemic.state[infected]) rtol = 1e-6
-        @test later(among) < 1e-3
+        @test later(reef) ≈ sum(endemic.state[infected]) rtol = 1e-12                 # achieved 6.3e-16 (2026-11-17)
+        @test later(among) < 2e-6                                                     # 9.7e-7
         # the same as a third stratum
         three = sea_fan(; cells, resistant = true, outside = 0.0, transmission = 1 / share)
-        @test project(three, n0, fill(phases.endemic, 20)).u ≈ project(community(among, resistant), n0, fill(phases.endemic, 20)).u rtol = 1e-10
+        @test project(three, n0, fill(phases.endemic, 20)).u ≈ project(community(among, resistant), n0, fill(phases.endemic, 20)).u rtol = 1e-13  # achieved 6.8e-17 (2026-11-17)
     end
 
     @testset "whole fans" begin

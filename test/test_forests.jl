@@ -122,8 +122,8 @@ forest_reference(file) = [split(l, ",") for l in readlines(joinpath(@__DIR__, "r
         fine = forest_tree(:spruce; cells = 400, harvest = 0.0)
         z = meshpoints(forest_stage(:spruce; cells = 400))
         column = frozen(fine, 20.0)[trees(fine, :spruce, 400), trees(fine, :spruce, 400)][:, 100]
-        @test sum(column) ≈ 1 - rates.death(z[100], 20.0) rtol = 1e-6
-        @test sum((z .- z[100]) .* column) / sum(column) ≈ exp(rates.log_increment(z[100], 20.0) + rates.sigma^2 / 2) rtol = 1e-3
+        @test sum(column) ≈ 1 - rates.death(z[100], 20.0) rtol = 2e-8         # achieved 8.4e-9 (2026-11-17), growth cut off at 6 sd
+        @test sum((z .- z[100]) .* column) / sum(column) ≈ exp(rates.log_increment(z[100], 20.0) + rates.sigma^2 / 2) rtol = 2.5e-4  # achieved 1.0e-4
 
         # options
         short = forest_tree(:spruce; cells, delay = 2)
@@ -142,8 +142,12 @@ forest_reference(file) = [split(l, ",") for l in readlines(joinpath(@__DIR__, "r
     @testset "kernels against matreex" begin
         # (cells, species): the entries matreex integrates by Gauss-Legendre quadrature, and the share of the trees
         # of a cell that stay on the mesh alive. With its default settings (700 cells) matreex uses a coarse rule for
-        # growth above 50 mm a year, which is common only in an empty stand: the shares differ there.
-        for (cells, checked, entry, share) in ((100, kinds, 2e-9, ba -> 1e-7), (700, [:spruce], 1e-12, ba -> ba == 0 ? 3e-4 : 1e-5))
+        # growth above 50 mm a year, which is common only in an empty stand: the shares differ there. Achieved
+        # (2026-11-17): 100 cells, entries 3.3e-10 and shares 2.9e-8; 700 cells, entries 2.0e-14 (spruce), 1.5e-11 (fir)
+        # and 8.6e-10 (beech), shares 2.2e-4 in an empty stand and 7.8e-6 at 30 m²/ha. The differences in the entries are
+        # matreex's quadrature, not rounding.
+        entry700 = Dict(:spruce => 1e-12, :fir => 5e-11, :beech => 2e-9)
+        for (cells, checked, entry, share) in ((100, kinds, k -> 7e-10, ba -> 6e-8), (700, kinds, k -> entry700[k], ba -> ba == 0 ? 3e-4 : 1.2e-5))
             ref = forest_reference("forest_kernel_$cells.csv")
             for kind in checked
                 sp = forest_tree(kind; cells, harvest = 0.0)
@@ -155,7 +159,7 @@ forest_reference(file) = [split(l, ",") for l in readlines(joinpath(@__DIR__, "r
                     shares = maximum(abs(sum(K[:, parse(Int, r[4])]) - number(r[5])) for r in rows if r[3] == "0")
                     println("forest kernel, $kind, $cells cells, basal area $ba: largest difference from matreex in ",
                             count(r -> r[3] != "0", rows), " entries = ", entries, "; in the share kept = ", shares)
-                    @test entries < entry
+                    @test entries < entry(kind)
                     @test shares < share(ba)
                 end
             end
@@ -171,7 +175,7 @@ forest_reference(file) = [split(l, ",") for l in readlines(joinpath(@__DIR__, "r
         mine = sol.pools[ref.years .+ 1, 1]
         println("forest, spruce alone, 100 cells: largest relative difference from matreex over ", maximum(ref.years),
                 " years = ", maximum(abs.(mine ./ ref.basal_area .- 1)))
-        @test mine ≈ ref.basal_area rtol = 3e-5
+        @test maximum(abs.(mine ./ ref.basal_area .- 1)) < 1.2e-5       # achieved 6.0e-6 (2026-11-17), matreex's interpolation
         @test held(sol, :spruce)[1:(end - 1)] ≈ sol.pools[1:(end - 1), 1]
         @test maximum(mine) > 1.2 * ref.settled                     # the stand overshoots, then cycles slowly
         # What remains is matreex's interpolation: it tabulates its kernels (here every 0.25 m² per hectare) and
@@ -192,26 +196,26 @@ forest_reference(file) = [split(l, ",") for l in readlines(joinpath(@__DIR__, "r
         end
         println("forest, spruce alone, 100 cells, kernels interpolated as in matreex: largest relative difference = ",
                 maximum(abs.(interpolated[ref.years .+ 1] ./ ref.basal_area .- 1)))
-        @test interpolated[ref.years .+ 1] ≈ ref.basal_area rtol = 2e-7
+        @test maximum(abs.(interpolated[ref.years .+ 1] ./ ref.basal_area .- 1)) < 5e-8   # achieved 2.5e-8 (2026-11-17)
         # the equilibrium matreex reaches is one of this model, and the nearest
         there = reference_state(states, "spruce", :spruce)
-        @test pool_totals(spruce, there, nothing).basal_area ≈ ref.settled rtol = 1e-10
-        @test maximum(abs, advance(spruce, there, nothing) .- there) < 1e-6 * maximum(there)
+        @test pool_totals(spruce, there, nothing).basal_area ≈ ref.settled rtol = 1e-10            # achieved 1.4e-12 (2026-11-17)
+        @test maximum(abs, advance(spruce, there, nothing) .- there) < 6e-8 * maximum(there)    # achieved 2.7e-8
         eq = equilibrium(spruce, there, nothing)
         @test eq.converged
-        @test pool_totals(spruce, eq.n, nothing).basal_area ≈ ref.settled rtol = 1e-6
-        @test maximum(abs, eq.n .- there) < 1e-5 * maximum(there)   # the same size distribution
-        @test growth_rate(community_matrix(spruce, eq.n, nothing)) ≈ 1 atol = 1e-8
+        @test pool_totals(spruce, eq.n, nothing).basal_area ≈ ref.settled rtol = 2.5e-7           # achieved 1.0e-7
+        @test maximum(abs, eq.n .- there) < 2e-7 * maximum(there)   # the same size distribution; achieved 9.0e-8
+        @test growth_rate(community_matrix(spruce, eq.n, nothing)) ≈ 1 atol = 3e-9                # achieved 2.6e-11
         # the settled basal area without iterating: where the growth rate of the frozen species is one
         for kind in kinds
             sp = kind == :spruce ? spruce : forest_tree(kind; cells)
-            @test settles(sp, kind, cells) ≈ reference_run(runs, String(kind), kind).settled rtol = 1e-6
+            @test settles(sp, kind, cells) ≈ reference_run(runs, String(kind), kind).settled rtol = 5e-7  # achieved 2.4e-7 (2026-11-17)
         end
         # without felling the stand holds more, and matreex's run is followed for 3000 years of cycles
         free = reference_run(runs, "unharvested", :spruce)
         unfelled = forest_tree(:spruce; cells, harvest = 0.0)
         long = project(unfelled, forest_stand(:spruce; cells), fill(nothing, maximum(free.years) + 1))
-        @test long.pools[free.years .+ 1, 1] ≈ free.basal_area rtol = 1e-4
+        @test maximum(abs.(long.pools[free.years .+ 1, 1] ./ free.basal_area .- 1)) < 5e-5   # achieved 2.6e-5 (2026-11-17)
         @test minimum(long.pools[2001:2991, 1]) < 40 < 50 < maximum(long.pools[2001:2991, 1])
     end
 
@@ -229,7 +233,7 @@ forest_reference(file) = [split(l, ",") for l in readlines(joinpath(@__DIR__, "r
                 mine = held(sol, kind)[years .+ 1]
                 println("forest, $run, 100 cells, $kind: largest relative difference from matreex over ", maximum(years),
                         " years = ", maximum(abs.(mine ./ ref.basal_area .- 1)))
-                @test mine ≈ ref.basal_area rtol = 3e-5
+                @test maximum(abs.(mine ./ ref.basal_area .- 1)) < 1.4e-5   # achieved 6.7e-6 (2026-11-17)
             end
             @test sol.pools[1:(end - 1), 1] ≈ sum(held(sol, k) for k in members)[1:(end - 1)]
         end
@@ -237,16 +241,16 @@ forest_reference(file) = [split(l, ",") for l in readlines(joinpath(@__DIR__, "r
         trio = community(spruce, fir, beech)
         there = reduce(vcat, [reference_state(states, "trio", k) for k in kinds])
         @test length(there) == length(trio)
-        @test maximum(abs, advance(trio, there, nothing) .- there) < 1e-6 * maximum(there)
+        @test maximum(abs, advance(trio, there, nothing) .- there) < 5e-7 * maximum(there)    # achieved 2.1e-7 (2026-11-17)
         totals = [reference_run(runs, "trio", k).settled for k in kinds]
-        @test pool_totals(trio, there, nothing).basal_area ≈ sum(totals) rtol = 1e-10
+        @test pool_totals(trio, there, nothing).basal_area ≈ sum(totals) rtol = 3e-12          # achieved 2.1e-14
         @test totals[2] > totals[1] > totals[3] > 5                 # fir, then spruce, then beech: all three persist
         # each species frozen there just replaces itself
         A = community_matrix(trio, there, nothing)
         edges = cumsum([0; [length(sp) for sp in (spruce, fir, beech)]])
         for j in 1:3
             block = (edges[j] + 1):edges[j + 1]
-            @test growth_rate(A[block, block]) ≈ 1 atol = 1e-6
+            @test growth_rate(A[block, block]) ≈ 1 atol = 3e-8                                # achieved 1.3e-8 (2026-11-17)
         end
     end
 
@@ -257,10 +261,10 @@ forest_reference(file) = [split(l, ",") for l in readlines(joinpath(@__DIR__, "r
         for r in forest_reference("forest_invasion_100.csv")
             kind, stand = Symbol(r[1]), number(r[2])
             invader = forest_tree(kind; cells, conspecific = number(r[3]))
-            @test invasion_growth_rate(invader, (basal_area = stand,), nothing) ≈ number(r[4]) rtol = 1e-8
+            @test invasion_growth_rate(invader, (basal_area = stand,), nothing) ≈ number(r[4]) rtol = 1e-9   # achieved 1.1e-10 (2026-11-17)
             net = system(invader)[kind]
             U, F = survival_fecundity_matrices(net, context(net, zeros(length(invader)), (basal_area = stand,), nothing))
-            @test growth_rate(F / (I - U)) ≈ number(r[5]) rtol = 1e-7
+            @test growth_rate(F / (I - U)) ≈ number(r[5]) rtol = 1e-7                                       # achieved 4.3e-8
         end
         spruce = forest_tree(:spruce; cells)
         there = reference_state("forest_states_100.csv", "spruce", :spruce)
@@ -271,7 +275,7 @@ forest_reference(file) = [split(l, ",") for l in readlines(joinpath(@__DIR__, "r
         @test rates[1] > rates[2] > rates[3] > 1                     # the rarer, the faster; fir invades spruce
         @test invasion_growth_rate(forest_tree(:beech; cells, conspecific = 0.1), spruce, there, nothing) > 1
         # a species that holds the whole stand at its equilibrium just replaces itself
-        @test invasion_growth_rate(forest_tree(:spruce; cells, conspecific = stand), (basal_area = stand,), nothing) ≈ 1 atol = 1e-7
+        @test invasion_growth_rate(forest_tree(:spruce; cells, conspecific = stand), (basal_area = stand,), nothing) ≈ 1 atol = 1e-8  # achieved 2.7e-9
         # an invader does invade: fir added to the spruce stand increases
         pair = community(spruce, forest_tree(:fir; cells))
         sol = project(pair, [there; forest_stand(:fir; cells, basal_area = 0.1)], fill(nothing, 150))
@@ -283,9 +287,10 @@ forest_reference(file) = [split(l, ",") for l in readlines(joinpath(@__DIR__, "r
         fine = reference_run("forest_runs_700.csv", "spruce", :spruce).settled
         found = [settles(forest_tree(:spruce; cells), :spruce, cells) for cells in (100, 200, 400)]
         println("forest, spruce alone settles at ", found, " m²/ha on 100, 200 and 400 cells; matreex on 700 cells: ", fine)
-        @test abs(found[1] / fine - 1) < 0.03
-        @test abs(found[2] / fine - 1) < 0.01
-        @test abs(found[3] / fine - 1) < 0.003
+        @test abs(found[1] / fine - 1) < 0.025      # achieved 0.0229 (2026-11-17)
+        @test abs(found[2] / fine - 1) < 0.007      # achieved 0.0063
+        @test abs(found[3] / fine - 1) < 5e-4       # achieved 4.0e-4
+        @test found[1:2] ≈ [37.51, 36.90] atol = 0.005                     # as vignette 15 prints them
         @test abs(found[3] - fine) < abs(found[2] - fine) < abs(found[1] - fine)
     end
 
@@ -300,16 +305,16 @@ forest_reference(file) = [split(l, ",") for l in readlines(joinpath(@__DIR__, "r
         sol = project(spruce, forest_stand(:spruce; cells), fill(nothing, 101))
         println("forest, spruce alone, 700 cells: largest relative difference from matreex over 100 years = ",
                 maximum(abs.(sol.pools[years .+ 1, 1] ./ ref.basal_area[1:length(years)] .- 1)))
-        @test sol.pools[years .+ 1, 1] ≈ ref.basal_area[1:length(years)] rtol = 1e-3
+        @test maximum(abs.(sol.pools[years .+ 1, 1] ./ ref.basal_area[1:length(years)] .- 1)) < 7e-4   # achieved 4.8e-4 (2026-11-17)
         # matreex's equilibrium is all but an equilibrium here: its kernels are interpolated between whole basal areas
         there = reference_state("forest_states_700.csv", "spruce", :spruce)
-        @test pool_totals(spruce, there, nothing).basal_area ≈ ref.settled rtol = 1e-10
-        @test maximum(abs, advance(spruce, there, nothing) .- there) < 1e-4 * maximum(there)
+        @test pool_totals(spruce, there, nothing).basal_area ≈ ref.settled rtol = 1e-10            # achieved 1.2e-12
+        @test maximum(abs, advance(spruce, there, nothing) .- there) < 7e-5 * maximum(there)    # achieved 3.3e-5
         # and the three species together
         trio = community(spruce, forest_tree(:fir; cells), forest_tree(:beech; cells))
         @test length(trio) == 714 + 728 + 748
         all3 = reduce(vcat, [reference_state("forest_states_700.csv", "trio", k) for k in kinds])
-        @test maximum(abs, advance(trio, all3, nothing) .- all3) < 1e-4 * maximum(all3)
+        @test maximum(abs, advance(trio, all3, nothing) .- all3) < 1.5e-5 * maximum(all3)     # achieved 6.3e-6 (2026-11-17)
     end
 
     @testset "whole trees" begin

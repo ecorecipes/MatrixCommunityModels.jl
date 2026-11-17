@@ -54,16 +54,50 @@ grassland_reference(file) = [split(l, ",") for l in readlines(joinpath(@__DIR__,
             worst = maximum(maximum(abs.(cover(c, sol.u[parse(Int, r[2]) + 1, :]) ./ number.(r[3:5]) .- 1)) for r in rows)
             println("grasslands, Kansas, $label: largest relative difference in cover = ", worst)
             # the authors integrate the crowding by conspecifics with R's integrate at its default tolerance
-            @test worst < 1e-7
+            @test worst < 2.5e-8            # achieved 8.9e-9, 7.4e-9, 9.7e-9 and 1.2e-8 (2026-11-17)
         end
         # their state after 500 mean years is an equilibrium here too
         states = grassland_reference("grassland_kansas_state.csv")
         for (label, inter) in (("mean_500", true), ("mean_500_nointer", false))
             c = grassland_community(:kansas; interactions = inter)
             n = state_vector(c, (k => [number(r[4]) for r in states if r[1] == label && r[2] == uppercase(String(k))] for k in kinds)...)
-            @test maximum(abs, advance(c, n, nothing) .- n) / maximum(n) < 1e-5
+            @test maximum(abs, advance(c, n, nothing) .- n) / maximum(n) < 1.5e-8     # achieved 1.9e-9 and 6.9e-9 (2026-11-17)
             last_row = only(r for r in runs if r[1] == label && r[2] == "500")
-            @test cover(c, n) ≈ number.(last_row[3:5]) rtol = 1e-12
+            @test cover(c, n) ≈ number.(last_row[3:5]) rtol = 1e-13                   # achieved 8.7e-16
+        end
+        # the authors' saved run of 2500 drawn years without interactions (their sequence of years, the first left out
+        # as above), against the covers they kept for years 501 to 2500 (vignette 20: 2.9e-7)
+        c = grassland_community(:kansas; interactions = false)
+        n0 = state_vector(c, (k => grassland_state(:kansas, k) for k in kinds)...)
+        sol = project(c, n0, years[2:2500])
+        C = reduce(vcat, permutedims(cover(c, row)) for row in eachrow(sol.u))
+        saved = [(parse(Int, r[2]), number.(r[3:5])) for r in grassland_reference("grassland_kansas_saved.csv") if r[1] == "ENVNOINTER"]
+        worst = maximum(maximum(abs.(C[year, :] ./ x .- 1)) for (year, x) in saved)
+        println("grasslands, Kansas, the authors' 2500 drawn years without interactions: largest relative difference in cover = ", worst)
+        @test worst < 6e-7                  # achieved 2.9e-7 (2026-11-17)
+        # and the synchrony of the yearly growth rates over the last 2000 years: 0.618 (vignette 20), which is the 0.62
+        # of Tredennick et al. (2017, Table S1)
+        growth_rates(X) = log.(X[2:end, :] ./ X[1:(end - 1), :])
+        @test synchrony(growth_rates(C[501:end, :])) ≈ 0.618 atol = 5e-4
+        @test synchrony(growth_rates(C[501:end, :])) ≈ 0.62 atol = 5e-3
+        # the synchrony of the covers the authors saved, with and without interactions: 0.611 and 0.618 (vignette 20)
+        theirs(run) = reduce(vcat, permutedims(number.(r[3:5])) for r in grassland_reference("grassland_kansas_saved.csv") if r[1] == run)
+        @test synchrony(growth_rates(theirs("ENVINTER"))) ≈ 0.611 atol = 5e-4
+        @test synchrony(growth_rates(theirs("ENVNOINTER"))) ≈ 0.618 atol = 5e-4
+    end
+
+    @testset "invasion in the mean year" begin
+        # Each species, rare, increases in the community of the other two at their equilibrium, with and without
+        # interactions. Vignette 20 prints, to four decimals, 1.6060, 1.0923 and 1.4386 (1.3830, 1.2117 and 1.4863
+        # without interactions); its residents run 500 mean years first, which changes the rates by less than 1e-7.
+        printed = Dict(true => [1.6060, 1.0923, 1.4386], false => [1.3830, 1.2117, 1.4863])
+        for interactions in (true, false), (j, k) in enumerate(kinds)
+            others = Tuple(x for x in kinds if x != k)
+            resident = grassland_community(:kansas; kinds = others, interactions)
+            n0 = state_vector(resident, (x => grassland_state(:kansas, x) for x in others)...)
+            eq = equilibrium(resident, n0, nothing; tol = 1e-9, maxiter = 5000)
+            @test eq.converged
+            @test invasion_growth_rate(grassland_plant(:kansas, k; interactions), resident, eq.n, nothing) ≈ printed[interactions][j] atol = 5e-5
         end
     end
     BLAS.set_num_threads(threads)

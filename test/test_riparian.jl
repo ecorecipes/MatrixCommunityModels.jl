@@ -39,5 +39,11 @@ end
         s5 = 3 * 6 + 5                                     # sagebrush is the fourth guild
         @test community_matrix(c.community, n, c.envs[1])[s5, s5] > 0
         @test community_matrix(m.community, n, m.envs[1])[s5, s5] == 0
+        # the original keeps every sagebrush stage at 10 or more; the corrected model only zeroes stages below one
+        full = project(m.community, m.n0, m.envs)[:S]
+        cfull = project(c.community, c.n0, c.envs)[:S]
+        @test all(>=(10), full) && any(==(10), full)
+        @test all(x -> x == 0 || x >= 1, cfull) && any(x -> 1 <= x < 10, cfull)
+        @test all(>(0), sum(cfull, dims = 2))              # sagebrush persists through the Yampa record
     end
 end
