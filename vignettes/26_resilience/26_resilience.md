@@ -10,6 +10,7 @@ Simon Frost
 - [Two beetles: presses and removals](#two-beetles-presses-and-removals)
 - [Riparian guilds in a constant flood
   regime](#riparian-guilds-in-a-constant-flood-regime)
+- [Two kinds of press](#two-kinds-of-press)
 - [With EcologicalResilience.jl](#with-ecologicalresiliencejl)
 - [References](#references)
 
@@ -234,6 +235,61 @@ same factor, about 13: every guild’s recruitment is proportional to the
 same free space, so freeing space scales them alike. Sagebrush stays at
 its floor. Removing any other guild changes the rest by about 1% or
 less.
+
+## Two kinds of press
+
+What “raising mortality” means is a modelling choice, and `MCMState`
+offers two:
+
+- `press = :hazard` (the default) multiplies each stage’s mortality
+  hazard by `f`, so a stage that survives a step with probability `σ`
+  survives with probability `σ^f`;
+- `press = :removal` removes a fraction `m = removal_scale × (f - 1)` of
+  every stage after each step, as harvesting or culling would. It is an
+  added loss, not the baseline mortality multiplied by `f`.
+
+Both leave the model unchanged at `f = 1`, and they differ most where
+survival is far from one. Cottonwood seedlings almost all die in their
+first year:
+
+``` julia
+σ = vec(sum(matrix_model(rip.community, :C, wet.n, flood_year).U; dims = 1))
+f = 1.1
+[(stage = k, survival = round(σ[k]; sigdigits = 2), kept_hazard = round(σ[k]^(f - 1); digits = 3),
+  kept_removal = round(1 - (f - 1); digits = 3)) for k in eachindex(σ)]
+```
+
+    6-element Vector{@NamedTuple{stage::Int64, survival::Float64, kept_hazard::Float64, kept_removal::Float64}}:
+     (stage = 1, survival = 0.00086, kept_hazard = 0.494, kept_removal = 0.9)
+     (stage = 2, survival = 0.067, kept_hazard = 0.763, kept_removal = 0.9)
+     (stage = 3, survival = 0.71, kept_hazard = 0.966, kept_removal = 0.9)
+     (stage = 4, survival = 0.53, kept_hazard = 0.939, kept_removal = 0.9)
+     (stage = 5, survival = 0.8, kept_hazard = 0.978, kept_removal = 0.9)
+     (stage = 6, survival = 0.95, kept_hazard = 0.995, kept_removal = 0.9)
+
+A 10% hazard press halves the survival of seedlings and barely touches
+mature trees; a 10% removal takes the same share of every stage.
+Pressing cottonwood alone, at the same `f`:
+
+``` julia
+wet_removal = MCMState(rip.community, rip.n0, flood_year; press = :removal)
+press_C = [f, 1, 1, 1, 1]
+(hazard = round.(state(with_mortality(wet, press_C)) ./ state(wet); digits = 3),
+ removal = round.(state(with_mortality(wet_removal, press_C)) ./ state(wet_removal); digits = 3),
+ tolerance_hazard = local_mortality_tolerances(wet)[1],
+ tolerance_removal = local_mortality_tolerances(wet_removal)[1])
+```
+
+    (hazard = [1.006, 1.006, 1.006, 1.0, 1.006], removal = [0.906, 1.006, 1.006, 1.0, 1.006], tolerance_hazard = 0.4, tolerance_removal = 0.30000000000000004)
+
+Under the hazard press cottonwood does not decline at all: it rises by
+0.6%, like the other guilds. The extra deaths fall mostly on seedlings,
+and the space they free is recruited into by every guild, cottonwood
+included. Under the removal press cottonwood falls by 9.4% while the
+others rise. Cottonwood is lost at a 40% hazard press but at a 30%
+removal press. Which press is right depends on the perturbation being
+modelled: a harsher flood or drought acts on survival, harvesting or
+browsing removes a share of what stands.
 
 ## With EcologicalResilience.jl
 

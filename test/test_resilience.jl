@@ -103,6 +103,36 @@ import ResilienceCore
         @test RC.global_mortality_tolerance(s) > 1
         @test all(>(0), RC.local_mortality_tolerances(s))
         @test_throws ArgumentError RC.with_mortality(s, [1.0])
+        @testset "press = :removal" begin
+            r = MCMState(beetles, e.n, nothing; press = :removal)
+            @test r.press === :removal
+            @test r.n ≈ s.n rtol = 1e-8
+            # f = 1 (m = 0) is the model itself
+            @test RC.state(RC.with_mortality(r, [1.0, 1.0])) ≈ RC.state(r) rtol = 1e-8
+            # one pressed step removes the fraction m = removal_scale (f - 1) after the model's step
+            pressed = MatrixCommunityModels._copy(r; factors = [1.1, 1.0])
+            @test MatrixCommunityModels._step(pressed, r.n) ≈ [0.9 .* advance(beetles, r.n, nothing)[1:3];
+                                                                advance(beetles, r.n, nothing)[4:6]]
+            half = MCMState(beetles, e.n, nothing; press = :removal, removal_scale = [0.5, 1.0])
+            @test MatrixCommunityModels._step(MatrixCommunityModels._copy(half; factors = [1.2, 1.0]), r.n)[1:3] ≈
+                  0.9 .* advance(beetles, r.n, nothing)[1:3]
+            @test MatrixCommunityModels._removed(MatrixCommunityModels._copy(r; factors = [3.0, 1.0]), 1) == 1.0
+            # direction: removing a little of one species each step (0.2%) lowers it and raises
+            # its competitor; removing 0.5% loses it, since it falls on long-lived adults too
+            p = RC.with_mortality(r, [1.002, 1.0])
+            @test RC.richness(p) == 2
+            @test RC.state(p)[1] < RC.state(r)[1] && RC.state(p)[2] > RC.state(r)[2]
+            @test RC.richness(RC.with_mortality(r, [1.005, 1.0])) == 1
+            # the two kinds of press are different perturbations
+            @test !(RC.state(p) ≈ RC.state(RC.with_mortality(s, [1.002, 1.0])))
+            # the experiments run; removing a whole species each step loses it
+            @test RC.press_response(r, [2.0, 1.0])[3] == 1
+            @test RC.global_mortality_tolerance(r) > 1
+            @test_throws ArgumentError RC.with_mortality(r, [0.9, 1.0])
+            @test_throws ArgumentError MCMState(beetles, e.n, nothing; press = :harvest)
+            @test_throws ArgumentError MCMState(beetles, e.n, nothing; removal_scale = [1.0])
+            @test occursin("press = :removal", sprint(show, r))
+        end
         # a state that cycles is not accepted as a steady state
         cyc = flour_beetle_competition(merge(TRIBOLIUM_EDMUNDS_2003, (c_el = [0.01 0.032; 0.032 0.01],)))
         @test_throws ArgumentError MCMState(cyc, [0.62, 16.68, 40.14, 3.05, 32.19, 67.78], nothing; newton = false,

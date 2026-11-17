@@ -73,7 +73,8 @@ function periodic_operator(invader::OpenCommunity, pool::NamedTuple, envs)
 end
 
 """
-    MCMState(c, n, env; settle = true, newton = true, extinct = 1e-6, tol = 1e-10, maxiter = 100_000)
+    MCMState(c, n, env; press = :hazard, removal_scale = 1.0, settle = true, newton = true,
+             extinct = 1e-6, tol = 1e-10, maxiter = 100_000)
 
 The closed community `c` at state `n` in the constant environment `env`, with the community
 interface of ResilienceCore.jl. ResilienceCore's simulated experiments then run unchanged:
@@ -83,12 +84,23 @@ interface of ResilienceCore.jl. ResilienceCore's simulated experiments then run 
 - **Species and abundance.** Species are those of `c`, in the order of
   [`species_names`](@ref). `state(s)` is each species' abundance, the sum over its states
   (as in [`abundance`](@ref)); a species is present while that sum exceeds `extinct`.
-- **Mortality.** `with_mortality(s, factors)` multiplies the mortality hazard of every stage
-  of species `i` by `factors[i]`: a stage that survives a step with probability `σ` survives
-  with probability `σ^factors[i]`. It scales the species' survival transitions (those of
-  `survival_fecundity_matrices`) and leaves births alone; `factors = ones(...)` is the model
-  itself. Scaling the hazard rather than the probability of dying keeps a small press small
-  for stages that almost all die, such as seedlings.
+- **Mortality presses.** `with_mortality(s, factors)` applies a press of strength
+  `factors[i]` to species `i`; `factors[i] = 1` is the model itself. What a press does is
+  chosen by `press`:
+  - `press = :hazard` (the default) multiplies the mortality hazard of every stage by the
+    factor `f`: a stage that survives a step with probability `σ` survives with probability
+    `σ^f`. It acts on the species' survival transitions (those of
+    `survival_fecundity_matrices`) and leaves births alone. This is "baseline mortality × f"
+    with mortality read as a hazard, which keeps a small press small for stages that almost
+    all die, such as seedlings, and hits them hardest in relative terms.
+  - `press = :removal` removes a fixed fraction of every stage after each step, newborns
+    included, as harvesting or culling would: `n ← (1 - m) advance(n)` for the states of
+    species `i`, with `m = min(removal_scale[i] * (f - 1), 1)`. With the default
+    `removal_scale = 1`, `f = 1.1` removes 10% of the species each step. This is an added
+    loss proportional to `f - 1`, not baseline mortality multiplied by `f`: it ignores how
+    many die anyway, and it does not depend on the stage. `removal_scale` (a number, or one
+    per species) converts the factors of ResilienceCore's experiments into fractions removed.
+    Factors below one would add individuals and are an error.
 - **Removal.** `without_species(s, i)` sets the states of species `i` to zero and holds them
   there.
 - **Steady state.** After a perturbation, and on construction when `settle = true`, the
@@ -113,18 +125,26 @@ struct MCMState{C<:OpenCommunity,E}
     factors::Vector{Float64}
     alive::BitVector
     converged::Bool
+    press::Symbol
+    removal_scale::Vector{Float64}
     newton::Bool
     extinct::Float64
     tol::Float64
     maxiter::Int
 end
 
-function MCMState(c::OpenCommunity, n::AbstractVector, env; settle::Bool = true, newton::Bool = true,
-                  extinct::Real = 1e-6, tol::Real = 1e-10, maxiter::Integer = 100_000)
+function MCMState(c::OpenCommunity, n::AbstractVector, env; press::Symbol = :hazard, removal_scale = 1.0,
+                  settle::Bool = true, newton::Bool = true, extinct::Real = 1e-6, tol::Real = 1e-10,
+                  maxiter::Integer = 100_000)
+    press in (:hazard, :removal) || throw(ArgumentError("press must be :hazard or :removal, got :$press"))
+    S = length(c.names)
+    scale = removal_scale isa Real ? fill(Float64(removal_scale), S) : collect(Float64, removal_scale)
+    length(scale) == S && all(>=(0), scale) ||
+        throw(ArgumentError("removal_scale must be a non-negative number or $S non-negative numbers"))
     x = collect(Float64, state_vector(c, n))
     alive = BitVector([sum(x[c.layout[sp]]) > extinct for sp in c.names])
     _zero_absent!(x, c, alive)
-    s = MCMState(c, x, env, ones(length(c.names)), alive, true, newton, Float64(extinct), Float64(tol), Int(maxiter))
+    s = MCMState(c, x, env, ones(S), alive, true, press, scale, newton, Float64(extinct), Float64(tol), Int(maxiter))
     settle || return s
     t = _settled(s; newton = newton)
     t.converged || throw(ArgumentError(
@@ -141,10 +161,14 @@ function _zero_absent!(x, c, alive)
 end
 
 _copy(s::MCMState; n = copy(s.n), factors = s.factors, alive = copy(s.alive), converged = s.converged) =
-    MCMState(s.community, n, s.env, collect(Float64, factors), alive, converged, s.newton, s.extinct, s.tol, s.maxiter)
+    MCMState(s.community, n, s.env, collect(Float64, factors), alive, converged, s.press, s.removal_scale, s.newton,
+             s.extinct, s.tol, s.maxiter)
 
-# One step of the perturbed community: survival scaled by the mortality factors, absent
-# species held at zero.
+# fraction of species i removed after each step under press = :removal
+_removed(s::MCMState, i) = min(s.removal_scale[i] * (s.factors[i] - 1), 1.0)
+
+# One step of the perturbed community: mortality presses applied (as a hazard multiplier on
+# survival, or as a removal after the step), absent species held at zero.
 function _step(s::MCMState, n::AbstractVector)
     c, env = s.community, s.env
     y = advance(c, n, env)
@@ -156,6 +180,10 @@ function _step(s::MCMState, n::AbstractVector)
         end
         f = s.factors[i]
         f == 1 && continue
+        if s.press === :removal
+            y[r] .*= 1 - _removed(s, i)
+            continue
+        end
         U, _ = survival_fecundity_matrices(c.system[sp], _context(c, sp, n, env))
         # pressed / baseline survival, by stage: the mortality hazard -log(σ) times f, so σ^f / σ
         keep = map(σ -> σ <= 0 ? 0.0 : σ >= 1 ? 1.0 : σ^(f - 1), vec(sum(U; dims = 1)))
@@ -246,6 +274,8 @@ function ResilienceCore.with_mortality(s::MCMState, factors::AbstractVector; new
     length(factors) == length(s.alive) ||
         throw(ArgumentError("factors has $(length(factors)) entries for $(length(s.alive)) species"))
     all(>=(0), factors) || throw(ArgumentError("mortality factors must be non-negative"))
+    s.press === :removal && any(<(1), factors) &&
+        throw(ArgumentError("with press = :removal a factor below one would add individuals; got $(minimum(factors))"))
     return _settled(_copy(s; factors = factors); newton = newton && s.newton, _steady(s, steady)...)
 end
 
@@ -264,5 +294,5 @@ linearise(s::MCMState) = ResilienceCore.DiscreteJacobian(jacobian(s), s.n[_prese
 function Base.show(io::IO, s::MCMState)
     names = s.community.names[s.alive]
     print(io, "MCMState(", length(names), " of ", length(s.alive), " species present: ", join(names, ", "),
-          s.converged ? "" : "; not at a fixed point", ")")
+          s.press === :hazard ? "" : "; press = :$(s.press)", s.converged ? "" : "; not at a fixed point", ")")
 end
