@@ -1,6 +1,6 @@
 name = "MatrixCommunityModels"
 uuid = "c9d7ffd9-8e9b-4c2f-8af4-9cd333236b7e"
-version = "0.1.5"
+version = "0.2.0"
 authors = ["Simon Frost"]
 
 [deps]
@@ -27,12 +27,12 @@ ResilienceCore = {url = "https://github.com/ecorecipes/ResilienceCore.jl"}
 StructuredPopulationCore = {url = "https://github.com/ecorecipes/ProjectionModels.jl"}
 
 [compat]
-CategoricalPopulationDynamics = "0.1.6"
+CategoricalPopulationDynamics = "0.1.7"
 Catlab = "0.17"
 Graphs = "1"
-IntegralProjectionModels = "0.1.2"
+IntegralProjectionModels = "0.2"
 LinearAlgebra = "1"
-MatrixProjectionModels = "0.1.4"
+MatrixProjectionModels = "0.2"
 Random = "1"
 ResilienceCore = "0.1"
 StructuredPopulationCore = "0.1.4"
