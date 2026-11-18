@@ -201,7 +201,7 @@ function _riparian_guild(name::Symbol, corrected::Bool, guilds)
             guild = inflow(guild, :s1 => ctx -> seedlings(ctx, ctx.pool.willow_adults, ctx.env.flood))
         end
     end
-    guild = after_step(guild, name === :S ? _quasiten : _quasi)
+    guild = after_step(guild, name === :S ? (corrected ? _quasi : _quasiten) : _quasi)
     return species(name, guild; occupies, reads)
 end
 
@@ -217,8 +217,14 @@ With `corrected = false` the model reproduces the published R script exactly, in
 two behaviours that look unintended: the meadow guild receives the willow guild's
 recruitment (expressed here as a second pool, `willow_adults`), and sagebrush and meadow
 lose the stage-5 individuals that do not mature. `corrected = true` gives meadow its own
-recruitment, gated on its own adults, and keeps those stage-5 individuals. Both variants
-keep the script's floor of 10 individuals per sagebrush stage.
+recruitment, gated on its own adults, and keeps those stage-5 individuals.
+
+The script also keeps every sagebrush stage at 10 individuals or more each year (its
+`quasiten`, described where it is defined as a rescue by sagebrush encroaching from the
+uplands), while its summary says sagebrush below 10 is set to zero. The original variant
+keeps the floor. The corrected variant treats sagebrush like the other guilds, setting
+stages below one individual to zero (by the package owner's decision, 2026-11-17: with the
+summary's rule, sagebrush is lost within seven years of the Yampa record).
 
 `guilds` supplies the parameters; pass a copy changed with [`with_rate`](@ref) to
 perturb a vital rate.

@@ -55,7 +55,7 @@ end
 s, values = flood_mortality_sensitivity(:C, 6)
 ```
 
-    ((slope = [2.8941063716726275e6, 27196.205681559768, 2105.455876929926, 1646.043604229914, 4501.0333011967095, -15915.091859500668, 1.969616545530645e6, 52826.05724552152, 14679.43775403232, 6850.827415677398  …  372.7810906690909, 230.6590467113406, 379.4552298321292, 145.77485342139963, 4.480971214369054e6, 141077.97103077153, 2356.0381137984723, 1518.4201102228083, 6612.51117427275, 25639.221689448957], r2 = [0.9717311055129279, 0.9710200664502038, 0.9709392250167993, 0.97082066655274, 0.9708003164064941, 0.9706925649639362, 0.9716241514835594, 0.9710846942092096, 0.970949281606067, 0.9708609492387071  …  0.9731463538561256, 0.9731971559946676, 0.9728544662141038, 0.9692801046060228, 0.971636988565778, 0.9707272373605086, 0.9705353436822334, 0.9706850578605656, 0.9705445669957481, 0.9696693119531941], means = [2.0510122977463552e6 19190.51110059933 … 4653.482648724525 17561.953159658784; 2.098966811424761e6 19643.412957252818 … 4764.307129655869 17994.475076211842; … ; 2.240470991118772e6 20972.779170096965 … 5087.254061803725 19246.031069491335; 2.2579751849963004e6 21135.958286870202 … 5126.790114443041 19398.086000516945]), [0.0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07])
+    ((slope = [2.9333329310629065e6, 27630.258619608467, 2139.308508478614, 1671.9234276629882, 4575.162408312951, -16076.338123579006, 1.9980383659485248e6, 53664.25121315984, 14910.945232335136, 6952.269078045299  …  54.56281161324272, 29.519361490532145, 64.73556410076138, 26.68511106397088, 4.546550914646113e6, 143378.03340640862, 2397.3729291399177, 1544.7038042519557, 6738.742026839686, 26108.03894632797], r2 = [0.9723450396997108, 0.970813570996602, 0.9707425978706129, 0.9706395763153273, 0.9706153553918346, 0.9708809728456742, 0.9719809007010939, 0.9708049562950889, 0.9707540011996333, 0.9706585971566825  …  0.6085759407957388, 0.7220297195540397, 0.7870100542927122, 0.8565082104721029, 0.9724336561407138, 0.9706565819473285, 0.9704534039646953, 0.9705647855435483, 0.970405273097389, 0.9694969415992729], means = [2.0739667443201113e6 19346.12579654757 … 4761.161764321525 17967.024797352424; 2.121960545372337e6 19809.105111498346 … 4874.3477177538725 18408.60575491752; … ; 2.2656780072167516e6 21158.246869760467 … 5203.327750668759 19682.464429442836; 2.2834385140301543e6 21323.93705126313 … 5243.659070489611 19837.397321947938]), [0.0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07])
 
 The response of mature (stage 6) individuals of each guild to the flood
 mortality of mature cottonwood:
@@ -78,7 +78,7 @@ competition coefficient.
 (slope = round.(s.slope[mature]; digits = 1), r2 = round.(s.r2[mature]; digits = 3))
 ```
 
-    (slope = [-15915.1, 10007.8, 16308.0, 145.8, 25639.2], r2 = [0.971, 0.97, 0.97, 0.969, 0.97])
+    (slope = [-16076.3, 10136.6, 16485.4, 26.7, 26108.0], r2 = [0.971, 0.969, 0.971, 0.857, 0.969])
 
 ## The full matrix
 
@@ -120,13 +120,17 @@ diagonal blocks are within-guild effects. Two features stand out:
  negative_within_guild = count(effect[i, j] < 0 for i in 1:30, j in 1:30 if (i - 1) ÷ 6 == (j - 1) ÷ 6))
 ```
 
-    (positive = 776, negative = 124, negative_within_guild = 88)
+    (positive = 706, negative = 194, negative_within_guild = 106)
 
 Most effects between guilds are positive, that is, competitive. The
-clearest exception is sagebrush (DS), which declines when willow (HS)
-suffers more in floods, a net positive effect of willow on sagebrush
-that no one put into the model. And the effect of a stage’s mortality on
-its own abundance is not always negative:
+exceptions involve sagebrush (DS). It declines when willow (HS) suffers
+more in floods, a net positive effect of willow on sagebrush that no one
+put into the model. And more flood mortality of sagebrush lowers
+cottonwood, tamarisk and meadow in about half of their stages. In the
+corrected model sagebrush is not held at 10 individuals per stage, as in
+the authors’ script, and its numbers swing over orders of magnitude. The
+effect of a stage’s mortality on its own abundance is not always
+negative:
 
 ``` julia
 [labels[k] => round(effect[k, k]; digits = 2) for k in (1, 6, 13, 18)]
@@ -134,7 +138,7 @@ its own abundance is not always negative:
 
     4-element Vector{Pair{String, Float64}}:
      "HT1" => 0.43
-     "HT6" => -7.79
+     "HT6" => -7.77
      "HS1" => 0.4
      "HS6" => -3.52
 
@@ -197,18 +201,18 @@ net = InteractionNetwork(effect, labels; threshold = 1)
  link_density = round(link_density(net); digits = 2), reciprocity = round(reciprocity(net); digits = 2))
 ```
 
-    (links = 91, connectance = 0.105, link_density = 3.03, reciprocity = 0.11)
+    (links = 124, connectance = 0.143, link_density = 4.13, reciprocity = 0.27)
 
 ``` julia
 first(links(net), 5)
 ```
 
     5-element Vector{@NamedTuple{from::String, to::String, effect::Float64}}:
-     (from = "XS5", to = "XS6", effect = -5.4343774594333025)
-     (from = "XS4", to = "XS5", effect = -3.8721332078786683)
-     (from = "XS4", to = "XS6", effect = -3.8568866264475323)
-     (from = "MM5", to = "MM6", effect = -2.446771597754121)
-     (from = "HT5", to = "HT6", effect = -2.3682103625999105)
+     (from = "DS1", to = "DS3", effect = -39.83118912586431)
+     (from = "DS1", to = "DS4", effect = -37.199751398776144)
+     (from = "DS1", to = "DS2", effect = -35.7440324281075)
+     (from = "DS1", to = "DS5", effect = -32.16764907481866)
+     (from = "DS1", to = "DS6", effect = -27.384900769960044)
 
 ``` julia
 sort(collect(zip(labels, out_degree(net))); by = last, rev = true)[1:5]
@@ -216,24 +220,25 @@ sort(collect(zip(labels, out_degree(net))); by = last, rev = true)[1:5]
 
     5-element Vector{Tuple{String, Int64}}:
      ("MM6", 29)
-     ("HT6", 23)
-     ("HS6", 6)
+     ("HT6", 24)
+     ("HS5", 7)
+     ("HS3", 6)
      ("HT1", 5)
-     ("XS1", 5)
 
 ## A note on R²
 
-The paper keeps only relationships with R² above 0.3. Here every
-relationship has an R² close to one:
+The paper keeps only relationships with R² above 0.3. Here most
+relationships have an R² close to one; the lowest are those of
+sagebrush, whose numbers swing widely:
 
 ``` julia
 quantile(vec(r2), [0.05, 0.5, 0.95])
 ```
 
     3-element Vector{Float64}:
-     0.9709487787766036
-     0.9999048761747208
-     0.9999949280840726
+     0.4386682611841727
+     0.9975663990581581
+     0.9999867120876612
 
 That is a consequence of using the same flow sequences for every value
 of the vital rate. If each run draws its own sequence, as in the
@@ -247,7 +252,7 @@ noisy, _ = flood_mortality_sensitivity(:C, 6; envs = r -> [rand(rng2, base.envs)
  slope_common = round.(s.slope[mature]; digits = 1), slope_independent = round.(noisy.slope[mature]; digits = 1))
 ```
 
-    (common_sequences = [0.97, 0.97, 0.97, 0.97, 0.97], independent_sequences = [0.96, 0.5, 0.54, 0.01, 0.48], slope_common = [-15915.1, 10007.8, 16308.0, 145.8, 25639.2], slope_independent = [-16458.1, 8335.0, 26528.6, 93.4, 29739.2])
+    (common_sequences = [0.97, 0.97, 0.97, 0.86, 0.97], independent_sequences = [0.96, 0.57, 0.55, 0.33, 0.56], slope_common = [-16076.3, 10136.6, 16485.4, 26.7, 26108.0], slope_independent = [-16566.7, 8766.6, 26037.1, -509.7, 34222.9])
 
 With common sequences the R² filter is not needed to separate signal
 from noise, and far fewer replicates are required; the size of the

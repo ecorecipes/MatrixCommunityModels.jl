@@ -30,16 +30,16 @@ lemans_reference(file) = [split(l, ",") for l in readlines(joinpath(@__DIR__, "r
             end
         end
         @test length(classes) == 250
-        @test all(<(1e-12), values(worst))
+        @test all(<(5e-13), values(worst))      # achieved 4.8e-15 (rations; 2026-11-17)
         # suitabilities of 1680 predator-prey pairs (whiting, cod, saithe as predators)
         far = maximum(lemans_reference("lemans_suitability.csv")) do r
             row = findfirst(==((named[r[1]], parse(Int, r[2]))), p.predators)
             relative(p.fish[named[r[3]]].suitability[row, parse(Int, r[4])], number(r[5]))
         end
-        @test far < 1e-12
+        @test far < 1e-13                       # achieved 1.0e-15 (2026-11-17)
         # each predator's suitabilities sum to one over its prey, except in the smallest class, which eats nothing
         total = reduce(+, [vec(sum(p.fish[s].suitability; dims = 2)) for s in p.species])
-        @test all(x -> isapprox(x, 1; atol = 1e-12) || x == 0, total)
+        @test all(x -> isapprox(x, 1; atol = 5e-14) || x == 0, total)    # achieved 4.4e-16
         @test all(total[r] == 0 for (r, (sp, j)) in enumerate(p.predators) if j == 1)
         @test_throws ArgumentError lemans_fish(p, :tuna)
     end
@@ -53,7 +53,7 @@ lemans_reference(file) = [split(l, ",") for l in readlines(joinpath(@__DIR__, "r
         @test pools.ration isa Vector{Float64} && length(pools.prey) == 250
         M2 = lemans_predation(p, c, n0, (recruiting = false, effort = (;)))
         far = maximum(relative(M2[named[r[1]]][parse(Int, r[2])], number(r[13])) for r in classes)
-        @test far < 1e-10
+        @test far < 1e-13                       # achieved 8.2e-16 (2026-11-17)
         # the recruits of the first step of a year are prey in that step
         with = pool_totals(c, n0, (recruiting = true, effort = (;)))
         @test all(with.prey .>= pools.prey) && any(with.prey .> pools.prey)
@@ -86,18 +86,32 @@ lemans_reference(file) = [split(l, ",") for l in readlines(joinpath(@__DIR__, "r
     states = lemans_reference("lemans_state.csv")
     saved(run) = state_vector(c, (sp => [number(r[4]) for r in states if r[1] == run && named[r[2]] == sp] for sp in order)...)
 
-    # Over 100 unfished years and 50 fished ones the vignette finds differences below 2e-14; here 20 years of each,
-    # with room for other platforms.
+    # The runs of vignette 18, 100 unfished years and 50 fished ones (a step costs about a millisecond), with tolerances
+    # of about a hundred times the differences found on 2026-11-17.
     @testset "runs against LeMaRns" begin
-        unfished = project(c, n0, lemans_environment(20))
-        @test apart("unfished", unfished) < 1e-11
-        @test size(unfished.pool_vectors[:prey]) == (201, 250) && all(isnan, unfished.pools)
-        @test all(isnan, unfished.pool_vectors[:ration][end, :]) && !any(isnan, unfished.pool_vectors[:ration][1:200, :])
+        century = lemans_environment(100)
+        unfished = project(c, n0, century)
+        @test apart("unfished", unfished) < 3e-13                 # achieved 2.7e-15
+        @test size(unfished.pool_vectors[:prey]) == (1001, 250) && all(isnan, unfished.pools)
+        @test all(isnan, unfished.pool_vectors[:ration][end, :]) && !any(isnan, unfished.pool_vectors[:ration][1:1000, :])
+        # numbers in every class at the end, and the predation mortality of the last step, which LeMaRns computes from
+        # the state before it
+        state_apart(run, n) = maximum(relative(a, b) for (a, b) in zip(n, saved(run)))
+        M2_apart(run, n, env) = (M2 = lemans_predation(p, c, n, env);
+                                 maximum(relative(M2[named[r[2]]][parse(Int, r[3])], number(r[5])) for r in states if r[1] == run))
+        @test state_apart("unfished", unfished.u[end, :]) < 3e-13                                          # achieved 2.9e-15
+        @test M2_apart("unfished", unfished.u[end - 1, :], century[end]) < 1.5e-13     # achieved 1.3e-15
+        # by year 100 the community repeats itself from year to year
+        S = lemans_biomass(p, unfished; spawning = true)
+        @test maximum(abs.(S[end, :] ./ S[end - 10, :] .- 1)) < 1e-13                                     # achieved 2.2e-16
         start = saved("unfished")
-        fished = project(c, start, lemans_environment(20; effort = (industrial = 1.0, otter = 1.0, beam = 1.0, pelagic = 1.0)))
-        @test apart("fished", fished) < 1e-11
-        otter = project(c, start, lemans_environment(20; effort = (otter = 1.5,)))
-        @test apart("otter", otter) < 1e-11
+        for (run, effort) in (("fished", (industrial = 1.0, otter = 1.0, beam = 1.0, pelagic = 1.0)), ("otter", (otter = 1.5,)))
+            envs = lemans_environment(50; effort)
+            sol = project(c, start, envs)
+            @test apart(run, sol) < 1.5e-12                       # achieved 1.3e-14 (fished), 7.4e-15 (otter)
+            @test state_apart(run, sol.u[end, :]) < 1.5e-12       # achieved 1.3e-14, 7.8e-15
+            @test M2_apart(run, sol.u[end - 1, :], envs[end]) < 1.5e-13   # achieved 1.4e-15, 1.3e-15
+        end
         # selectivity at the midpoints of the classes, rather than LeMaRns's upper bounds, changes the catchabilities
         mid = lemans_parameters(; selectivity_at = :mid)
         @test mid.fish.cod.catchability != p.fish.cod.catchability && mid.fish.cod.weight == p.fish.cod.weight

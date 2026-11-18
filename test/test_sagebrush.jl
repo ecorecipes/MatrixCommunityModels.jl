@@ -64,7 +64,7 @@ sagebrush_reference(file) = [split(l, ",") for l in readlines(joinpath(@__DIR__,
         end
         # IPMdoit integrates the crowding by conspecifics with R's integrate at its default tolerance (1.2e-4)
         println("sagebrush crowding: largest difference from IPMdoit, relative to the largest crowding = ", worst)
-        @test worst < 3e-5
+        @test worst < 1.5e-5                # achieved 9.2e-6 (2026-11-17)
         # the largest of those differences, crowding of Pseudoroegneria in cell 33 by its own species (growth), is
         # R's: integrate with rel.tol = 1e-13 gives 0.273076048328859, where its default gives 0.273079825617989
         W = sagebrush_crowding(:pssp, saved("community_30", :pssp), pools)
@@ -84,8 +84,9 @@ sagebrush_reference(file) = [split(l, ",") for l in readlines(joinpath(@__DIR__,
             end
         end
         println("sagebrush kernels: largest difference from IPMdoit = ", entries, "; growth rates ", rates)
-        @test entries < 3e-8
-        @test rates < 3e-7
+        # these differences, like those of the runs below, come from IPMdoit's integration, not from rounding
+        @test entries < 1.5e-8              # achieved 8.9e-9 (2026-11-17)
+        @test rates < 1e-7                  # achieved 4.7e-8
     end
 
     @testset "runs against IPMdoit" begin
@@ -95,21 +96,34 @@ sagebrush_reference(file) = [split(l, ",") for l in readlines(joinpath(@__DIR__,
         ref = covers("community_30")
         worst = maximum(maximum(relative.(cover_vector(com, sol.u[r.year + 1, :]), r.cover)) for r in ref)
         println("sagebrush, 30 mean years: largest relative difference in cover = ", worst)
-        @test worst < 1e-6
+        @test worst < 6e-7                  # achieved 3.7e-7 (2026-11-17)
         # 20 years drawn from the 22 years of the data, in the order the R script drew them
         years = [parse(Int, r[2]) for r in sagebrush_reference("sagebrush_years.csv")]
         sol = project(com, start, years[1:20])
         ref = [r for r in covers("community_years") if r.year <= 20]
         worst = maximum(maximum(relative.(cover_vector(com, sol.u[r.year + 1, :]), r.cover)) for r in ref)
         println("sagebrush, 20 fluctuating years: largest relative difference in cover = ", worst)
-        @test worst < 1e-6
+        @test worst < 1.2e-7                # achieved 6.1e-8 (2026-11-17)
+    end
+
+    @testset "each species alone against IPMdoit" begin
+        # the cover at which a species alone settles, found without iterating, against IPMdoit's run of 1500 years
+        # (vignette 17: relative differences 1.5e-7, 5.9e-8, 8.1e-8 and 1.5e-6)
+        worst = 0.0
+        for (j, k) in enumerate(kinds)
+            settled = equilibrium(sagebrush_plant(k), Symbol(k, :_cover) => (0.001, 0.2), sagebrush_state(k), nothing)
+            @test settled.converged
+            worst = max(worst, relative(settled.total, last(covers("alone_" * uppercase(String(k)))).cover[j]))
+        end
+        println("sagebrush, each species alone: largest relative difference in cover at equilibrium = ", worst)
+        @test worst < 3e-6                  # achieved 1.5e-6 (2026-11-17)
     end
 
     @testset "equilibrium and invasion against IPMdoit" begin
         # IPMdoit's state after 1500 mean years is an equilibrium here too, to within the error of its integration
         eq = community_state(com, "community")
-        @test maximum(abs, advance(com, eq, nothing) .- eq) / maximum(eq) < 1e-7
-        @test cover_vector(com, eq) ≈ last(covers("community")).cover rtol = 1e-12
+        @test maximum(abs, advance(com, eq, nothing) .- eq) / maximum(eq) < 6e-8   # achieved 3.9e-8 (2026-11-17)
+        @test cover_vector(com, eq) ≈ last(covers("community")).cover rtol = 1e-13  # achieved 3.8e-16
         # each species invades the other three at their equilibrium; without niche differences none does
         for r in sagebrush_reference("sagebrush_invasion.csv")
             niche, k = r[1] == "niche", codes[r[2]]
@@ -117,9 +131,17 @@ sagebrush_reference(file) = [split(l, ",") for l in readlines(joinpath(@__DIR__,
             resident = sagebrush_community(; niche_differences = niche, kinds = others)
             n = community_state(resident, "residents_" * r[1] * "_without_" * r[2])
             rate = invasion_growth_rate(sagebrush_plant(k; niche_differences = niche), resident, n, nothing)
-            @test rate ≈ number(r[3]) rtol = 1e-6
+            @test rate ≈ number(r[3]) rtol = 1e-12          # achieved 3.1e-15 (2026-11-17)
             @test niche ? rate > 1 : rate < 1
         end
+        # the long-run growth rate of the rare shrub along the R script's 600 drawn years, the first 100 left out
+        # (sagebrush_stochastic_invasion.csv; vignette 17 has all four invaders, equal to the six decimals printed)
+        r = only(r for r in sagebrush_reference("sagebrush_stochastic_invasion.csv") if r[1] == "ARTR")
+        resident = sagebrush_community(; kinds = (:heco, :pose, :pssp))
+        years = [parse(Int, r[2]) for r in sagebrush_reference("sagebrush_years.csv")]
+        rate = stochastic_invasion_rate(sagebrush_plant(:artr), resident, community_state(resident, "residents_niche_without_ARTR"),
+                                        years; burnin = parse(Int, r[2]))
+        @test rate ≈ number(r[4]) rtol = 1e-9     # achieved 2.2e-10 (2026-11-17); the grasses' rates differ by up to 3.3e-8
     end
 
     @testset "exclusion without niche differences, mean and drawn years" begin
@@ -127,19 +149,21 @@ sagebrush_reference(file) = [split(l, ",") for l in readlines(joinpath(@__DIR__,
         # starting cover. IPMdoit, run from the same state with the niche differences removed as in
         # run_sagebrush_reference.R, gives 80, 16 and 78 years in the mean year and 43, 15 and 36 along the R
         # script's drawn years (sagebrush_years.csv, set.seed(2010)). Each crossing clears the threshold by at
-        # least 1%.
+        # least 1%. Below a ten-thousandth, vignette 17 gives 109, 46 and 115 mean years (each crossing clears it by
+        # at least 0.7%).
         flat = sagebrush_community(; niche_differences = false)
         n0 = community_state(flat, "community")
         c0 = cover_vector(flat, n0)
-        function excluded(envs)
+        function excluded(envs; shares = (0.01,))
             sol = project(flat, n0, envs)
             C = reduce(hcat, cover_vector(flat, row) for row in eachrow(sol.u))
-            return [findfirst(<(0.01 * c0[j]), C[j, :]) - 1 for j in 2:4]
+            return [[findfirst(<(share * c0[j]), C[j, :]) - 1 for j in 2:4] for share in shares]
         end
         years = [parse(Int, r[2]) for r in sagebrush_reference("sagebrush_years.csv")]
-        mean_years, drawn = excluded(fill(nothing, 82)), excluded(years[1:45])
+        (mean_years, strict), (drawn,) = excluded(fill(nothing, 116); shares = (0.01, 1e-4)), excluded(years[1:45])
         @test mean_years == [80, 16, 78]
         @test drawn == [43, 15, 36]
+        @test strict == [109, 46, 115]
         # drawing the years brings the exclusion forward, here by about half for the two slower grasses
         @test all(drawn .<= mean_years)
         @test all(drawn[[1, 3]] .< 0.6 .* mean_years[[1, 3]])

@@ -81,8 +81,12 @@ line; here a guild cannot see another guild except through a pool, so reproducin
 behaviour required adding a wire, and the wire is visible.
 
 The script also drops the stage-5 sagebrush and meadow individuals that do not mature,
-while still counting their space. `riparian_model(corrected = true)` removes both
-behaviours:
+while still counting their space. And it keeps every sagebrush stage at 10 individuals or
+more each year: where the function that does this is defined, the script calls it a rescue
+by sagebrush encroaching from the uplands, while its own summary says that sagebrush below
+10 is set to zero. Set to zero below 10, sagebrush is lost within seven years of the
+Yampa record. `riparian_model(corrected = true)` removes the first two behaviours and
+treats sagebrush like the other guilds, setting stages below one individual to zero:
 
 ```{julia}
 c = riparian_model(corrected = true)

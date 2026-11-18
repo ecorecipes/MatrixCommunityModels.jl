@@ -103,10 +103,13 @@ effects. Two features stand out:
  negative_within_guild = count(effect[i, j] < 0 for i in 1:30, j in 1:30 if (i - 1) ÷ 6 == (j - 1) ÷ 6))
 ```
 
-Most effects between guilds are positive, that is, competitive. The clearest exception is
-sagebrush (DS), which declines when willow (HS) suffers more in floods, a net positive
-effect of willow on sagebrush that no one put into the model. And the effect of a
-stage's mortality on its own abundance is not always negative:
+Most effects between guilds are positive, that is, competitive. The exceptions involve
+sagebrush (DS). It declines when willow (HS) suffers more in floods, a net positive effect
+of willow on sagebrush that no one put into the model. And more flood mortality of
+sagebrush lowers cottonwood, tamarisk and meadow in about half of their stages. In the
+corrected model sagebrush is not held at 10 individuals per stage, as in the authors'
+script, and its numbers swing over orders of magnitude. The effect of a stage's mortality on its own abundance is
+not always negative:
 
 ```{julia}
 [labels[k] => round(effect[k, k]; digits = 2) for k in (1, 6, 13, 18)]
@@ -172,8 +175,8 @@ sort(collect(zip(labels, out_degree(net))); by = last, rev = true)[1:5]
 
 ## A note on R²
 
-The paper keeps only relationships with R² above 0.3. Here every relationship has an R²
-close to one:
+The paper keeps only relationships with R² above 0.3. Here most relationships have an R²
+close to one; the lowest are those of sagebrush, whose numbers swing widely:
 
 ```{julia}
 quantile(vec(r2), [0.05, 0.5, 0.95])

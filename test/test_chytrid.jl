@@ -61,24 +61,43 @@ using Test, MatrixCommunityModels
 
     @testset "runs against the authors' code" begin
         runs, states = rows("chytrid_runs.csv"), rows("chytrid_states.csv")
-        for (site, steps) in ((:PA, 120), (:LA, 120))
+        y = meshpoints(chytrid_load_stage())
+        # Three sites for 120 weekly steps (saved steps 0, 1, 26, 52, 104), and Vermont for the whole 529 (all
+        # seven saved steps), where vignette 24 finds the largest difference; 529 steps at every site would add
+        # about 10 s. Tolerances, measured 2026-11-17:
+        # - totals (tadpoles, susceptible, infected, zoospores), relative to each value: achieved PA 2.2e-12,
+        #   LA 7.9e-12, TN 6.2e-12, VT 1.7e-12. 100 times that would loosen the earlier 1e-10, which is kept.
+        # - whole state at the saved steps, relative to its largest entry: achieved PA 7.1e-14, LA 3.5e-14,
+        #   TN 1.0e-14, VT 1.6e-12 (at step 529; 2.5e-13 up to step 260).
+        # - mean log load of the infected frogs, relative: achieved PA 2.6e-13, LA 3.7e-14, TN 4.8e-13, VT 3.1e-13.
+        # - water temperature of the environment for the next step, absolute: achieved 3.6e-15 (4 to 30 °C).
+        for (site, steps, state_tol) in ((:PA, 120, 7e-12), (:LA, 120, 4e-12), (:TN, 120, 1e-12), (:VT, 529, 2e-10))
             c = chytrid_community(site; area = 500.0)
             n0 = state_vector(c, :frog => vcat([0.0, 70.0], zeros(300)), :zoospores => [10000.0])
-            sol = project(c, n0, chytrid_environment(site, steps))
+            env = chytrid_environment(site, steps)
+            sol = project(c, n0, env)
             frog, z = sol[:frog], sol[:zoospores]
-            worst = 0.0
+            worst, load, temperature = 0.0, 0.0, 0.0
             for r in runs
                 (r[1] == String(site) && parse(Int, r[2]) <= steps) || continue
                 k = parse(Int, r[2]) + 1
                 mine = (frog[k, 1], frog[k, 2], sum(frog[k, 3:end]), z[k, 1])
                 worst = max(worst, maximum(abs(m - t) / max(abs(t), 1e-300) for (m, t) in zip(mine, num.(r[4:7]))))
+                infected = frog[k, 3:end]
+                # Python writes nan for the mean load when no frog is infected (step 0)
+                load = max(load, sum(infected) > 0 ? abs(sum(infected .* y) / sum(infected) / num(r[8]) - 1) :
+                                 r[8] == "nan" ? 0.0 : Inf)
+                k <= steps && (temperature = max(temperature, abs(env[k].temperature - num(r[3]))))
             end
+            @test all(env[k + 1].day == 7k for k in 0:(steps - 1))
             @test worst < 1e-10
+            @test load < 5e-11
+            @test temperature < 4e-13
             for r in states
                 (r[1] == String(site) && parse(Int, r[2]) <= steps) || continue
                 k = parse(Int, r[2]) + 1
                 v = num.(r[3:end])
-                @test maximum(abs.(vcat(frog[k, :], z[k, 1]) .- v)) <= 1e-11 * maximum(abs, v)
+                @test maximum(abs.(vcat(frog[k, :], z[k, 1]) .- v)) <= state_tol * maximum(abs, v)
             end
         end
     end
