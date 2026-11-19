@@ -18,7 +18,9 @@
 # in the authors' script (`:as_written`, the default) and one that reproduces the published figures (`:calibrated`).
 # See `coral`.
 #
-# The parameters are read from data/corals, typed from Table S1; see data/corals/LICENSE.txt.
+# The parameters are read from data/corals, typed from Table S1; the colonies observed in 2013 and 2015, from which the
+# paper's updated runs start (`coral_observed_state`), are binned from MCR LTER data (CC BY 4.0). See
+# data/corals/LICENSE.txt.
 
 const _CORAL_TAXA = (acropora = "Acr", pocillopora = "Poc", porites = "Por")
 const _CORAL_NAMES = (acropora = "Acropora", pocillopora = "Pocillopora", porites = "Porites")
@@ -166,13 +168,67 @@ function coral(taxon::Symbol; reef::Symbol = :lter1, parameters = CORAL_PARAMETE
     return species(name, net; occupies, reads)
 end
 
+const _CORAL_YEARS = (2013, 2015)
+
+function _coral_observed(file)
+    lines = [split(l, ",") for l in readlines(file)]
+    header, rows = lines[1], lines[2:end]
+    col(name) = findfirst(==(name), header)
+    code = Dict(v => k for (k, v) in pairs(_CORAL_TAXA))
+    reef_of = Dict(v => k for (k, v) in pairs(_CORAL_REEFS))
+    states = Dict((r, y) => NamedTuple{keys(_CORAL_TAXA)}(Tuple(zeros(100) for _ in _CORAL_TAXA))
+                  for r in keys(_CORAL_REEFS), y in _CORAL_YEARS)
+    for row in rows
+        reef, year = reef_of[parse(Int, row[col("reef")])], parse(Int, row[col("year")])
+        taxon = code[row[col("taxon")]]
+        # colonies per 10 m²: each genus was mapped over its own area (20 m² for Acropora, 4 m² for the others)
+        getproperty(states[(reef, year)], taxon)[parse(Int, row[col("cell")])] +=
+            parse(Int, row[col("colonies")]) * 10 / parse(Float64, row[col("sampled_area_m2")])
+    end
+    return states
+end
+
+const _CORAL_OBSERVED = _coral_observed(joinpath(DATA_DIR, "corals", "mcr_lter_observed_colonies.csv"))
+
+"""
+    coral_observed_state(reef, year)
+
+The coral colonies observed on the fore reef `reef` (`:lter1`, `:lter2`, `:lter4`,
+`:lter5`) of Mo'orea in `year` (2013 or 2015), binned onto the mesh of
+[`coral_stage`](@ref) (100 cells), in colonies per 10 m² in each cell: a vector of
+`taxon => stages` pairs, one per genus (`:acropora`, `:pocillopora`, `:porites`), which
+[`project`](@ref) and `state_vector` accept as the state of a [`coral_community`](@ref)
+of the default 100 cells. Kayal et al. (2018) started their updated runs from these
+states (Fig. 4: from 2013 to 2015, and from 2015 to 2020):
+
+```julia
+c = coral_community(:lter1; recruit_size = (acropora = (1.2, 0.4), pocillopora = (0.6, 0.2), porites = (0.6, 0.2)))
+sol = project(c, coral_observed_state(:lter1, 2015), fill(nothing, 5))   # 2020 in the last row
+```
+
+The colonies are those mapped in four permanent 5 m × 1 m transects per reef by the
+Mo'orea Coral Reef LTER (Lenihan et al., EDI data package knb-lter-mcr.4009, revision 5,
+CC BY 4.0; see `data/corals/LICENSE.txt`). *Acropora* was mapped over the whole of each
+transect (20 m² per reef), *Pocillopora* and *Porites* over its first metre (4 m²), and
+the counts are scaled to 10 m² accordingly. A colony's size is z = log10(S + 1), with its
+surface area S estimated from its length, width and height as in Appendix S2 of the paper
+(a sphere for *Pocillopora*, a cylinder for the other two).
+"""
+function coral_observed_state(reef::Symbol, year::Integer)
+    _coral_check("reef", reef, keys(_CORAL_REEFS))
+    year in _CORAL_YEARS || throw(ArgumentError("no observed state for $year; expected one of $(join(_CORAL_YEARS, ", "))"))
+    observed = _CORAL_OBSERVED[(reef, year)]
+    return [taxon => copy(getproperty(observed, taxon)) for taxon in keys(_CORAL_TAXA)]
+end
+
 """
     coral_community(reef = :lter1; taxa = (:acropora, :pocillopora, :porites), kwargs...)
 
 The three coral genera of [`coral`](@ref) on one reef, composed through their pools. The
 keyword arguments are passed to `coral` (`reading`, `recruit_size`, `cap`, `cells`,
 `parameters`); `recruit_size` may also be a `NamedTuple` with one `(mean, sd)` per taxon.
-The reef of the paper's first simulations starts empty: `zeros(length(c))`.
+The reef of the paper's first simulations starts empty: `zeros(length(c))`; its updated runs
+start from the assemblages observed in 2013 or 2015, [`coral_observed_state`](@ref).
 """
 function coral_community(reef::Symbol = :lter1; taxa = keys(_CORAL_TAXA), recruit_size = (0.6, 0.2), kwargs...)
     size_of(t) = recruit_size isa NamedTuple ? getproperty(recruit_size, t) : recruit_size

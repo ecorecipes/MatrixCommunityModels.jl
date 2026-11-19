@@ -1,6 +1,6 @@
 name = "MatrixCommunityModels"
 uuid = "c9d7ffd9-8e9b-4c2f-8af4-9cd333236b7e"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Simon Frost"]
 
 [deps]

@@ -13,4 +13,29 @@ The authors' R code (https://github.com/MohsenKayal/Coral-assemblage-IPM, Zenodo
 no licence and is not included in this package. test/reference/R/run_coral_reference.R reads it at run time from a
 path given on its command line.
 
-The field data behind the estimates (MCR LTER, Environmental Data Initiative) are not included.
+mcr_lter_observed_colonies.csv holds the coral colonies observed on the fore reefs of LTER 1, 2, 4 and 5 in 2013 and
+2015, binned by size. It is derived from
+
+    Moorea Coral Reef LTER, Lenihan, H., Ake, H. & Winslow, E. (2022). MCR LTER: Coral Reef: Long-Term Coral Population
+    and Community Dynamics: Annual Island Wide Coral Demography Survey 2011 ongoing. Version 5. Environmental Data
+    Initiative. https://doi.org/10.6073/pasta/322a76c6f197bfac60c91d66a3e96fb5
+    (EDI package knb-lter-mcr.4009, revision 5; table "Mapped Corals long format",
+    MCR_LTER_Lenihan_mapped_corals_20220413.csv, 2,300,028 bytes, SHA-1 cb91e282e52f84ea47085431bed6aa6be4274c76)
+
+which its metadata (intellectualRights) releases "under the Creative Commons license Attribution 4.0 International
+(CC BY 4.0, see https://creativecommons.org/licenses/by/4.0/)". The derived file is distributed under the same licence,
+CC BY 4.0. The data package asks its users to cite it and to notify its creators or data contact of products that use it.
+Paper citation of an earlier revision of the same package: Lenihan, H.S. & Kayal, M. (2015),
+doi:10.6073/pasta/98855475790bfb012066f9dc802ecc31.
+
+Changes made (by bin_observed_colonies.jl in this directory, which reproduces the file from the table above):
+  - kept only the fore reef (Habitat OR), the years 2013 and 2015, the genera Acropora, Pocillopora and Porites, and
+    colonies with length, width and height all recorded in that year;
+  - dropped 5 Pocillopora and Porites colonies recorded beyond the first metre of their transect (Acropora was mapped
+    over the whole of each 5 m x 1 m transect, Pocillopora and Porites over its first metre);
+  - replaced each colony's dimensions by its surface area S (cm²), as in Appendix S2 of Kayal et al. (2018): a sphere
+    for Pocillopora, a cylinder for Acropora and Porites;
+  - binned z = log10(S + 1) into 100 cells of width 0.07 on [0, 7] and counted the colonies in each cell, by reef,
+    year and genus; all other columns (positions, observers, notes, demographic flags) were dropped;
+  - added the area over which each genus was mapped on a reef (20 m² for Acropora, 4 m² for the other two).
+The tagged corals of 2011-2013 behind the estimates of Table S1 are not included.

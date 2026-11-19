@@ -1,0 +1,26 @@
+name: Long tests
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 4 * * 1'      # every Monday at 04:17 UTC
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  test:
+    name: Main and long tests - Julia 1 - ubuntu-latest
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      MCM_LONG_TESTS: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1'
+          arch: x64
+      - uses: julia-actions/cache@v2
+        with:
+          cache-compiled: 'true'
+      - uses: julia-actions/julia-buildpkg@v1
+      - uses: julia-actions/julia-runtest@v1

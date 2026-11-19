@@ -260,12 +260,161 @@ end
 (largest_relative_difference_in_colonies = worst,)
 ```
 
-## After 2015
+## From the observed assemblages
 
-The paper projects to 2020 from the assemblages observed in 2015. Those data are not used
-here, so the projection below continues the recovery from empty reef, for 40 years
-(*Acropora* blue, *Pocillopora* red, *Porites* green). Recruitment of *Acropora* rises with
-its own density, with nothing to stop it but the cap.
+The runs from empty reef left out the colonies that survived the disturbances, chiefly
+*Porites*. So the paper restarted its model from the assemblages observed in the field. It
+ran from those of 2013 to predict 2015 (Fig. 4a-d), and from those of 2015 to project to
+2020 (Fig. 4i-l). In these updated runs the recruits of *Acropora* are larger, with mean
+size 1.2 and standard deviation 0.4 (Appendix S3).
+
+The observed colonies are those mapped every year since 2013 by the Mo'orea Coral Reef LTER
+in four permanent transects, 5 m by 1 m, on each fore reef. They are in the Environmental
+Data Initiative package knb-lter-mcr.4009 (revision 5, CC BY 4.0). Mapping each colony's
+position shows that *Acropora* was recorded along the whole of each transect, but
+*Pocillopora* and *Porites* only in its first metre. So each reef has 20 m² of *Acropora*
+and 4 m² of the other two. Scaled this way to colonies per 10 m², the counts match the
+observed bars of Fig. S2a: for LTER 1 in 2013, 20.5, 722.5 and 330.0 colonies against bars
+of about 20, 720 and 330. A colony's area comes from its length, width and height, as in
+Appendix S2 of the paper: a sphere for *Pocillopora*, a cylinder for the other two. Its size
+is z = log10(S + 1), binned onto the model's mesh. `coral_observed_state` returns the state
+of one reef in one year, in colonies per 10 m² in each cell. The shares of the summed sizes
+it gives can be compared with those the paper prints for the observed assemblages:
+
+```{julia}
+c0 = coral_community(:lter1)
+observed(r, year) = state_vector(c0, coral_observed_state(r, year))
+fig3obs = Dict(:lter1 => [2, 67, 30], :lter2 => [3, 78, 19], :lter4 => [5, 78, 17], :lter5 => [4, 75, 21])
+fig4obs = Dict(:lter1 => [3, 68, 29], :lter2 => [4, 75, 20], :lter4 => [11, 83, 6], :lter5 => [9, 70, 21])
+f1(v) = join([@sprintf("%5.1f", x) for x in v], " ")
+println("        observed 2013 (%)        Fig. 3e-h    observed 2015 (%)        Fig. 4e-h    colonies per 10 m², 2015")
+for r in reefs
+    @printf("%-6s  %s   %s    %s   %s    %s\n", r, f1(shares(c0, observed(r, 2013))), fmt(fig3obs[r]),
+            f1(shares(c0, observed(r, 2015))), fmt(fig4obs[r]), f1(colonies(c0, observed(r, 2015))))
+end
+```
+
+Every share of 2013 is within 1.6 points of the printed one. Those of 2015 are within a
+point, except on LTER 4, where the data give *Pocillopora* 4 points less and *Porites* 4
+more. The data used here are revision 5 of the package (2022). The paper (2018) used an
+earlier revision, which could not be compared. This agreement also confirms how the shares
+the paper prints are computed: they are shares of the summed sizes z, not of summed area.
+Summed area gives shares up to 18 points away.
+
+The runs start from these states, with both readings of recruitment:
+
+```{julia}
+fig4pred = Dict(:lter1 => [3, 67, 30], :lter2 => [4, 82, 14], :lter4 => [5, 87, 7], :lter5 => [3, 77, 20])
+fig4proj = Dict(:lter1 => [27, 50, 24], :lter2 => [11, 74, 15], :lter4 => [14, 84, 2], :lter5 => [8, 63, 29])
+size4 = (acropora = (1.2, 0.4), pocillopora = (0.6, 0.2), porites = (0.6, 0.2))
+function updated(r; reading = :as_written)
+    c = coral_community(r; reading, recruit_size = size4)
+    to2015 = project(c, coral_observed_state(r, 2013), fill(nothing, 2))
+    to2020 = project(c, coral_observed_state(r, 2015), fill(nothing, 5))
+    return c, to2015, to2020
+end
+acropora_recruits(c, sol, r, reading) =
+    maximum(coral_recruits(:acropora, pool_totals(c, n, nothing).acropora_colonies; reef = r, reading) for n in eachrow(sol.u))
+for reading in (:as_written, :calibrated)
+    println("reading $reading")
+    println("        2015 from 2013 (%)       Fig. 4a-d    2020 from 2015 (%)       Fig. 4i-l    most Acropora recruits, 2015-2020")
+    for r in reefs
+        c, a, b = updated(r; reading)
+        @printf("%-6s  %s   %s    %s   %s    %6.1f\n", r, f1(shares(c, a.u[end, :])), fmt(fig4pred[r]),
+                f1(shares(c, b.u[end, :])), fmt(fig4proj[r]), acropora_recruits(c, b, r, reading))
+    end
+end
+```
+
+Read as written, the model predicts the composition of 2015 from that of 2013 within 1.8
+points of Fig. 4a-d on every reef. The calibrated reading is within 3 points. The order is
+the reverse of the runs from empty reef, where only the calibrated reading came near the
+paper. In the runs from 2015 to 2020, the reading as written gives the east reef (LTER 4)
+within 2 points of Fig. 4k and LTER 2 within 3.4 of Fig. 4j. It gives LTER 5 *Pocillopora* 8
+points less than Fig. 4l. Neither reading gives the north-shore *Acropora* of Fig. 4i: 27% of
+the assemblage in 2020, against 7% as written and 3% calibrated. The paper says that
+*Acropora* recruitment on the north shore reached the cap of 348 recruits a year in these
+projections (Appendix S3). Here it stays below it in both readings. As written it is highest
+on LTER 1, at 158 in 2020, still rising with the density of *Acropora*. Calibrated, it never
+exceeds 6.
+
+```{julia}
+panels = []
+for r in reefs
+    c, a, b = updated(r)
+    for (state, title) in ((a.u[end, :], "predicted 2015"), (observed(r, 2015), "observed 2015"), (b.u[end, :], "projected 2020"))
+        s = species_states(c, state)
+        p = plot(; xscale = :log10, xlims = (0.1, 1e5), legend = false, titlefontsize = 9,
+                 title = "$(uppercase(String(r))), $title", xlabel = r === :lter5 ? "Colony area (cm²)" : "")
+        stacked = zeros(length(z))
+        for (t, colour) in zip(taxa, (:blue, :red, :green))
+            lower = copy(stacked)
+            stacked .+= s[t]
+            plot!(p, area[2:end], stacked[2:end]; fillrange = lower[2:end], color = colour, alpha = 0.7, lw = 0)
+        end
+        push!(panels, p)
+    end
+end
+plot(panels...; layout = (4, 3), size = (900, 900))
+```
+
+These are the assemblages of Fig. 4, drawn as before, with the reading as written. Each row
+is a reef. The columns are the prediction for 2015 from 2013, the observation of 2015, and
+the projection to 2020 from 2015, in colonies per 10 m² in each cell, stacked by genus
+(*Acropora* blue, *Pocillopora* red, *Porites* green).
+
+Tables S3 and S4 of the paper give the elasticities of each population's summed size in
+2015, and in 2020, to each parameter. The starting state is observed, so these equal the
+elasticities of the ratio the script computes. For LTER 1, as written:
+
+```{julia}
+function final_size(r, taxon, field, which, factor; start, steps, reading = :as_written)
+    P = CORAL_PARAMETERS
+    sizes = size4
+    if field === :recruit_size
+        m, s = size4[taxon]
+        sizes = merge(size4, NamedTuple{(taxon,)}(((which === :mean ? (m * factor, s) : (m, s * factor)),)))
+    end
+    pars = P
+    if field !== :recruit_size
+        p = P[r][taxon]
+        rate = merge(getproperty(p, field), NamedTuple{(which,)}((getproperty(getproperty(p, field), which) * factor,)))
+        pars = merge(P, NamedTuple{(r,)}((merge(P[r], NamedTuple{(taxon,)}((merge(p, NamedTuple{(field,)}((rate,))),))),)))
+    end
+    c = coral_community(r; parameters = pars, recruit_size = sizes, reading)
+    u = project(c, coral_observed_state(r, start), fill(nothing, steps)).u
+    return getproperty(pool_totals(c, u[end, :], nothing), Symbol(taxon, :_log_size))
+end
+updated_elasticity(args...; kw...) = abs((final_size(args..., 1 + 1e-4; kw...) - final_size(args..., 1 - 1e-4; kw...)) /
+                                         (2e-4 * final_size(args..., 1.0; kw...)))
+table_s3 = [0.17 0.22 0.03; 0.03 0.06 0.10; 0.68 0.67 0.74; 0.29 0.98 0.83; 0.00 0.00 0.00;
+            0.82 0.05 0.05; 0.53 0.03 0.03; 0.28 0.00 0.02; 0.00 0.00 0.00]      # Table S3, LTER 1
+table_s4 = [0.50 0.41 0.04; 0.08 0.15 0.14; 0.49 0.91 0.97; 0.17 2.08 1.45; 0.00 0.00 0.00;
+            3.70 0.13 0.16; 4.35 0.10 0.08; 0.58 0.00 0.03; 0.03 0.00 0.00]      # Table S4, LTER 1
+println("                        2013-2015: here   Table S3            2015-2020: here   Table S4")
+for (i, (f, w)) in enumerate(items)
+    e3 = [updated_elasticity(:lter1, t, f, w; start = 2013, steps = 2) for t in taxa]
+    e4 = [updated_elasticity(:lter1, t, f, w; start = 2015, steps = 5) for t in taxa]
+    f2(v) = join([@sprintf("%5.2f", x) for x in v], " ")
+    @printf("%-12s %-9s  %s  %s    %s  %s\n", f, w, f2(e3), f2(table_s3[i, :]), f2(e4), f2(table_s4[i, :]))
+end
+```
+
+Survival, growth and recruit size are again close to the paper. They are within 0.11 of
+Table S3, and within 0.06 of Table S4 for *Pocillopora* and *Porites*. *Acropora* in Table S4
+is the exception: its growth intercept is 0.76 against 0.49. The elasticities to recruitment
+come nearer than in Table S2. Those of *Acropora* are 1.4 to 2.5 times smaller than
+published, not three to seven. In 2015-2020 the slope of *Acropora* recruitment is, as
+published, the largest elasticity of all: the feedback of *Acropora* on its own recruitment
+drives the projection. *Pocillopora*'s elasticities to recruitment are near zero here
+(below 0.01), against 0.03 to 0.13 published. On the other reefs (a check outside this
+vignette), survival and growth stay within 0.1 of Table S3, and within 0.8 of Table S4.
+
+## Forty years from empty reef
+
+Back to the runs from empty reef: the projection below continues them for 40 years (*Acropora* blue,
+*Pocillopora* red, *Porites* green). Recruitment of *Acropora* rises with its own density,
+with nothing to stop it but the cap.
 
 ```{julia}
 plot(; layout = (1, 4), size = (900, 260), legend = false)
@@ -292,11 +441,9 @@ end
 
 *Pocillopora* levels off within a decade, held by its own density dependence. *Acropora*
 keeps increasing on the north shore (LTER 1 and 2) and the east (LTER 4), fastest at
-LTER 1, but from an empty reef it does not reach the cap within 40 years. Kayal et al.
-(2018) report that only *Acropora* on the north shore reached the cap, in their
-projections to 2020; those started from the larger *Acropora* populations observed in 2015
-and with larger *Acropora* recruits (1.2 rather than 0.6), and cannot be repeated here.
-Without the cap the positive feedback of *Acropora* on its own recruitment has no limit;
+LTER 1, but from an empty reef it does not reach the cap within 40 years. Nor does it in the
+runs from the assemblages observed in 2015, by 2020 (above). Kayal et al. (2018) report
+that north-shore *Acropora* did reach it in those runs. Without the cap the positive feedback of *Acropora* on its own recruitment has no limit;
 the cap is part of the model, not of the reef.
 
 ## The comparison with the authors' code and the paper
@@ -312,7 +459,13 @@ the cap is part of the model, not of the reef.
 | Elasticities to survival, growth and recruit size (Table S2, LTER 1) | within 0.05, except *Pocillopora* growth slope and recruit mean size (0.68 against 0.79; 0.78 against 0.99) |
 | Elasticities to the intercept and slope of recruitment (Table S2) | no: three to seven times smaller |
 | Shape of the size distributions in 2013 (Fig. 3a-d) | in part: the cohorts are where published, but the youngest are too large |
-| The recruitment cap reached only by north-shore *Acropora*, by 2020 (Appendix S3) | not tested: those runs start from data not used here |
+| Observed shares of the summed sizes, 2013 (Fig. 3e-h) and 2015 (Fig. 4e-h), from the MCR LTER data | 2013 within 1.6 points; 2015 within 1 point, except LTER 4 (4.2) |
+| Runs from the observed assemblages, both readings, against the R reference | relative difference below 1e-14 |
+| Shares predicted for 2015 from 2013 (Fig. 4a-d) | as written within 1.8 points; calibrated within 3 |
+| Shares projected for 2020 from 2015 (Fig. 4i-l) | in part: as written LTER 4 within 1.8 and LTER 2 within 3.4, LTER 5 within 8.3; north-shore *Acropora* 7% (as written) or 3% (calibrated) against 27% |
+| The recruitment cap reached only by north-shore *Acropora*, by 2020 (Appendix S3) | no: highest *Acropora* recruitment 158 (as written) or 6 (calibrated) |
+| Elasticities from the observed assemblages, LTER 1, as written (Tables S3, S4): survival, growth, recruit size | within 0.11 (S3); within 0.06 for *Pocillopora* and *Porites*, 0.28 for *Acropora* (S4) |
+| Elasticities to recruitment, same runs | in part: *Acropora* 1.4 to 2.5 times smaller; *Pocillopora* near zero against 0.03 to 0.13 |
 
 ## What is measured and what is assumed
 
@@ -327,6 +480,9 @@ the cap is part of the model, not of the reef.
 | Mesh: $z$ on $[0, 7]$ in 100 cells | Appendix S3 |
 | Base-10 logarithm, $R_0$ per 25 m², $\gamma$ per m² | calibrated here against Fig. 3, Fig. S2 and Fig. S4; not stated in the paper |
 | Start: empty reef, first recruits in the first step | the paper's initial runs; the step count chosen to match Fig. 3 and Table S2 |
+| Start of the updated runs: colonies observed in 2013 and 2015 | MCR LTER mapped corals (EDI knb-lter-mcr.4009.5), sizes from Appendix S2 |
+| Areas mapped: 20 m² of *Acropora*, 4 m² of *Pocillopora* and *Porites* per reef | read from the colonies' positions in the data; reproduces Fig. S2a |
+| *Acropora* recruits of mean 1.2 and sd 0.4 in the updated runs | Appendix S3 |
 
 ## Where the model and its sources part
 
@@ -348,9 +504,16 @@ the cap is part of the model, not of the reef.
 - The crowding of *Pocillopora* is the sum of the sizes $z$ (logarithms of area) of the
   colonies, as Appendix S3 writes it and Fig. S2b labels it ("sum log-sizes"), not their
   summed area.
-- The paper's updated runs start from the assemblages observed in 2013 and 2015 (MCR LTER
-  data on the Environmental Data Initiative). Those data were not used, so Fig. 4, Fig. S5
-  to S8, Tables S3 and S4 and the projections to 2020 are not reproduced.
+- From the assemblages observed in 2013 and 2015, the reading as written is the nearer to
+  the paper's predictions for 2015 (Fig. 4a-d), while from empty reef the calibrated one is.
+  No single reading reproduces both sets of runs. Neither reproduces the surge of
+  north-shore *Acropora* by 2020 (Fig. 4i) or its recruitment reaching the cap. The
+  published model again behaves as if recruitment, here that of *Acropora*, responded more
+  strongly than in either reading.
+- The observed states come from revision 5 of the MCR LTER data (2022). Their shares match
+  those printed for 2013 and 2015 except on LTER 4 in 2015, perhaps because the paper used
+  an earlier revision. Fig. S5 to S8 (densities, size distributions and their changes) were
+  not compared.
 - Values read from the figures (Fig. S2) are approximate, to a few colonies.
 
 ## Sources
@@ -364,7 +527,11 @@ read. Two DOIs carry this paper's title and authors: 10.1111/ele.13153 (*Ecology
 3 February 2019). Crossref and PubMed list both, with the same abstract and no notice
 linking them. The eScholarship record, the MCR LTER bibliography and HAL give the first,
 which is cited here. Kayal et al. (2015), the source of the recruitment slopes, was not
-read. The parameters are the published values of Table S1, typed into
+read. The observed colonies are from the MCR LTER data package knb-lter-mcr.4009, revision
+5, released under CC BY 4.0 (Moorea Coral Reef LTER et al. 2022). Only the colonies of 2013
+and 2015 on the fore reefs, binned onto the model's mesh, are included in the package
+(`data/corals/mcr_lter_observed_colonies.csv`); `data/corals/LICENSE.txt` gives the changes
+made. The parameters are the published values of Table S1, typed into
 `data/corals/kayal2018_table_s1.csv`; no file of the authors is included in this package.
 
 ## References
@@ -384,6 +551,12 @@ reef-building corals. *Ecological Complexity* 23, 73-84.
 Lenihan, H. S. & Kayal, M. (2015). MCR LTER: Coral Reefs: Long-term coral population and
 community dynamics: annual island wide coral demography survey 2011 to present.
 Environmental Data Initiative. <https://doi.org/10.6073/pasta/98855475790bfb012066f9dc802ecc31>
+
+Moorea Coral Reef LTER, Lenihan, H., Ake, H. & Winslow, E. (2022). MCR LTER: Coral Reef:
+Long-Term Coral Population and Community Dynamics: Annual Island Wide Coral Demography Survey
+2011 ongoing. Version 5. Environmental Data Initiative. Licensed under CC BY 4.0
+(<https://creativecommons.org/licenses/by/4.0/>).
+<https://doi.org/10.6073/pasta/322a76c6f197bfac60c91d66a3e96fb5>
 
 Ellner, S. P., Childs, D. Z. & Rees, M. (2016). *Data-driven Modelling of Structured
 Populations: A Practical Guide to the Integral Projection Model*. Springer.

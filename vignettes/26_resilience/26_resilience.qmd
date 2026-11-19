@@ -166,21 +166,23 @@ dry = MCMState(rip.community, rip.n0, dry_year)
 (flood_every_year = wet, no_floods = dry)
 ```
 
-Without floods, sagebrush (`S`) excludes every other guild. With a flood every year all five
-persist at a stable equilibrium:
+Without floods, sagebrush (`S`) excludes every other guild. With a flood every year sagebrush
+is lost and the other four persist at a stable equilibrium. (The authors' script kept at least
+10 sagebrush in each stage, which held it in; the corrected model has no such floor, see
+vignette 3.)
 
 ```{julia}
 guilds = species_names(rip.community)
+alive = present_species(wet)
 (abundance = round.(state(wet); sigdigits = 3), largest_multiplier = maximum(abs, eigvals(operator(linearise(wet)))),
- local_tolerance = local_mortality_tolerances(wet))
+ local_tolerance = guilds[alive] .=> local_mortality_tolerances(wet))
 ```
 
-Cottonwood (`C`) is the most sensitive to extra mortality of its own. Sagebrush cannot be lost
-(`NaN`): the published model keeps at least 10 individuals in each of its stages. Removing one
-guild at a time shows who takes the space:
+Cottonwood (`C`) is the most sensitive to extra mortality of its own. Removing one guild at a
+time shows who takes the space (abundances of the four guilds present, relative to before):
 
 ```{julia}
-change(t) = round.(state(t) ./ state(wet); digits = 2)
+change(t) = guilds[alive] .=> round.(state(t)[alive] ./ state(wet)[alive]; digits = 2)
 removals = [(removed = guilds[i], abundance_relative_to_before = change(without_species(wet, i)))
             for i in present_species(wet)]
 removals
@@ -189,7 +191,7 @@ removals
 Removing willow (`W`) multiplies cottonwood, tamarisk and meadow by the same factor, about
 `{julia} round(Int, state(without_species(wet, 3))[1] / state(wet)[1])`: every guild's
 recruitment is proportional to the same free space, so freeing space scales them alike.
-Sagebrush stays at its floor. Removing any other guild changes the rest by about 1% or less.
+Removing any other guild changes the rest by about 1% or less.
 
 ## Two kinds of press
 
@@ -217,8 +219,8 @@ removal takes the same share of every stage. Pressing cottonwood alone, at the s
 ```{julia}
 wet_removal = MCMState(rip.community, rip.n0, flood_year; press = :removal)
 press_C = [f, 1, 1, 1, 1]
-(hazard = round.(state(with_mortality(wet, press_C)) ./ state(wet); digits = 3),
- removal = round.(state(with_mortality(wet_removal, press_C)) ./ state(wet_removal); digits = 3),
+(hazard = guilds[alive] .=> round.(state(with_mortality(wet, press_C))[alive] ./ state(wet)[alive]; digits = 3),
+ removal = guilds[alive] .=> round.(state(with_mortality(wet_removal, press_C))[alive] ./ state(wet_removal)[alive]; digits = 3),
  tolerance_hazard = local_mortality_tolerances(wet)[1],
  tolerance_removal = local_mortality_tolerances(wet_removal)[1])
 ```
@@ -244,8 +246,8 @@ survival, harvesting or browsing removes a share of what stands.
 `jacobian` and `linearise` are ResilienceCore's functions, so this package and others built
 on ResilienceCore (EcologicalResilience.jl, FoodWebDynamics.jl) share them. EcologicalResilience
 also exports its own `equilibrium` and `subcommunity`; when both packages are loaded, write
-`MatrixCommunityModels.equilibrium`. (At present the two cannot be installed in one environment:
-MatrixProjectionModels.jl requires SciMLBase 2 and EcologicalResilience.jl SciMLBase 3.)
+`MatrixCommunityModels.equilibrium`. Since version 0.2.0 this package is on the SciMLBase 3
+line, as EcologicalResilience.jl is, so the two can be installed in one environment.
 
 ## References
 

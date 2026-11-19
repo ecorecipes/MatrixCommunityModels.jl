@@ -4,7 +4,7 @@
 ## Kendall (2018, Ecology Letters 21:1790-1799) for Acropora, Pocillopora and Porites on four fore reefs of
 ## Mo'orea (LTER 1, 2, 4 and 5).
 ##
-## Usage: Rscript run_coral_reference.R <Coral-assemblage-IPM.R> <output dir>
+## Usage: Rscript run_coral_reference.R <Coral-assemblage-IPM.R> <output dir> [<mcr_lter_observed_colonies.csv>]
 ##   <Coral-assemblage-IPM.R> is the authors' script (https://github.com/MohsenKayal/Coral-assemblage-IPM, commit
 ##   af547a8; Zenodo doi:10.5281/zenodo.573772). It carries no licence, so it is not copied into the package: this
 ##   driver reads it at run time and evaluates only its survival, growth, survival-growth kernel and recruit-size
@@ -22,9 +22,16 @@
 ##                 compositions (Fig. 3, Fig. S4) and densities (Fig. S2); see the vignette.
 ## Both cap recruitment at 348 colonies per 10 m2 a year (Appendix S3). Recruits have log10(area + 1) normal with
 ## mean 0.6 and sd 0.2 (the initial runs). The reef starts empty and the first recruits arrive in the first step.
+##
+## If the third argument is given (data/corals/mcr_lter_observed_colonies.csv of the package: the colonies observed
+## by the MCR LTER in 2013 and 2015, binned onto the mesh), the updated runs of the paper (Fig. 4) are also written to
+## coral_observed_runs.csv: from the state observed in 2013, two steps (to 2015), and from that observed in 2015, five
+## steps (to 2020), with Acropora recruits of mean 1.2 and sd 0.4 (Appendix S3), in both readings. Acropora was mapped
+## over 20 m2 of each reef and the other two genera over 4 m2, as the file's sampled_area_m2 column says.
 args <- commandArgs(trailingOnly = TRUE)
 authors <- normalizePath(args[1])
 outdir <- args[2]
+observed_file <- if (length(args) >= 3) args[3] else NA
 dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
 num <- function(x) sprintf("%.17g", x)
 save <- function(x, name) write.csv(x, file.path(outdir, name), row.names = FALSE, quote = FALSE)
@@ -59,10 +66,12 @@ reef taxon recr_int recr_slope surv_int surv_slope grow_int grow_slope grow_sd
 5 Poc 1.889 -0.002  2.651 -0.564 1.102 0.686 0.184
 5 Por 0.669  0.003  0.685  0.759 0.689 0.798 0.273
 ")
+recruit_size <- list(Acr = c(0.6, 0.2), Poc = c(0.6, 0.2), Por = c(0.6, 0.2))
 m.par <- function(reef, taxon) {
     r <- S1[S1$reef == reef & S1$taxon == taxon, ]
     c(surv.Intercept = r$surv_int, surv.Slope = r$surv_slope, grow.Intercept = r$grow_int, grow.Slope = r$grow_slope,
-      grow.sd = r$grow_sd, recr.Intercept = r$recr_int, recr.Slope = r$recr_slope, recr.zmean = 0.6, recr.zsd = 0.2)
+      grow.sd = r$grow_sd, recr.Intercept = r$recr_int, recr.Slope = r$recr_slope,
+      recr.zmean = recruit_size[[taxon]][1], recr.zsd = recruit_size[[taxon]][2])
 }
 
 ## ---------------------------------------------------------------- the model (Appendix S3)
@@ -78,10 +87,9 @@ recruits <- function(reef, taxon, n, reading) {
          else 0.4 * 10^(p["recr.Intercept"] + p["recr.Slope"] * gamma / 10)
     min(cap, unname(r))
 }
-project <- function(reef, reading, T) {
+project <- function(reef, reading, T, n = lapply(setNames(taxa, taxa), function(k) rep(0, m))) {
     P <- lapply(setNames(taxa, taxa), function(k) kernel(reef, k))
     cz <- lapply(setNames(taxa, taxa), function(k) c_fun[[k]](meshpts, m.par(reef, k)))
-    n <- lapply(setNames(taxa, taxa), function(k) rep(0, m))
     states <- list(n)
     for (t in 1:T) {
         r <- sapply(taxa, function(k) recruits(reef, k, n, reading))
@@ -118,4 +126,27 @@ for (reef in reefs) {
 save(do.call(rbind, runs), "coral_runs.csv")
 save(do.call(rbind, cells), "coral_state.csv")
 save(do.call(rbind, kern), "coral_kernels.csv")
+
+## ---------------------------------------------------------------- the updated runs, from the observed states
+if (!is.na(observed_file)) {
+    obs <- read.csv(observed_file)
+    recruit_size$Acr <- c(1.2, 0.4)
+    observed <- function(reef, year) lapply(setNames(taxa, taxa), function(k) {
+        n <- rep(0, m)
+        rows <- obs[obs$reef == reef & obs$year == year & obs$taxon == k, ]
+        n[rows$cell] <- rows$colonies * 10 / rows$sampled_area_m2 / h.mesh   # density per unit log size, per 10 m2
+        n
+    })
+    out <- list()
+    for (reef in reefs) for (reading in c("as_written", "calibrated")) for (start in c(2013, 2015)) {
+        steps <- if (start == 2013) 2 else 5
+        st <- project(reef, reading, steps, observed(reef, start))
+        for (t in 0:steps) for (k in taxa) {
+            n <- st[[t + 1]][[k]]
+            out[[length(out) + 1]] <- data.frame(reading = reading, reef = reef, start = start, step = t, taxon = k,
+                                                 colonies = num(h.mesh * sum(n)), log_size = num(h.mesh * sum(meshpts * n)))
+        }
+    }
+    save(do.call(rbind, out), "coral_observed_runs.csv")
+}
 cat("done\n")

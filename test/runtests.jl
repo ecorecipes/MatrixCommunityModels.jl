@@ -26,3 +26,8 @@ using MatrixCommunityModels
     include("test_resilience.jl")
     include("test_docstrings.jl")
 end
+
+# the slow checks (test/long), only when asked: MCM_LONG_TESTS=true
+if lowercase(get(ENV, "MCM_LONG_TESTS", "false")) in ("true", "1", "yes")
+    include(joinpath("long", "runtests.jl"))
+end

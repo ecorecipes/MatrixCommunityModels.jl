@@ -2393,34 +2393,34 @@ var requirejs,require,define;(function(global,setTimeout){var req,s,head,baseEle
 <span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>dry <span class="op">=</span> <span class="fu">MCMState</span>(rip.community, rip.n0, dry_year)</span>
 <span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>(flood_every_year <span class="op">=</span> wet, no_floods <span class="op">=</span> dry)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="1">
-<pre><code>(flood_every_year = MCMState(5 of 5 species present: C, T, W, S, M), no_floods = MCMState(1 of 5 species present: S))</code></pre>
+<pre><code>(flood_every_year = MCMState(4 of 5 species present: C, T, W, M), no_floods = MCMState(1 of 5 species present: S))</code></pre>
 </div>
 </div>
-<p>Without floods, sagebrush (<code>S</code>) excludes every other guild. With a flood every year all five persist at a stable equilibrium:</p>
+<p>Without floods, sagebrush (<code>S</code>) excludes every other guild. With a flood every year sagebrush is lost and the other four persist at a stable equilibrium. (The authors’ script kept at least 10 sagebrush in each stage, which held it in; the corrected model has no such floor, see vignette 3.)</p>
 <div id="16" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>guilds <span class="op">=</span> <span class="fu">species_names</span>(rip.community)</span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>(abundance <span class="op">=</span> <span class="fu">round</span>.(<span class="fu">state</span>(wet); sigdigits <span class="op">=</span> <span class="fl">3</span>), largest_multiplier <span class="op">=</span> <span class="fu">maximum</span>(abs, <span class="fu">eigvals</span>(<span class="fu">operator</span>(<span class="fu">linearise</span>(wet)))),</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a> local_tolerance <span class="op">=</span> <span class="fu">local_mortality_tolerances</span>(wet))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>alive <span class="op">=</span> <span class="fu">present_species</span>(wet)</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>(abundance <span class="op">=</span> <span class="fu">round</span>.(<span class="fu">state</span>(wet); sigdigits <span class="op">=</span> <span class="fl">3</span>), largest_multiplier <span class="op">=</span> <span class="fu">maximum</span>(abs, <span class="fu">eigvals</span>(<span class="fu">operator</span>(<span class="fu">linearise</span>(wet)))),</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a> local_tolerance <span class="op">=</span> guilds[alive] <span class="op">.=&gt;</span> <span class="fu">local_mortality_tolerances</span>(wet))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="1">
-<pre><code>(abundance = [1.42e6, 650000.0, 2.54e6, 60.0, 2.32e6], largest_multiplier = 0.9516844707836132, local_tolerance = [0.4, 0.9, 1.6, NaN, 1.2000000000000002])</code></pre>
+<pre><code>(abundance = [1.42e6, 650000.0, 2.54e6, 0.0, 2.32e6], largest_multiplier = 0.9516844708559193, local_tolerance = [:C =&gt; 0.4, :T =&gt; 0.9, :W =&gt; 1.6, :M =&gt; 1.2000000000000002])</code></pre>
 </div>
 </div>
-<p>Cottonwood (<code>C</code>) is the most sensitive to extra mortality of its own. Sagebrush cannot be lost (<code>NaN</code>): the published model keeps at least 10 individuals in each of its stages. Removing one guild at a time shows who takes the space:</p>
+<p>Cottonwood (<code>C</code>) is the most sensitive to extra mortality of its own. Removing one guild at a time shows who takes the space (abundances of the four guilds present, relative to before):</p>
 <div id="18" class="cell" data-execution_count="1">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">change</span>(t) <span class="op">=</span> <span class="fu">round</span>.(<span class="fu">state</span>(t) <span class="op">./</span> <span class="fu">state</span>(wet); digits <span class="op">=</span> <span class="fl">2</span>)</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">change</span>(t) <span class="op">=</span> guilds[alive] <span class="op">.=&gt;</span> <span class="fu">round</span>.(<span class="fu">state</span>(t)[alive] <span class="op">./</span> <span class="fu">state</span>(wet)[alive]; digits <span class="op">=</span> <span class="fl">2</span>)</span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>removals <span class="op">=</span> [(removed <span class="op">=</span> guilds[i], abundance_relative_to_before <span class="op">=</span> <span class="fu">change</span>(<span class="fu">without_species</span>(wet, i)))</span>
 <span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>            for i <span class="kw">in</span> <span class="fu">present_species</span>(wet)]</span>
 <span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>removals</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="1">
-<pre><code>5-element Vector{@NamedTuple{removed::Symbol, abundance_relative_to_before::Vector{Float64}}}:
- (removed = :C, abundance_relative_to_before = [0.0, 1.01, 1.01, 1.0, 1.01])
- (removed = :T, abundance_relative_to_before = [1.01, 0.0, 1.01, 1.0, 1.01])
- (removed = :W, abundance_relative_to_before = [13.06, 13.06, 0.0, 1.0, 13.06])
- (removed = :S, abundance_relative_to_before = [1.0, 1.0, 1.0, 0.0, 1.0])
- (removed = :M, abundance_relative_to_before = [1.0, 1.0, 1.0, 1.0, 0.0])</code></pre>
+<pre><code>4-element Vector{@NamedTuple{removed::Symbol, abundance_relative_to_before::Vector{Pair{Symbol, Float64}}}}:
+ (removed = :C, abundance_relative_to_before = [:C =&gt; 0.0, :T =&gt; 1.01, :W =&gt; 1.01, :M =&gt; 1.01])
+ (removed = :T, abundance_relative_to_before = [:C =&gt; 1.01, :T =&gt; 0.0, :W =&gt; 1.01, :M =&gt; 1.01])
+ (removed = :W, abundance_relative_to_before = [:C =&gt; 13.06, :T =&gt; 13.06, :W =&gt; 0.0, :M =&gt; 13.06])
+ (removed = :M, abundance_relative_to_before = [:C =&gt; 1.0, :T =&gt; 1.0, :W =&gt; 1.0, :M =&gt; 0.0])</code></pre>
 </div>
 </div>
-<p>Removing willow (<code>W</code>) multiplies cottonwood, tamarisk and meadow by the same factor, about 13: every guild’s recruitment is proportional to the same free space, so freeing space scales them alike. Sagebrush stays at its floor. Removing any other guild changes the rest by about 1% or less.</p>
+<p>Removing willow (<code>W</code>) multiplies cottonwood, tamarisk and meadow by the same factor, about 13: every guild’s recruitment is proportional to the same free space, so freeing space scales them alike. Removing any other guild changes the rest by about 1% or less.</p>
 </section>
 <section id="two-kinds-of-press" class="level2">
 <h2 class="anchored" data-anchor-id="two-kinds-of-press">Two kinds of press</h2>
@@ -2449,19 +2449,19 @@ var requirejs,require,define;(function(global,setTimeout){var req,s,head,baseEle
 <div id="22" class="cell" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>wet_removal <span class="op">=</span> <span class="fu">MCMState</span>(rip.community, rip.n0, flood_year; press <span class="op">=</span> <span class="op">:</span>removal)</span>
 <span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>press_C <span class="op">=</span> [f, <span class="fl">1</span>, <span class="fl">1</span>, <span class="fl">1</span>, <span class="fl">1</span>]</span>
-<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>(hazard <span class="op">=</span> <span class="fu">round</span>.(<span class="fu">state</span>(<span class="fu">with_mortality</span>(wet, press_C)) <span class="op">./</span> <span class="fu">state</span>(wet); digits <span class="op">=</span> <span class="fl">3</span>),</span>
-<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a> removal <span class="op">=</span> <span class="fu">round</span>.(<span class="fu">state</span>(<span class="fu">with_mortality</span>(wet_removal, press_C)) <span class="op">./</span> <span class="fu">state</span>(wet_removal); digits <span class="op">=</span> <span class="fl">3</span>),</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>(hazard <span class="op">=</span> guilds[alive] <span class="op">.=&gt;</span> <span class="fu">round</span>.(<span class="fu">state</span>(<span class="fu">with_mortality</span>(wet, press_C))[alive] <span class="op">./</span> <span class="fu">state</span>(wet)[alive]; digits <span class="op">=</span> <span class="fl">3</span>),</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a> removal <span class="op">=</span> guilds[alive] <span class="op">.=&gt;</span> <span class="fu">round</span>.(<span class="fu">state</span>(<span class="fu">with_mortality</span>(wet_removal, press_C))[alive] <span class="op">./</span> <span class="fu">state</span>(wet_removal)[alive]; digits <span class="op">=</span> <span class="fl">3</span>),</span>
 <span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a> tolerance_hazard <span class="op">=</span> <span class="fu">local_mortality_tolerances</span>(wet)[<span class="fl">1</span>],</span>
 <span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a> tolerance_removal <span class="op">=</span> <span class="fu">local_mortality_tolerances</span>(wet_removal)[<span class="fl">1</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display" data-execution_count="1">
-<pre><code>(hazard = [1.006, 1.006, 1.006, 1.0, 1.006], removal = [0.906, 1.006, 1.006, 1.0, 1.006], tolerance_hazard = 0.4, tolerance_removal = 0.30000000000000004)</code></pre>
+<pre><code>(hazard = [:C =&gt; 1.006, :T =&gt; 1.006, :W =&gt; 1.006, :M =&gt; 1.006], removal = [:C =&gt; 0.906, :T =&gt; 1.006, :W =&gt; 1.006, :M =&gt; 1.006], tolerance_hazard = 0.4, tolerance_removal = 0.30000000000000004)</code></pre>
 </div>
 </div>
 <p>Under the hazard press cottonwood does not decline at all: it rises by 0.6%, like the other guilds. The extra deaths fall mostly on seedlings, and the space they free is recruited into by every guild, cottonwood included. Under the removal press cottonwood falls by 9.4% while the others rise. Cottonwood is lost at a 40% hazard press but at a 30% removal press. Which press is right depends on the perturbation being modelled: a harsher flood or drought acts on survival, harvesting or browsing removes a share of what stands.</p>
 </section>
 <section id="with-ecologicalresilience.jl" class="level2">
 <h2 class="anchored" data-anchor-id="with-ecologicalresilience.jl">With EcologicalResilience.jl</h2>
-<p><code>jacobian</code> and <code>linearise</code> are ResilienceCore’s functions, so this package and others built on ResilienceCore (EcologicalResilience.jl, FoodWebDynamics.jl) share them. EcologicalResilience also exports its own <code>equilibrium</code> and <code>subcommunity</code>; when both packages are loaded, write <code>MatrixCommunityModels.equilibrium</code>. (At present the two cannot be installed in one environment: MatrixProjectionModels.jl requires SciMLBase 2 and EcologicalResilience.jl SciMLBase 3.)</p>
+<p><code>jacobian</code> and <code>linearise</code> are ResilienceCore’s functions, so this package and others built on ResilienceCore (EcologicalResilience.jl, FoodWebDynamics.jl) share them. EcologicalResilience also exports its own <code>equilibrium</code> and <code>subcommunity</code>; when both packages are loaded, write <code>MatrixCommunityModels.equilibrium</code>. Since version 0.2.0 this package is on the SciMLBase 3 line, as EcologicalResilience.jl is, so the two can be installed in one environment.</p>
 </section>
 <section id="references" class="level2">
 <h2 class="anchored" data-anchor-id="references">References</h2>

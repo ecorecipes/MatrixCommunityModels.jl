@@ -244,8 +244,8 @@ Over 1000 steps biomass and spawning stock biomass agree with LeMaRns to roundin
 year equals that a year before to rounding.
 
 The predation mortality at year 100 shows the size dependence: small fish are eaten, large
-ones are not, and the background mortality `M1` acts on the largest quarter of each
-species' classes.
+ones are not, and the background mortality `M1` acts on roughly the largest quarter of
+each species' classes.
 
 ```{julia}
 settled = unfished.u[end, :]
@@ -385,7 +385,7 @@ own, which agree to rounding. The values are largest relative differences.
 | Check | Agreement |
 |---|---|
 | Length classes, weights, growth shares, rations, maturity, background mortality, catchability, starting state | to rounding (below 1e-14) |
-| Suitabilities of whiting, cod and saithe for all their prey classes | to rounding |
+| Suitabilities of whiting, cod and saithe (their second, middle and last classes) for all their prey classes | to rounding |
 | Predation mortality of every class at the starting state | to rounding |
 | Steps at which recruits enter | the same |
 | Unfished, 100 years; fished by all fleets and by the otter trawl, 50 years each | biomass and spawning stock biomass to rounding (about 1e-14) |
@@ -401,7 +401,7 @@ own, which agree to rounding. The values are largest relative differences.
 | Other food, $1.2 \times 10^{12}$ g | `NS_other`; calibrated |
 | Preferred predator-prey weight ratio $10^{-2.25}$, preference variance 0.5 | LeMaRns defaults, the values of Thorpe et al. (2015) |
 | Growth efficiency 0.5 at length zero, decay exponent 0.11 | LeMaRns defaults |
-| Background mortality 0.8 per year in the largest quarter of the classes | LeMaRns default (`std_RNM`) |
+| Background mortality 0.8 per year from class ⌊0.75 × number of classes⌋ up, slightly more than the largest quarter | LeMaRns default (`std_RNM`) |
 | Maturity ogive slope 10 per cm | LeMaRns default |
 | Fishing efforts used here (1 for every fleet; 1.5 for the otter trawl) | chosen for illustration |
 

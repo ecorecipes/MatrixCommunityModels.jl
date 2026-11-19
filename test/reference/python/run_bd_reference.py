@@ -53,8 +53,8 @@ SITES = [("PA", "LIPI", (4, 25), "a_temp"),
 K, OMEGA = 4, 1
 IPM = {"min_size": -20, "max_size": 25, "bins": 300, "time_step": 7}
 YEAR = 364
-AREA = 500.0          # m^2; ccs_simulation.py uses 100 to 1000
-DENSITY = 0.14        # post-metamorphic frogs per m^2 at the start, as there
+AREA = 500.0          # m^3 of water, as in the paper (the code calls it an area); ccs_simulation.py uses 100 to 1000
+DENSITY = 0.14        # post-metamorphic frogs per m^3 at the start, as there
 STEPS = 530           # as there: about ten years
 SAVED = [0, 1, 26, 52, 104, 260, 529]
 

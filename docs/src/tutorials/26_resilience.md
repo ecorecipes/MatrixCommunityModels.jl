@@ -198,43 +198,44 @@ dry = MCMState(rip.community, rip.n0, dry_year)
 (flood_every_year = wet, no_floods = dry)
 ```
 
-    (flood_every_year = MCMState(5 of 5 species present: C, T, W, S, M), no_floods = MCMState(1 of 5 species present: S))
+    (flood_every_year = MCMState(4 of 5 species present: C, T, W, M), no_floods = MCMState(1 of 5 species present: S))
 
 Without floods, sagebrush (`S`) excludes every other guild. With a flood
-every year all five persist at a stable equilibrium:
+every year sagebrush is lost and the other four persist at a stable
+equilibrium. (The authors’ script kept at least 10 sagebrush in each
+stage, which held it in; the corrected model has no such floor, see
+vignette 3.)
 
 ``` julia
 guilds = species_names(rip.community)
+alive = present_species(wet)
 (abundance = round.(state(wet); sigdigits = 3), largest_multiplier = maximum(abs, eigvals(operator(linearise(wet)))),
- local_tolerance = local_mortality_tolerances(wet))
+ local_tolerance = guilds[alive] .=> local_mortality_tolerances(wet))
 ```
 
-    (abundance = [1.42e6, 650000.0, 2.54e6, 60.0, 2.32e6], largest_multiplier = 0.9516844707836132, local_tolerance = [0.4, 0.9, 1.6, NaN, 1.2000000000000002])
+    (abundance = [1.42e6, 650000.0, 2.54e6, 0.0, 2.32e6], largest_multiplier = 0.9516844708559193, local_tolerance = [:C => 0.4, :T => 0.9, :W => 1.6, :M => 1.2000000000000002])
 
 Cottonwood (`C`) is the most sensitive to extra mortality of its own.
-Sagebrush cannot be lost (`NaN`): the published model keeps at least 10
-individuals in each of its stages. Removing one guild at a time shows
-who takes the space:
+Removing one guild at a time shows who takes the space (abundances of
+the four guilds present, relative to before):
 
 ``` julia
-change(t) = round.(state(t) ./ state(wet); digits = 2)
+change(t) = guilds[alive] .=> round.(state(t)[alive] ./ state(wet)[alive]; digits = 2)
 removals = [(removed = guilds[i], abundance_relative_to_before = change(without_species(wet, i)))
             for i in present_species(wet)]
 removals
 ```
 
-    5-element Vector{@NamedTuple{removed::Symbol, abundance_relative_to_before::Vector{Float64}}}:
-     (removed = :C, abundance_relative_to_before = [0.0, 1.01, 1.01, 1.0, 1.01])
-     (removed = :T, abundance_relative_to_before = [1.01, 0.0, 1.01, 1.0, 1.01])
-     (removed = :W, abundance_relative_to_before = [13.06, 13.06, 0.0, 1.0, 13.06])
-     (removed = :S, abundance_relative_to_before = [1.0, 1.0, 1.0, 0.0, 1.0])
-     (removed = :M, abundance_relative_to_before = [1.0, 1.0, 1.0, 1.0, 0.0])
+    4-element Vector{@NamedTuple{removed::Symbol, abundance_relative_to_before::Vector{Pair{Symbol, Float64}}}}:
+     (removed = :C, abundance_relative_to_before = [:C => 0.0, :T => 1.01, :W => 1.01, :M => 1.01])
+     (removed = :T, abundance_relative_to_before = [:C => 1.01, :T => 0.0, :W => 1.01, :M => 1.01])
+     (removed = :W, abundance_relative_to_before = [:C => 13.06, :T => 13.06, :W => 0.0, :M => 13.06])
+     (removed = :M, abundance_relative_to_before = [:C => 1.0, :T => 1.0, :W => 1.0, :M => 0.0])
 
 Removing willow (`W`) multiplies cottonwood, tamarisk and meadow by the
 same factor, about 13: every guild’s recruitment is proportional to the
-same free space, so freeing space scales them alike. Sagebrush stays at
-its floor. Removing any other guild changes the rest by about 1% or
-less.
+same free space, so freeing space scales them alike. Removing any other
+guild changes the rest by about 1% or less.
 
 ## Two kinds of press
 
@@ -274,13 +275,13 @@ Pressing cottonwood alone, at the same `f`:
 ``` julia
 wet_removal = MCMState(rip.community, rip.n0, flood_year; press = :removal)
 press_C = [f, 1, 1, 1, 1]
-(hazard = round.(state(with_mortality(wet, press_C)) ./ state(wet); digits = 3),
- removal = round.(state(with_mortality(wet_removal, press_C)) ./ state(wet_removal); digits = 3),
+(hazard = guilds[alive] .=> round.(state(with_mortality(wet, press_C))[alive] ./ state(wet)[alive]; digits = 3),
+ removal = guilds[alive] .=> round.(state(with_mortality(wet_removal, press_C))[alive] ./ state(wet_removal)[alive]; digits = 3),
  tolerance_hazard = local_mortality_tolerances(wet)[1],
  tolerance_removal = local_mortality_tolerances(wet_removal)[1])
 ```
 
-    (hazard = [1.006, 1.006, 1.006, 1.0, 1.006], removal = [0.906, 1.006, 1.006, 1.0, 1.006], tolerance_hazard = 0.4, tolerance_removal = 0.30000000000000004)
+    (hazard = [:C => 1.006, :T => 1.006, :W => 1.006, :M => 1.006], removal = [:C => 0.906, :T => 1.006, :W => 1.006, :M => 1.006], tolerance_hazard = 0.4, tolerance_removal = 0.30000000000000004)
 
 Under the hazard press cottonwood does not decline at all: it rises by
 0.6%, like the other guilds. The extra deaths fall mostly on seedlings,
@@ -297,9 +298,9 @@ browsing removes a share of what stands.
 package and others built on ResilienceCore (EcologicalResilience.jl,
 FoodWebDynamics.jl) share them. EcologicalResilience also exports its
 own `equilibrium` and `subcommunity`; when both packages are loaded,
-write `MatrixCommunityModels.equilibrium`. (At present the two cannot be
-installed in one environment: MatrixProjectionModels.jl requires
-SciMLBase 2 and EcologicalResilience.jl SciMLBase 3.)
+write `MatrixCommunityModels.equilibrium`. Since version 0.2.0 this
+package is on the SciMLBase 3 line, as EcologicalResilience.jl is, so
+the two can be installed in one environment.
 
 ## References
 

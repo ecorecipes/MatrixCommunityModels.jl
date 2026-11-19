@@ -192,10 +192,17 @@ The mizer model takes its equations, default scheme and North Sea parameters fro
 package mizer 3.4.0 and reproduces its runs; mizer's optional second-order methods are not
 written (see vignette 25).
 
+The tests (`Pkg.test()`, about seven minutes) compare the models with the authors' code and
+published values. Checks that need long runs or ensembles (`test/long`: the five grassland
+sites over 2500 years, the forests on 700 cells, the sagebrush runs and exclusion times, the
+chytrid runs over 529 weeks, the seeded ensembles of the vignettes) are left out unless asked
+for: `MCM_LONG_TESTS=true julia --project -e 'using Pkg; Pkg.test()'` runs them after the
+main suite. They also run every week on GitHub Actions (`LongTests.yml`).
+
 ## Data and licences
 
-The package is under mixed licences: the code and most data are MIT, and two data
-directories, `data/lemans` and `data/mizer`, are GPL-3 (see below). `data/verde_fish` is from Rogosch et al. (2019),
+The package is under mixed licences: the code and most data are MIT, two data
+directories, `data/lemans` and `data/mizer`, are GPL-3, and one file of `data/corals` is CC BY 4.0 (see below). `data/verde_fish` is from Rogosch et al. (2019),
 <https://doi.org/10.5281/zenodo.1309024> (MIT). `data/riparian/maybell.csv` is from
 Lytle et al. (2017), <https://doi.org/10.6084/m9.figshare.4652608> (CC BY 4.0), with
 line endings converted. `data/cypripedium` holds matrices estimated with the R packages
@@ -213,8 +220,12 @@ not MIT; their provenance and licence are in `data/lemans/LICENSE.txt`.
 `test/reference/lemans_*.csv` were produced by running LeMaRns.
 `data/corals` holds the parameter estimates of Table S1 of Kayal et al. (2018), typed from
 the paper's Supporting Information; the authors' R code carries no licence and is not
-included (`data/corals/LICENSE.txt`). `test/reference/coral_*.csv` were produced by
-running its kernel functions, read at run time.
+included. `data/corals/mcr_lter_observed_colonies.csv` holds the coral colonies observed in 2013
+and 2015, binned by size, derived from MCR LTER data on the Environmental Data Initiative
+(knb-lter-mcr.4009.5, <https://doi.org/10.6073/pasta/322a76c6f197bfac60c91d66a3e96fb5>,
+**CC BY 4.0**, <https://creativecommons.org/licenses/by/4.0/>). That file is under the same
+licence; the changes made are listed in `data/corals/LICENSE.txt`.
+`test/reference/coral_*.csv` were produced by running the authors' kernel functions, read at run time.
 `data/grasslands` holds the fitted parameters of Tredennick et al. (2017), written out from
 <https://github.com/atredennick/community_synchrony>, whose DESCRIPTION says "License: MIT"
 but which has no LICENSE file; the fits are to the data of Chu & Adler (2015) on Dryad

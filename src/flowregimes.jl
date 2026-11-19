@@ -141,8 +141,11 @@ The environments of one flow regime of Tonkin et al. (2021) (see [`TONKIN_SCENAR
 
 Returns `(riparian, fish, invertebrates, riparian_n0, invertebrate_n0)`: the riparian start is 3978 m² of every
 stage of every guild, the invertebrates start at 50. Peak flows of the natural regime are the mean spring and
-autumn peaks at Paulden (1134 and 459 cfs), scaled by 0.35 to the Bill Williams River, on which the invertebrate
-models were parameterised.
+autumn peaks at Paulden (1134 and 459 cfs), scaled by 0.35 to m³/s on the Bill Williams River, on which the
+invertebrate models were parameterised. The factor is not a unit conversion (1 m³/s is about 35 cfs) but the
+authors' match between corresponding floods on the two rivers: a bankfull flood is 220 cfs on the Verde and 87 m³/s
+on the Bill Williams, a large flood 700 cfs and 215 m³/s, and 0.35 lies between the two ratios. The designed floods
+use it too (`700 * 0.35`).
 """
 function tonkin_scenario(scenario::Symbol; years::Integer = 200, invertebrate_years::Integer = 30, corrected::Bool = false,
                          path = joinpath(DATA_DIR, "verde_fish", "naturalflow_long.csv"))

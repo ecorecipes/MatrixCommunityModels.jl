@@ -280,7 +280,7 @@ include("lemans.jl")
 export lemans_parameters, lemans_fish, lemans_community, lemans_state, lemans_environment, lemans_biomass,
        lemans_predation, LEMANS_NORTH_SEA
 include("corals.jl")
-export coral, coral_stage, coral_community, coral_recruits, CORAL_PARAMETERS, CORAL_RECRUITMENT_CAP
+export coral, coral_stage, coral_community, coral_recruits, coral_observed_state, CORAL_PARAMETERS, CORAL_RECRUITMENT_CAP
 include("grasslands.jl")
 export grassland_plant, grassland_community, grassland_state, synchrony, GRASSLAND_PARAMETERS
 include("tribolium.jl")
