@@ -1,0 +1,45 @@
+The files in this directory hold the parameters of the annual plant competition model of
+
+    Godoy, O., Kraft, N.J.B. & Levine, J.M. (2014). Phylogenetic relatedness and the determinants of
+    competitive outcomes. Ecology Letters 17, 836-844. https://doi.org/10.1111/ele.12289
+
+for 18 annual plant species of the serpentine grassland of the University of California Sedgwick Reserve.
+
+species_vital_rates.csv and alpha_estimates_row_is_target.csv
+-------------------------------------------------------------
+
+From the authors' deposit on figshare:
+
+    Godoy, O., Kraft, N.J.B. & Levine, J.M. (2017). Dataset Godoy et al. 2014 Ecology Letters. figshare.
+    Dataset. https://doi.org/10.6084/m9.figshare.4793488.v3
+
+released under CC0 1.0 (public domain dedication, https://creativecommons.org/publicdomain/zero/1.0/), as the
+figshare record states. Downloaded 19 November 2026 (figshare files 7880038, "species vital rates.csv", and
+8655469, "alpha_estimates_row_is_target.csv"; MD5 d442c65fb62036657e3cc00f0551f919 and
+0a509c5bf8a6c1493ca8e7c365615a9a as published).
+
+Changes: the first file is renamed (a space replaced by an underscore); in both files the line endings are
+converted from carriage returns to line feeds and a final line feed is added. No value is changed.
+
+- species_vital_rates.csv: for each species (four-letter code), lambda (viable seeds produced per germinant
+  without competitors), s (annual survival of ungerminated seed in the soil) and g (germination fraction).
+- alpha_estimates_row_is_target.csv: the interaction coefficients alpha[i, j], the per capita effect of a
+  germinant of the column species j on the seed production of the row species i. "NA" marks coefficients the
+  authors had little confidence in (figshare description); 66 of the 324 are NA, none on the diagonal.
+  This is the file of versions 2 and 3 of the deposit (June 2017). Version 1 (March 2017, figshare file 7880041,
+  MD5 48341dd42c2c50da2da8640a465a20ab, not included) gives the same values to 9 digits but splits the 66 into
+  33 NA and 33 coefficients estimated as 0. The deposit was made for Saavedra et al. (2017, Ecological
+  Monographs 87:470), which cites version 1.
+
+godoy2014_appendix_s2_table2.csv
+--------------------------------
+
+The mean and standard error of each species' common competitive effect (e_j) and common competitive response
+(r_i), Appendix S2, Table 2 of Godoy et al. (2014), typed from the authors' accepted manuscript with appendices
+(CSIC repository, https://digital.csic.es/handle/10261/345766) to the printed three decimals. The paper uses
+alpha[i, j] = r_i e_j for a coefficient missing from the pairwise fits (Appendix S4). These are numbers reported
+in the paper; facts are not subject to copyright, and they are distributed here with attribution under the MIT
+licence of the package.
+
+The paper's Appendix S2, Table 3 also prints lambda, g and s (to two decimals for lambda, three for g, two for s).
+The g and s of the figshare file agree with it at that precision; lambda does not (see vignette 29).

@@ -22,6 +22,8 @@ using MatrixCommunityModels
     include("test_predatorprey.jl")
     include("test_chytrid.jl")
     include("test_mizer.jl")
+    include("test_annualplants.jl")
+    include("test_waterfowl.jl")
     include("test_solvers.jl")
     include("test_resilience.jl")
     include("test_docstrings.jl")

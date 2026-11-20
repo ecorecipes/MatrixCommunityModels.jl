@@ -41,7 +41,11 @@ makedocs(;
                                   prettyurls = get(ENV, "CI", "false") == "true",
                                   canonical = "https://ecorecipes.github.io/MatrixCommunityModels.jl",
                                   edit_link = "main",
-                                  size_threshold = 300 * 1024),
+                                  size_threshold = 300 * 1024,
+                                  # The search index is mostly the tutorials' prose (20 to 40 KiB
+                                  # each) plus the API docstrings; it grows with every vignette,
+                                  # so warn only well above its present 640 KiB.
+                                  search_size_threshold_warn = 1024 * 1024),
          pages = ["Home" => "index.md",
                   "Tutorials" => tutorial_pages(),
                   "API Reference" => ["Composing communities" => "api/communities.md",

@@ -22,3 +22,10 @@ Pages = ["src/predatorprey.jl"]
 Modules = [MatrixCommunityModels]
 Pages = ["src/chytrid.jl"]
 ```
+
+## Canvasbacks and redheads
+
+```@autodocs
+Modules = [MatrixCommunityModels]
+Pages = ["src/waterfowl.jl"]
+```

@@ -10,6 +10,8 @@ Simon Frost
 - [The check against the authors’ R
   code](#the-check-against-the-authors-r-code)
 - [From the observed assemblages](#from-the-observed-assemblages)
+  - [Densities and sizes in 2015 (Figs. S5 to
+    S8)](#densities-and-sizes-in-2015-figs-s5-to-s8)
 - [Forty years from empty reef](#forty-years-from-empty-reef)
 - [The comparison with the authors’ code and the
   paper](#the-comparison-with-the-authors-code-and-the-paper)
@@ -444,9 +446,10 @@ gives the north-shore *Acropora* of Fig. 4i: 27% of the assemblage in
 2020, against 7% as written and 3% calibrated. The paper says that
 *Acropora* recruitment on the north shore reached the cap of 348
 recruits a year in these projections (Appendix S3). Here it stays below
-it in both readings. As written it is highest on LTER 1, at 158 in 2020,
-still rising with the density of *Acropora*. Calibrated, it never
-exceeds 6.
+it in both readings. As written it is highest on LTER 1: the *Acropora*
+projected there for 2020 would bring 158 recruits the following year,
+and the number is still rising with the density of *Acropora*.
+Calibrated, it never exceeds 6.
 
 ``` julia
 panels = []
@@ -474,7 +477,9 @@ These are the assemblages of Fig. 4, drawn as before, with the reading
 as written. Each row is a reef. The columns are the prediction for 2015
 from 2013, the observation of 2015, and the projection to 2020 from
 2015, in colonies per 10 m² in each cell, stacked by genus (*Acropora*
-blue, *Pocillopora* red, *Porites* green).
+blue, *Pocillopora* red, *Porites* green). The observed panels show the
+raw counts binned onto the mesh, so they are spikier than the paper’s,
+whose observed distributions are smoothed.
 
 Tables S3 and S4 of the paper give the elasticities of each population’s
 summed size in 2015, and in 2020, to each parameter. The starting state
@@ -538,6 +543,254 @@ the feedback of *Acropora* on its own recruitment drives the projection.
 outside this vignette), survival and growth stay within 0.1 of Table S3,
 and within 0.8 of Table S4.
 
+### Densities and sizes in 2015 (Figs. S5 to S8)
+
+The Supporting Information compares the prediction for 2015 from 2013
+with the observation in four more figures. Fig. S5 sets the predicted
+abundance of each genus on each reef, in colonies and in summed sizes z
+per 10 m², against the observed mean and its 95% confidence interval,
+and prints a z-score on each bar: the distance between prediction and
+observation in standard errors of the observed mean. Fig. S7 plots the
+same predictions, and the observations of 2015, against the observations
+of 2013. Fig. S6 compares the predicted and observed size distributions
+of 2015, each scaled to one, and prints the Kolmogorov-Smirnov distance
+D between them. Fig. S8 shows how those distributions changed from 2013
+to 2015, predicted and observed. Fig. S8 prints no numbers.
+
+The observed means and standard errors come from the four transects of
+each reef. `coral_observed_transects` gives the colonies and the summed
+sizes of each transect, scaled to 10 m². With n = 4 and a t-quantile on
+3 degrees of freedom, they reproduce the bars of Fig. S5: LTER 1
+*Pocillopora* in 2015, for instance, has a mean of 537.5 colonies per 10
+m² with a 95% interval of 375 to 700. The bar of Fig. S5a runs from
+about 375 to 695.
+
+``` julia
+using Statistics
+standard_error(x) = std(x) / sqrt(length(x))
+figS5a = Dict(:lter1 => [4.9, 2.6, 1.8], :lter2 => [6.5, 1.9, -0.4], :lter4 => [-0.9, 0.2, 0.7], :lter5 => [-4.7, -1.2, -1.2])
+figS5b = Dict(:lter1 => [2.3, 4.1, 3.3], :lter2 => [3.1, 2.7, 0.0], :lter4 => [-1.1, 2.2, 1.9], :lter5 => [-4.3, -0.2, -0.9])
+function predicted2015(r, reading)
+    c = coral_community(r; reading, recruit_size = size4)
+    return c, project(c, coral_observed_state(r, 2013), fill(nothing, 2)).u[end, :]
+end
+# z-scores of Fig. S5, here: (predicted - observed mean) / standard error, by genus, for colonies and summed sizes
+function zscore(r, reading, what)
+    c, u = predicted2015(r, reading)
+    p, o = pool_totals(c, u, nothing), coral_observed_transects(r, 2015)
+    return [(getproperty(p, Symbol(t, :_, what)) - mean(getproperty(o[t], what))) / standard_error(getproperty(o[t], what)) for t in taxa]
+end
+Z = Dict((r, reading, what) => zscore(r, reading, what) for r in reefs, reading in (:as_written, :calibrated), what in (:colonies, :log_size))
+for (what, fig, title) in ((:colonies, figS5a, "colonies per 10 m², 2015; z-scores of Fig. S5a"),
+                          (:log_size, figS5b, "summed z per 10 m², 2015; z-scores of Fig. S5b"))
+    println(title)
+    println("reef   genus           observed (se)    paper  as written  calibrated")
+    for r in reefs, (i, t) in enumerate(taxa)
+        o = getproperty(coral_observed_transects(r, 2015)[t], what)
+        @printf("%-6s %-12s  %7.1f (%5.1f)  %6.1f  %9.1f  %10.1f\n", r, label[t], mean(o), standard_error(o),
+                fig[r][i], Z[(r, :as_written, what)][i], Z[(r, :calibrated, what)][i])
+    end
+end
+inside(v) = count(x -> abs(x) <= 3.182, v)          # the prediction within the 95% interval (t, 3 degrees of freedom)
+published = reduce(vcat, [what === :colonies ? figS5a[r] : figS5b[r] for r in reefs, what in (:colonies, :log_size)])
+@printf("Fig. S5:    %d of 24 predictions inside the observed 95%% interval\n", inside(published))
+for reading in (:as_written, :calibrated)
+    here = reduce(vcat, [Z[(r, reading, what)] for r in reefs, what in (:colonies, :log_size)])
+    @printf("%-10s  %d of 24 inside; largest difference from Fig. S5 %.1f\n", reading, inside(here), maximum(abs.(here .- published)))
+end
+```
+
+    colonies per 10 m², 2015; z-scores of Fig. S5a
+    reef   genus           observed (se)    paper  as written  calibrated
+    lter1  Acropora         25.0 (  3.7)     4.9        1.9         0.7
+    lter1  Pocillopora     537.5 ( 51.2)     2.6        2.3         5.2
+    lter1  Porites         257.5 ( 43.1)     1.8        1.6         1.5
+    lter2  Acropora         16.0 (  1.6)     6.5        3.2         1.8
+    lter2  Pocillopora     320.0 ( 68.1)     1.9        1.3         3.3
+    lter2  Porites          95.0 ( 32.0)    -0.4       -0.4        -0.4
+    lter4  Acropora         20.5 (  6.6)    -0.9       -1.1        -1.3
+    lter4  Pocillopora     175.0 ( 26.3)     0.2       -0.2         0.8
+    lter4  Porites          17.5 (  2.5)     0.7        0.2        -0.2
+    lter5  Acropora         24.0 (  3.7)    -4.7       -4.3        -4.8
+    lter5  Pocillopora     217.5 ( 44.8)    -1.2       -1.9        -0.9
+    lter5  Porites          57.5 ( 14.9)    -1.2       -0.8        -0.9
+    summed z per 10 m², 2015; z-scores of Fig. S5b
+    reef   genus           observed (se)    paper  as written  calibrated
+    lter1  Acropora         61.9 (  7.9)     2.3        0.2        -0.6
+    lter1  Pocillopora    1264.2 (129.0)     4.1        4.0         5.2
+    lter1  Porites         528.1 ( 73.2)     3.3        3.4         3.4
+    lter2  Acropora         36.4 (  3.6)     3.1        2.0         1.1
+    lter2  Pocillopora     685.0 (143.1)     2.7        2.3         3.3
+    lter2  Porites         181.1 ( 64.6)     0.0       -0.0        -0.0
+    lter4  Acropora         44.9 ( 12.9)    -1.1       -1.3        -1.5
+    lter4  Pocillopora     303.5 ( 51.7)     2.2        2.6         3.2
+    lter4  Porites          37.0 (  7.3)     1.9        0.9         0.8
+    lter5  Acropora         50.5 (  8.3)    -4.3       -4.1        -4.4
+    lter5  Pocillopora     375.2 ( 81.9)    -0.2       -0.6        -0.1
+    lter5  Porites         107.3 ( 29.3)    -0.9       -0.6        -0.6
+    Fig. S5:    18 of 24 predictions inside the observed 95% interval
+    as_written  19 of 24 inside; largest difference from Fig. S5 3.3
+    calibrated  17 of 24 inside; largest difference from Fig. S5 4.7
+
+The published predictions themselves can be recovered from the printed
+z-scores, as the observed mean plus z standard errors: for instance 43
+colonies of *Acropora* per 10 m² on LTER 1, the orange dot of Figs. S5a
+and S7a. Fig. S7 shows whether each population was predicted to grow or
+shrink from 2013 to 2015, by the side of the diagonal it falls on. Here
+are the predictions that grow or shrink where the paper’s do not:
+
+``` julia
+for (what, fig) in ((:colonies, figS5a), (:log_size, figS5b))
+    for reading in (:as_written, :calibrated)
+        differ = String[]
+        for r in reefs, (i, t) in enumerate(taxa)
+            o13, o15 = getproperty(coral_observed_transects(r, 2013)[t], what), getproperty(coral_observed_transects(r, 2015)[t], what)
+            paper = mean(o15) + fig[r][i] * standard_error(o15)
+            here = getproperty(pool_totals(predicted2015(r, reading)..., nothing), Symbol(t, :_, what))
+            sign(here - mean(o13)) == sign(paper - mean(o13)) ||
+                push!(differ, @sprintf("%s %s (2013 %.0f, paper %.0f, here %.0f)", r, label[t], mean(o13), paper, here))
+        end
+        @printf("%s, %s: %d of 12 change as in Fig. S7\n", what, reading, 12 - length(differ))
+        foreach(d -> println("    not ", d), differ)
+    end
+end
+```
+
+    colonies, as_written: 10 of 12 change as in Fig. S7
+        not lter1 Porites (2013 330, paper 335, here 328)
+        not lter5 Acropora (2013 7, paper 6, here 8)
+    colonies, calibrated: 9 of 12 change as in Fig. S7
+        not lter1 Pocillopora (2013 722, paper 671, here 802)
+        not lter1 Porites (2013 330, paper 335, here 323)
+        not lter2 Pocillopora (2013 472, paper 449, here 546)
+    log_size, as_written: 12 of 12 change as in Fig. S7
+    log_size, calibrated: 11 of 12 change as in Fig. S7
+        not lter5 Acropora (2013 15, paper 15, here 14)
+
+Read as written, the model’s z-scores are within 3.3 of Fig. S5a and
+within 2.1 of Fig. S5b, and the largest differences are those of
+*Acropora* on the north shore. There the paper predicts 43 colonies per
+10 m² on LTER 1 and 27 on LTER 2, against 32 and 21 here; the observed
+means of 2015 are 25 and 16. Elsewhere the z-scores mostly agree to a
+few tenths. Both models over-predict *Pocillopora* and *Porites* on LTER
+1 and under-predict *Acropora* on LTER 5. As written, 19 of the 24
+predictions fall inside the observed 95% interval, against 18 published;
+calibrated, 17, because the calibrated reading over-predicts the
+*Pocillopora* of the north shore more than the paper does. The direction
+of change agrees with Fig. S7 in all but a few cases, listed above. As
+written, these are populations that the paper predicts barely change.
+Calibrated, the north-shore *Pocillopora* also grows where the paper’s
+shrinks. So the mismatch is the one found before: the published model’s
+*Acropora* responds more strongly to its own density than in either
+reading.
+
+The size distributions of Fig. S6 and their changes (Fig. S8) are
+compared through the Kolmogorov-Smirnov distance between the predicted
+and observed distributions of 2015, and through the change in the mean
+size z from 2013 to 2015. The observed distributions here are the binned
+counts, not smoothed; the assemblage pools the three genera by colonies
+per 10 m².
+
+``` julia
+figS6 = Dict(:lter1 => [0.07, 0.58, 0.25, 0.21], :lter2 => [0.05, 0.43, 0.19, 0.26],
+             :lter4 => [0.35, 0.22, 0.50, 0.68], :lter5 => [0.18, 0.15, 0.27, 0.16])   # D: assemblage, Acr, Poc, Por
+ks(a, b) = maximum(abs.(cumsum(a) ./ sum(a) .- cumsum(b) ./ sum(b)))
+mean_size(w) = sum(w .* z) / sum(w)
+groups(s) = (sum(s[t] for t in taxa), (s[t] for t in taxa)...)
+D = Dict{Tuple{Symbol, Symbol}, Vector{Float64}}()
+shift = Dict{Tuple{Symbol, Symbol}, Vector{Float64}}()
+for r in reefs
+    o13, o15 = groups(Dict(coral_observed_state(r, 2013))), groups(Dict(coral_observed_state(r, 2015)))
+    shift[(r, :observed)] = [mean_size(b) - mean_size(a) for (a, b) in zip(o13, o15)]
+    for reading in (:as_written, :calibrated)
+        c, u = predicted2015(r, reading)
+        p = groups(species_states(c, u))
+        D[(r, reading)] = [ks(x, y) for (x, y) in zip(p, o15)]
+        shift[(r, reading)] = [mean_size(b) - mean_size(a) for (a, b) in zip(o13, p)]
+    end
+end
+f2(v) = join([@sprintf("%4.2f", x) for x in v], " ")
+f3(v) = join([@sprintf("%5.2f", x) for x in v], " ")
+println("D, 2015: assemblage, Acropora, Pocillopora, Porites")
+println("reef    Fig. S6               as written            calibrated")
+for r in reefs
+    @printf("%-6s  %s   %s   %s\n", r, f2(figS6[r]), f2(D[(r, :as_written)]), f2(D[(r, :calibrated)]))
+end
+println("\nchange in mean z, 2013 to 2015: assemblage, Acropora, Pocillopora, Porites")
+println("reef    observed                 as written               calibrated")
+for r in reefs
+    @printf("%-6s  %s   %s   %s\n", r, f3(shift[(r, :observed)]), f3(shift[(r, :as_written)]), f3(shift[(r, :calibrated)]))
+end
+```
+
+    D, 2015: assemblage, Acropora, Pocillopora, Porites
+    reef    Fig. S6               as written            calibrated
+    lter1   0.07 0.58 0.25 0.21   0.22 0.50 0.29 0.26   0.16 0.47 0.17 0.27
+    lter2   0.05 0.43 0.19 0.26   0.24 0.28 0.26 0.24   0.14 0.25 0.14 0.25
+    lter4   0.35 0.22 0.50 0.68   0.54 0.17 0.61 0.51   0.45 0.15 0.49 0.55
+    lter5   0.18 0.15 0.27 0.16   0.36 0.09 0.45 0.21   0.21 0.19 0.24 0.22
+
+    change in mean z, 2013 to 2015: assemblage, Acropora, Pocillopora, Porites
+    reef    observed                 as written               calibrated
+    lter1    0.61  0.38  0.70  0.44    0.94 -0.11  1.06  0.77    0.75 -0.03  0.76  0.79
+    lter2    0.59  0.36  0.66  0.33    0.92  0.13  1.03  0.58    0.62  0.20  0.64  0.60
+    lter4    0.42  0.21  0.44  0.29    1.14  0.08  1.29  0.60    0.98  0.16  1.08  0.69
+    lter5    0.35  0.02  0.30  0.50    0.89  0.04  1.01  0.66    0.65  0.23  0.66  0.67
+
+For the three genera, the distances here are within 0.18 of Fig. S6 in
+both readings. They pick out the same poor fits as the paper: *Acropora*
+on LTER 1, and *Pocillopora* and *Porites* on LTER 4, have the three
+largest distances in the paper and in both readings. For the assemblage
+they do not agree. The paper’s distances are 0.07 and 0.05 on the north
+shore, although its *Pocillopora* and *Porites*, which make up nearly
+all the colonies, are each 0.19 to 0.26 away and both predicted too
+large. Here the assemblage is about as far from the observation as its
+two main genera are. How the paper pooled the assemblage is not stated.
+
+The changes in mean size have the pattern of Fig. S8. The model grows
+*Pocillopora* and *Porites* more than observed on every reef (as
+written; calibrated on all but *Pocillopora* of LTER 2), most of all
+*Pocillopora* on LTER 4, as in Fig. S8k. On LTER 1 the observed
+*Acropora* grew, but the predicted *Acropora* does not. In Fig. S8e the
+predicted change is also much weaker than the observed one. The figure
+below draws the changes as Fig. S8 does: the predicted distribution of
+2015 minus the observed one of 2013, against the observed change. Each
+is a density in z scaled to one, and the observed counts are smoothed
+with a normal kernel of standard deviation 0.1 in z for this figure
+only.
+
+``` julia
+smooth(w) = [sum(w .* exp.(-((z .- x) ./ 0.1) .^ 2 ./ 2)) for x in z]
+scaled(w) = w ./ (sum(w) * step_size(coral_stage()))
+panels = []
+for r in reefs
+    o13, o15 = groups(Dict(coral_observed_state(r, 2013))), groups(Dict(coral_observed_state(r, 2015)))
+    pw, pc = groups(species_states(predicted2015(r, :as_written)...)), groups(species_states(predicted2015(r, :calibrated)...))
+    for (k, (name, colour)) in enumerate(zip(("Assemblage", "Acropora", "Pocillopora", "Porites"), (:black, :blue, :red, :green)))
+        base = scaled(smooth(o13[k]))
+        p = plot(; xscale = :log10, xlims = (0.1, 1e5), ylims = (-1.6, 1.6), legend = false, titlefontsize = 9,
+                 title = "$(uppercase(String(r))), $name", xlabel = r === :lter5 ? "Colony area (cm²)" : "")
+        hline!(p, [0]; color = :grey, lw = 0.5)
+        plot!(p, area[2:end], (scaled(smooth(o15[k])) .- base)[2:end]; color = colour, lw = 2)
+        plot!(p, area[2:end], (scaled(pw[k]) .- base)[2:end]; color = colour, ls = :dash)
+        plot!(p, area[2:end], (scaled(pc[k]) .- base)[2:end]; color = colour, ls = :dot)
+        push!(panels, p)
+    end
+end
+plot(panels...; layout = (4, 4), size = (900, 800))
+```
+
+![](19_corals_moorea_files/figure-commonmark/cell-18-output-1.svg)
+
+Solid lines are the observed change, dashed the prediction as written
+and dotted the calibrated one. The y-axis is per unit z, which above a
+few cm² is a decade of area; the paper does not say how its densities
+are scaled, so the heights are comparable with Fig. S8’s only roughly.
+The curves have the shapes of Fig. S8, panel by panel, including the
+large observed swing of LTER 1 *Acropora* that neither prediction
+follows. The jagged observed curves of LTER 4 *Porites* rest on 15
+colonies in 2013 and 7 in 2015.
+
 ## Forty years from empty reef
 
 Back to the runs from empty reef: the projection below continues them
@@ -558,7 +811,7 @@ end
 plot!()
 ```
 
-![](19_corals_moorea_files/figure-commonmark/cell-15-output-1.svg)
+![](19_corals_moorea_files/figure-commonmark/cell-19-output-1.svg)
 
 ``` julia
 for r in reefs
@@ -604,6 +857,10 @@ no limit; the cap is part of the model, not of the reef.
 | The recruitment cap reached only by north-shore *Acropora*, by 2020 (Appendix S3) | no: highest *Acropora* recruitment 158 (as written) or 6 (calibrated) |
 | Elasticities from the observed assemblages, LTER 1, as written (Tables S3, S4): survival, growth, recruit size | within 0.11 (S3); within 0.06 for *Pocillopora* and *Porites*, 0.28 for *Acropora* (S4) |
 | Elasticities to recruitment, same runs | in part: *Acropora* 1.4 to 2.5 times smaller; *Pocillopora* near zero against 0.03 to 0.13 |
+| z-scores of the predicted 2015 abundances against the observed (Fig. S5), 24 values | as written within 3.3 (colonies) and 2.1 (summed sizes), the largest for north-shore *Acropora*; calibrated within 4.7 |
+| Direction of change 2013-2015 of the predicted abundances (Fig. S7) | in part: as written 22 of 24 as published, calibrated 20 of 24 |
+| Kolmogorov-Smirnov distances between predicted and observed size distributions, 2015 (Fig. S6) | for the genera within 0.18 in both readings, with the same three worst fits; not for the assemblage |
+| Change in size distributions 2013-2015 (Fig. S8, no numbers printed) | the same pattern: *Pocillopora* and *Porites* grow more than observed, north-shore *Acropora* less |
 
 ## What is measured and what is assumed
 
@@ -655,9 +912,14 @@ no limit; the cap is part of the model, not of the reef.
   *Acropora*, responded more strongly than in either reading.
 - The observed states come from revision 5 of the MCR LTER data (2022).
   Their shares match those printed for 2013 and 2015 except on LTER 4 in
-  2015, perhaps because the paper used an earlier revision. Fig. S5 to
-  S8 (densities, size distributions and their changes) were not
-  compared.
+  2015, perhaps because the paper used an earlier revision. The same
+  revision gives the observed means and standard errors behind the
+  z-scores of Fig. S5 compared here; those of the paper may differ
+  slightly.
+- The distances between the size distributions of the whole assemblage
+  in Fig. S6 (0.05 to 0.35) are not reproduced (0.14 to 0.54 here),
+  although those of the three genera are; how the paper pooled the
+  genera is not stated.
 - Values read from the figures (Fig. S2) are approximate, to a few
   colonies.
 
@@ -679,7 +941,8 @@ are from the MCR LTER data package knb-lter-mcr.4009, revision 5,
 released under CC BY 4.0 (Moorea Coral Reef LTER et al. 2022). Only the
 colonies of 2013 and 2015 on the fore reefs, binned onto the model’s
 mesh, are included in the package
-(`data/corals/mcr_lter_observed_colonies.csv`);
+(`data/corals/mcr_lter_observed_colonies.csv`), and totalled by transect
+(`data/corals/mcr_lter_observed_transects.csv`);
 `data/corals/LICENSE.txt` gives the changes made. The parameters are the
 published values of Table S1, typed into
 `data/corals/kayal2018_table_s1.csv`; no file of the authors is included

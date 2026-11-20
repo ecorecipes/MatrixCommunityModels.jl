@@ -1,6 +1,6 @@
 # Plants and trees
 
-Integral projection models of thistles, forest trees, sagebrush steppe and grasslands.
+Integral projection models of thistles, forest trees, sagebrush steppe and grasslands, and matrix models of annual plants with a seed bank.
 
 ## Thistles and a weevil
 
@@ -28,4 +28,11 @@ Pages = ["src/sagebrush.jl"]
 ```@autodocs
 Modules = [MatrixCommunityModels]
 Pages = ["src/grasslands.jl"]
+```
+
+## Annual plants with a seed bank
+
+```@autodocs
+Modules = [MatrixCommunityModels]
+Pages = ["src/annualplants.jl"]
 ```

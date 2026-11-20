@@ -280,7 +280,8 @@ include("lemans.jl")
 export lemans_parameters, lemans_fish, lemans_community, lemans_state, lemans_environment, lemans_biomass,
        lemans_predation, LEMANS_NORTH_SEA
 include("corals.jl")
-export coral, coral_stage, coral_community, coral_recruits, coral_observed_state, CORAL_PARAMETERS, CORAL_RECRUITMENT_CAP
+export coral, coral_stage, coral_community, coral_recruits, coral_observed_state, coral_observed_transects, CORAL_PARAMETERS,
+       CORAL_RECRUITMENT_CAP
 include("grasslands.jl")
 export grassland_plant, grassland_community, grassland_state, synchrony, GRASSLAND_PARAMETERS
 include("tribolium.jl")
@@ -296,5 +297,10 @@ export CHYTRID_SITES, CHYTRID_ZOOSPORE_SURVIVAL, chytrid_temperature, chytrid_en
 include("mizer.jl")
 export MIZER_NORTH_SEA, mizer_parameters, mizer_fish, mizer_resource, mizer_community, mizer_state,
        mizer_environment, mizer_biomass, mizer_rates
+include("annualplants.jl")
+export ANNUAL_PLANTS_GODOY_2014, annual_plant, annual_plant_community, annual_plant_state, annual_plant_alphas,
+       annual_plant_eta, annual_plant_pairs
+include("waterfowl.jl")
+export WATERFOWL_GIBSON_2025, waterfowl_duck, waterfowl_community, waterfowl_environment, waterfowl_ltre
 
 end # module MatrixCommunityModels

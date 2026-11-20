@@ -1,6 +1,6 @@
 # Three coral genera of Mo'orea, the open-population IPM of Kayal et al. (2018), compared with the authors' kernel
 # functions run in R (test/reference/R/run_coral_reference.R) and with the published simulations (Fig. 3, Fig. S2
-# and Fig. S4 of the paper, read from the figures).
+# and Fig. S4 of the paper, read from the figures), and with the observed transects (Figs. S5 to S8).
 using LinearAlgebra
 
 coral_reference(file) = [split(l, ",") for l in readlines(joinpath(@__DIR__, "reference", file))[2:end]]
@@ -257,6 +257,92 @@ coral_reference(file) = [split(l, ",") for l in readlines(joinpath(@__DIR__, "re
         @test all(1.3 .< table_s3[6:7, 1] ./ E3[6:7, 1] .< 2.6) && all(1.3 .< table_s4[6:7, 1] ./ E4[6:7, 1] .< 2.6)
         @test argmax(E4) == argmax(table_s4) == CartesianIndex(7, 1)
         @test maximum(E3[6:7, 2]) < 0.01 && maximum(E4[6:7, 2]) < 0.01
+    end
+
+    @testset "2015 from observed 2013 (Figs. S5 to S8)" begin
+        # Per-transect totals (data/corals/mcr_lter_observed_transects.csv): four transects per reef and year, adding
+        # up to the binned state
+        size4 = (acropora = (1.2, 0.4), pocillopora = (0.6, 0.2), porites = (0.6, 0.2))
+        avg(x) = sum(x) / length(x)
+        se(x) = sqrt(sum(abs2, x .- avg(x)) / (length(x) - 1) / length(x))
+        for r in (:lter1, :lter2, :lter4, :lter5), year in (2013, 2015)
+            o, s = coral_observed_transects(r, year), Dict(coral_observed_state(r, year))
+            @test keys(o) == taxa && all(length(o[t].colonies) == length(o[t].log_size) == 4 for t in taxa)
+            @test all(avg(o[t].colonies) ≈ sum(s[t]) for t in taxa)
+        end
+        o = coral_observed_transects(:lter1, 2015).pocillopora
+        o.colonies[1] = -1.0
+        @test coral_observed_transects(:lter1, 2015).pocillopora.colonies[1] == 610   # a copy
+        @test_throws ArgumentError coral_observed_transects(:lter1, 2014)
+        # LTER 1 Pocillopora 2015, as vignette 19 prints it: 537.5 (51.2) colonies, 1264.2 (129.0) summed z; 95% interval
+        # (t, 3 degrees of freedom) 375 to 700, against about 375 to 695 on Fig. S5a
+        o = coral_observed_transects(:lter1, 2015).pocillopora
+        @test avg(o.colonies) == 537.5 && abs(se(o.colonies) - 51.2) <= 0.05 &&            # 51.17
+              abs(avg(o.log_size) - 1264.2) <= 0.05 && abs(se(o.log_size) - 129.0) <= 0.05  # 1264.17, 128.97
+        @test abs(avg(o.colonies) - 3.182446 * se(o.colonies) - 375) < 1 && abs(avg(o.colonies) + 3.182446 * se(o.colonies) - 700) < 1
+
+        # z-scores (predicted - observed mean) / standard error, Acr Poc Por by reef (rows LTER 1, 2, 4, 5): printed on
+        # Fig. S5a (colonies) and S5b (summed z), and as vignette 19 prints them here
+        reefs4 = (:lter1, :lter2, :lter4, :lter5)
+        s5a = [4.9 2.6 1.8; 6.5 1.9 -0.4; -0.9 0.2 0.7; -4.7 -1.2 -1.2]
+        s5b = [2.3 4.1 3.3; 3.1 2.7 0.0; -1.1 2.2 1.9; -4.3 -0.2 -0.9]
+        printed = Dict((:as_written, :colonies) => [1.9 2.3 1.6; 3.2 1.3 -0.4; -1.1 -0.2 0.2; -4.3 -1.9 -0.8],
+                       (:as_written, :log_size) => [0.2 4.0 3.4; 2.0 2.3 0.0; -1.3 2.6 0.9; -4.1 -0.6 -0.6],
+                       (:calibrated, :colonies) => [0.7 5.2 1.5; 1.8 3.3 -0.4; -1.3 0.8 -0.2; -4.8 -0.9 -0.9],
+                       (:calibrated, :log_size) => [-0.6 5.2 3.4; 1.1 3.3 0.0; -1.5 3.2 0.8; -4.4 -0.1 -0.6])
+        s6 = [0.07 0.58 0.25 0.21; 0.05 0.43 0.19 0.26; 0.35 0.22 0.50 0.68; 0.18 0.15 0.27 0.16]
+        printed_D = Dict(:as_written => [0.22 0.50 0.29 0.26; 0.24 0.28 0.26 0.24; 0.54 0.17 0.61 0.51; 0.36 0.09 0.45 0.21],
+                         :calibrated => [0.16 0.47 0.17 0.27; 0.14 0.25 0.14 0.25; 0.45 0.15 0.49 0.55; 0.21 0.19 0.24 0.22])
+        ks(a, b) = maximum(abs.(cumsum(a) ./ sum(a) .- cumsum(b) ./ sum(b)))
+        zmesh = meshpoints(coral_stage())
+        mean_z(w) = sum(w .* zmesh) / sum(w)
+        groups(s) = (sum(s[t] for t in taxa), (s[t] for t in taxa)...)
+        for reading in (:as_written, :calibrated)
+            Z = Dict(w => zeros(4, 3) for w in (:colonies, :log_size))
+            D, shift_here, shift_seen, same = zeros(4, 4), zeros(4, 4), zeros(4, 4), 0
+            for (i, r) in enumerate(reefs4)
+                c = coral_community(r; reading, recruit_size = size4)
+                u = project(c, coral_observed_state(r, 2013), fill(nothing, 2)).u[end, :]
+                p = pool_totals(c, u, nothing)
+                o13, o15 = coral_observed_transects(r, 2013), coral_observed_transects(r, 2015)
+                for w in (:colonies, :log_size), (j, t) in enumerate(taxa)
+                    x15, x13, here = getproperty(o15[t], w), getproperty(o13[t], w), getproperty(p, Symbol(t, :_, w))
+                    Z[w][i, j] = (here - avg(x15)) / se(x15)
+                    # Fig. S7: the published prediction, observed mean + z standard errors, on the same side of 2013
+                    paper = avg(x15) + (w === :colonies ? s5a : s5b)[i, j] * se(x15)
+                    same += sign(here - avg(x13)) == sign(paper - avg(x13))
+                end
+                g13, g15 = groups(Dict(coral_observed_state(r, 2013))), groups(Dict(coral_observed_state(r, 2015)))
+                g = groups(species_states(c, u))
+                D[i, :] = [ks(a, b) for (a, b) in zip(g, g15)]
+                shift_here[i, :] = [mean_z(b) - mean_z(a) for (a, b) in zip(g13, g)]
+                shift_seen[i, :] = [mean_z(b) - mean_z(a) for (a, b) in zip(g13, g15)]
+            end
+            for w in (:colonies, :log_size)
+                @test maximum(abs.(Z[w] .- printed[(reading, w)])) <= 0.05 + 1e-9
+            end
+            @test maximum(abs.(D .- printed_D[reading])) <= 0.005 + 1e-9
+            gap = max(maximum(abs.(Z[:colonies] .- s5a)), maximum(abs.(Z[:log_size] .- s5b)))
+            inside = count(<=(3.182446), abs.([Z[:colonies]; Z[:log_size]]))
+            # the three worst fits of the genera in Fig. S6 (LTER 1 Acropora, LTER 4 Pocillopora and Porites) are the
+            # three worst here; for the genera, D within 0.19 of Fig. S6 (0.183 as written, 0.181 calibrated)
+            worst3(M) = Set(partialsortperm(vec(M[:, 2:4]), 1:3; rev = true))
+            @test worst3(D) == worst3(s6) && maximum(abs.(D[:, 2:4] .- s6[:, 2:4])) < 0.19
+            # Fig. S8: Pocillopora and Porites predicted to grow more than observed (all eight as written; calibrated all
+            # but LTER 2 Pocillopora, 0.64 against 0.66); LTER 1 Acropora observed to grow (0.38) but not predicted to
+            @test shift_here[1, 2] < 0 < shift_seen[1, 2]
+            if reading === :as_written
+                @test gap < 3.3          # largest difference from Fig. S5: LTER 2 Acropora colonies, 3.27
+                @test maximum(abs.(Z[:log_size] .- s5b)) < 2.15          # 2.10
+                @test inside == 19 && same == 22                          # Fig. S5: 18 of 24 inside
+                @test all(shift_here[:, 3:4] .> shift_seen[:, 3:4])
+            else
+                @test gap < 4.7          # LTER 2 Acropora colonies, 4.65
+                @test inside == 17 && same == 20
+                @test count(shift_here[:, 3:4] .> shift_seen[:, 3:4]) == 7
+            end
+        end
+        @test count(<=(3.182446), abs.([s5a; s5b])) == 18
     end
     BLAS.set_num_threads(threads)
 end

@@ -97,6 +97,16 @@ simulation loop.
   step written exactly as a projection matrix of each species, predation through pools
   with a value for each of 1200 predator classes; mizer's runs and steady states are
   reproduced to rounding.
+- Eighteen California annual plants with a seed bank (`annual_plant_community`; Godoy,
+  Kraft & Levine 2014): seeds and germinants of each species coupled by crowding pools of
+  germinants weighted by the interaction coefficients; the niche overlap, fitness ratio and
+  predicted outcome of all 153 pairs, checked against the paper's equations run in R.
+- Canvasbacks and redheads, two diving ducks of the Prairie Pothole Region
+  (`waterfowl_community`; Gibson et al. 2025): yearling and older females and males of each,
+  driven year by year by the posterior means of the authors' integrated population model,
+  checked against the authors' process equations and stored posterior draws; an extension
+  joins fecundity to pools of both species' breeding females (conspecific density and the
+  canvasback-to-redhead ratio of nest parasitism).
 
 ## Installation
 
@@ -148,6 +158,8 @@ sol[:CACL]                                  # biomass by year and stage
 | 24 | [Chytrid fungus in leopard frogs](vignettes/24_chytrid_leopard_frogs/24_chytrid_leopard_frogs.md) ([PDF](vignettes/24_chytrid_leopard_frogs/24_chytrid_leopard_frogs.pdf)) | The full host-parasite IPM of Wilber et al. (2022): Bd load as the trait, a zoospore component joined by pools, seasonal temperature and breeding at four locations, checked against the authors' Python code; persistence with demographic stochasticity |
 | 25 | [A size-spectrum fish community](vignettes/25_size_spectrum_mizer/25_size_spectrum_mizer.md) ([PDF](vignettes/25_size_spectrum_mizer/25_size_spectrum_mizer.pdf)) | The North Sea model of the R package mizer, its implicit upwind step written as a projection matrix, checked against mizer's runs and steady states; fishing, the size spectrum and a comparison with LeMans |
 | 26 | [Resilience metrics](vignettes/26_resilience/26_resilience.md) ([PDF](vignettes/26_resilience/26_resilience.pdf)) | ResilienceCore.jl on matrix communities: a reactive beetle equilibrium, the stability of cycles on the way to chaos, presses and removals in competing beetles and in riparian guilds under a constant flood regime |
+| 28 | [Canvasbacks and redheads](vignettes/28_canvasbacks_redheads/28_canvasbacks_redheads.md) ([PDF](vignettes/28_canvasbacks_redheads/28_canvasbacks_redheads.pdf)) | The process model of a two-species integrated population model of diving ducks, run on the posterior-mean yearly rates and checked against the authors' equations, stored draws and transient LTRE; a closed-loop extension through pools of breeding females |
+| 29 | [Annual plants with a seed bank](vignettes/29_annual_plants/29_annual_plants.md) ([PDF](vignettes/29_annual_plants/29_annual_plants.pdf)) | Eighteen annual plants of Godoy et al. (2014) as two-stage nets joined by crowding pools; niche and fitness differences of all pairs, predicted and simulated outcomes, and competitive ranks, checked against the paper's equations in R |
 
 ## Status
 
@@ -191,6 +203,9 @@ analysis, not the reduced IPM they fit (see vignette 24).
 The mizer model takes its equations, default scheme and North Sea parameters from the R
 package mizer 3.4.0 and reproduces its runs; mizer's optional second-order methods are not
 written (see vignette 25).
+The annual plant model takes its vital rates and interaction coefficients from the authors'
+figshare deposit, which do not reproduce the paper's counts of coexisting pairs (10 here, 12
+printed), and whose seed production differs from the paper's Table 3 (see vignette 29).
 
 The tests (`Pkg.test()`, about seven minutes) compare the models with the authors' code and
 published values. Checks that need long runs or ensembles (`test/long`: the five grassland
@@ -202,7 +217,7 @@ main suite. They also run every week on GitHub Actions (`LongTests.yml`).
 ## Data and licences
 
 The package is under mixed licences: the code and most data are MIT, two data
-directories, `data/lemans` and `data/mizer`, are GPL-3, and one file of `data/corals` is CC BY 4.0 (see below). `data/verde_fish` is from Rogosch et al. (2019),
+directories, `data/lemans` and `data/mizer`, are GPL-3, and two files of `data/corals` are CC BY 4.0 (see below). `data/verde_fish` is from Rogosch et al. (2019),
 <https://doi.org/10.5281/zenodo.1309024> (MIT). `data/riparian/maybell.csv` is from
 Lytle et al. (2017), <https://doi.org/10.6084/m9.figshare.4652608> (CC BY 4.0), with
 line endings converted. `data/cypripedium` holds matrices estimated with the R packages
@@ -221,10 +236,11 @@ not MIT; their provenance and licence are in `data/lemans/LICENSE.txt`.
 `data/corals` holds the parameter estimates of Table S1 of Kayal et al. (2018), typed from
 the paper's Supporting Information; the authors' R code carries no licence and is not
 included. `data/corals/mcr_lter_observed_colonies.csv` holds the coral colonies observed in 2013
-and 2015, binned by size, derived from MCR LTER data on the Environmental Data Initiative
+and 2015, binned by size, and `data/corals/mcr_lter_observed_transects.csv` the same colonies
+totalled by transect, both derived from MCR LTER data on the Environmental Data Initiative
 (knb-lter-mcr.4009.5, <https://doi.org/10.6073/pasta/322a76c6f197bfac60c91d66a3e96fb5>,
-**CC BY 4.0**, <https://creativecommons.org/licenses/by/4.0/>). That file is under the same
-licence; the changes made are listed in `data/corals/LICENSE.txt`.
+**CC BY 4.0**, <https://creativecommons.org/licenses/by/4.0/>). Those two files are under the
+same licence; the changes made are listed in `data/corals/LICENSE.txt`.
 `test/reference/coral_*.csv` were produced by running the authors' kernel functions, read at run time.
 `data/grasslands` holds the fitted parameters of Tredennick et al. (2017), written out from
 <https://github.com/atredennick/community_synchrony>, whose DESCRIPTION says "License: MIT"
@@ -246,3 +262,15 @@ parameter values of Wilber et al. (2022), taken from the authors' code
 (<https://doi.org/10.5281/zenodo.6407088>), which carries no licence file (its Zenodo
 record says "other-open"); none of that code is copied, and
 `test/reference/chytrid_*.csv` were produced by running it.
+`data/annual_plants` holds the vital rates and interaction coefficients of Godoy, Kraft &
+Levine (2014), from the authors' figshare deposit (<https://doi.org/10.6084/m9.figshare.4793488>,
+CC0) with line endings converted, and the common competitive effects and responses of the
+paper's Appendix S2, Table 2, typed from the paper; see `data/annual_plants/LICENSE.txt`.
+`test/reference/annualplants_*.csv` were produced by `test/reference/R/run_annualplants_reference.R`,
+which writes the paper's equations in base R.
+`data/waterfowl` holds posterior means and data summaries derived from the Dryad dataset of
+Gibson et al. (2025) (<https://doi.org/10.5061/dryad.hqbzkh1n9>, CC0); the files here are CC0
+too, and the changes are listed in `data/waterfowl/LICENSE.txt`. The model equations and the
+LTRE of `src/waterfowl.jl` follow the authors' code (<https://doi.org/10.5281/zenodo.8076163>,
+MIT; its notice is in `data/waterfowl/LICENSE.txt`), and `test/reference/waterfowl_*.csv`
+were produced by evaluating it, read at run time.

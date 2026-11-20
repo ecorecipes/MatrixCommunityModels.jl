@@ -19,7 +19,8 @@
 # See `coral`.
 #
 # The parameters are read from data/corals, typed from Table S1; the colonies observed in 2013 and 2015, from which the
-# paper's updated runs start (`coral_observed_state`), are binned from MCR LTER data (CC BY 4.0). See
+# paper's updated runs start (`coral_observed_state`), are binned from MCR LTER data (CC BY 4.0), and also totalled by
+# transect (`coral_observed_transects`). See
 # data/corals/LICENSE.txt.
 
 const _CORAL_TAXA = (acropora = "Acr", pocillopora = "Poc", porites = "Por")
@@ -219,6 +220,43 @@ function coral_observed_state(reef::Symbol, year::Integer)
     year in _CORAL_YEARS || throw(ArgumentError("no observed state for $year; expected one of $(join(_CORAL_YEARS, ", "))"))
     observed = _CORAL_OBSERVED[(reef, year)]
     return [taxon => copy(getproperty(observed, taxon)) for taxon in keys(_CORAL_TAXA)]
+end
+
+function _coral_transects(file)
+    lines = [split(l, ",") for l in readlines(file)]
+    header, rows = lines[1], lines[2:end]
+    col(name) = findfirst(==(name), header)
+    code = Dict(v => k for (k, v) in pairs(_CORAL_TAXA))
+    reef_of = Dict(v => k for (k, v) in pairs(_CORAL_REEFS))
+    out = Dict((r, y) => NamedTuple{keys(_CORAL_TAXA)}(Tuple((colonies = Float64[], log_size = Float64[]) for _ in _CORAL_TAXA))
+               for r in keys(_CORAL_REEFS), y in _CORAL_YEARS)
+    for row in rows
+        reef, year = reef_of[parse(Int, row[col("reef")])], parse(Int, row[col("year")])
+        t = getproperty(out[(reef, year)], code[row[col("taxon")]])
+        scale = 10 / parse(Float64, row[col("sampled_area_m2")])
+        push!(t.colonies, parse(Int, row[col("colonies")]) * scale)
+        push!(t.log_size, parse(Float64, row[col("sum_log_size")]) * scale)
+    end
+    return out
+end
+
+const _CORAL_TRANSECTS = _coral_transects(joinpath(DATA_DIR, "corals", "mcr_lter_observed_transects.csv"))
+
+"""
+    coral_observed_transects(reef, year)
+
+The colonies of [`coral_observed_state`](@ref) totalled by transect: for each genus
+(`:acropora`, `:pocillopora`, `:porites`), a `NamedTuple` of `colonies` (colonies per
+10 m²) and `log_size` (summed sizes z per 10 m²), each a vector with one entry for each of the
+four transects mapped on `reef` in `year` (2013 or 2015). Their means are the observed
+abundances of Figs. S2, S5 and S7 of Kayal et al. (2018), and their standard errors those
+behind the figures' confidence intervals and z-scores.
+"""
+function coral_observed_transects(reef::Symbol, year::Integer)
+    _coral_check("reef", reef, keys(_CORAL_REEFS))
+    year in _CORAL_YEARS || throw(ArgumentError("no observed transects for $year; expected one of $(join(_CORAL_YEARS, ", "))"))
+    t = _CORAL_TRANSECTS[(reef, year)]
+    return map(x -> (colonies = copy(x.colonies), log_size = copy(x.log_size)), t)
 end
 
 """
