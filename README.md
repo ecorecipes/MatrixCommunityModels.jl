@@ -46,6 +46,16 @@ simulation loop.
   `periodic_operator` a rare invader over a cycle of environments as a `PeriodicOperator`, and
   `MCMState` the community interface on which ResilienceCore's press, removal and extinction
   experiments run. `jacobian` and `linearise` are ResilienceCore's functions, extended here.
+- Management and decisions: a `ManagedCommunity` gives a community named parameters (a
+  `build` function maps the names to vital rates or matrix entries), an action as plain data
+  (`remove` a share of a stage after each step, `take` a number, `add` a number, change
+  `parameters` or the `environment`) and named outcomes; `project` runs it, deterministic or
+  with demographic stochasticity. With
+  [DecisionAnalysis.jl](https://github.com/ecorecipes/DecisionAnalysis.jl) loaded (a weak
+  dependency, Julia 1.12 or later), an extension gives its adapter verbs methods, so that
+  `outcomes(m, actions, draws; replicates, seed)` runs the community over parameter draws,
+  actions and replicates with common random numbers, ready for payoff tables, decision rules
+  and the value of information.
 - Published models rebuilt and checked against their original implementations: the Verde
   River fish model (identical output), the Yampa River riparian guild model (within 4e-16,
   plus a corrected variant), and the adapt3 Cypripedium community (within 2e-15).
@@ -118,6 +128,14 @@ using Pkg
 Pkg.add(url = "https://github.com/ecorecipes/MatrixCommunityModels.jl")
 ```
 
+The decision-analysis extension (see vignette 30) needs Julia 1.12 or later and two more
+unregistered packages; without them the rest of the package is unaffected:
+
+```julia
+Pkg.add([PackageSpec(url = "https://github.com/ecorecipes/FiniteKernels.jl"),
+         PackageSpec(url = "https://github.com/ecorecipes/DecisionAnalysis.jl")])
+```
+
 ## Quick start
 
 ```julia
@@ -160,6 +178,7 @@ sol[:CACL]                                  # biomass by year and stage
 | 26 | [Resilience metrics](vignettes/26_resilience/26_resilience.md) ([PDF](vignettes/26_resilience/26_resilience.pdf)) | ResilienceCore.jl on matrix communities: a reactive beetle equilibrium, the stability of cycles on the way to chaos, presses and removals in competing beetles and in riparian guilds under a constant flood regime |
 | 28 | [Canvasbacks and redheads](vignettes/28_canvasbacks_redheads/28_canvasbacks_redheads.md) ([PDF](vignettes/28_canvasbacks_redheads/28_canvasbacks_redheads.pdf)) | The process model of a two-species integrated population model of diving ducks, run on the posterior-mean yearly rates and checked against the authors' equations, stored draws and transient LTRE; a closed-loop extension through pools of breeding females |
 | 29 | [Annual plants with a seed bank](vignettes/29_annual_plants/29_annual_plants.md) ([PDF](vignettes/29_annual_plants/29_annual_plants.pdf)) | Eighteen annual plants of Godoy et al. (2014) as two-stage nets joined by crowding pools; niche and fitness differences of all pairs, predicted and simulated outcomes, and competitive ranks, checked against the paper's equations in R |
+| 30 | [Which stage to harvest, and how hard](vignettes/30_harvest_decision/30_harvest_decision.md) ([PDF](vignettes/30_harvest_decision/30_harvest_decision.pdf)) | A managed community and the DecisionAnalysis.jl extension: harvesting the prey of Barraquand & Gimenez (2019) by share or by quota under uncertain vital rates, the decision under several rules, and the value of measuring each rate (illustrative numbers) |
 
 ## Status
 
@@ -207,12 +226,18 @@ The annual plant model takes its vital rates and interaction coefficients from t
 figshare deposit, which do not reproduce the paper's counts of coexisting pairs (10 here, 12
 printed), and whose seed production differs from the paper's Table 3 (see vignette 29).
 
+The harvest decision of vignette 30 uses the published predator-prey model, but its prior,
+harvest rates, horizon and survival study are illustrative and describe no real population.
+
 The tests (`Pkg.test()`, about seven minutes) compare the models with the authors' code and
 published values. Checks that need long runs or ensembles (`test/long`: the five grassland
 sites over 2500 years, the forests on 700 cells, the sagebrush runs and exclusion times, the
 chytrid runs over 529 weeks, the seeded ensembles of the vignettes) are left out unless asked
 for: `MCM_LONG_TESTS=true julia --project -e 'using Pkg; Pkg.test()'` runs them after the
 main suite. They also run every week on GitHub Actions (`LongTests.yml`).
+The DecisionAnalysis.jl extension is tested in an environment of its own
+(`test/decision_analysis`), which `Pkg.test()` runs in a second process on Julia 1.12 or
+later; `MCM_DECISION_TESTS=false` leaves it out.
 
 ## Data and licences
 

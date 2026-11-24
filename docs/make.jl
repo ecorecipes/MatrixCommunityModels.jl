@@ -51,6 +51,7 @@ makedocs(;
                   "API Reference" => ["Composing communities" => "api/communities.md",
                                       "Analysis" => "api/analysis.md",
                                       "Resilience metrics" => "api/resilience.md",
+                                      "Management and decisions" => "api/management.md",
                                       "IPMs and kernels" => "api/kernels.md",
                                       "Published models" => ["Rivers and orchids" => "api/models_rivers.md",
                                                              "Bees and flowers" => "api/models_bees.md",
