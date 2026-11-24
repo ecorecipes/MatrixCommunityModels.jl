@@ -19,6 +19,7 @@ and kernels, and a set of published models.
 module MatrixCommunityModels
 
 using LinearAlgebra
+import Random
 import StructuredPopulationCore
 using StructuredPopulationCore: ContinuousDomain
 import StructuredPopulationCore: meshpoints, step_size, quasi_extinction   # extended here, not redefined
@@ -255,6 +256,9 @@ export periodic_matrix, abundance, stage_total, CommunityEnsemble, ensemble, ext
 
 include("resilience.jl")
 export linearise, periodic_operator, MCMState
+
+include("management.jl")
+export ManagedCommunity, ManagedTrajectory
 
 include("models.jl")
 export verde_fish_model, riparian_model, cypripedium_model, with_rate, VERDE_SPECIES, RIPARIAN_GUILDS

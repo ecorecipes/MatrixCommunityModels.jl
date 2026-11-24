@@ -1,6 +1,8 @@
 [deps]
 CategoricalPopulationDynamics = "04a5e6ed-5bdd-4eeb-ad4c-515b60df3359"
 Catlab = "134e5e36-593f-5add-ad60-77f754baafbe"
+DecisionAnalysis = "6a9d793e-d09c-4461-8cb4-55c12d181024"
+FiniteKernels = "2ee73795-50db-4096-9573-22982ed4949b"
 IntegralProjectionModels = "00376763-44f4-49c9-a075-cdcba60854bb"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MatrixCommunityModels = "c9d7ffd9-8e9b-4c2f-8af4-9cd333236b7e"
@@ -13,7 +15,11 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 StructuredPopulationCore = "33358fd2-7d60-4541-bded-caea801370e0"
 
 [sources]
+CategoricalPopulationDynamics = {url = "https://github.com/ecorecipes/CategoricalPopulationDynamics.jl"}
+DecisionAnalysis = {url = "https://github.com/ecorecipes/DecisionAnalysis.jl"}
+FiniteKernels = {url = "https://github.com/ecorecipes/FiniteKernels.jl"}
 IntegralProjectionModels = {url = "https://github.com/ecorecipes/IntegralProjectionModels.jl"}
 MatrixCommunityModels = {path = ".."}
 MatrixProjectionModels = {url = "https://github.com/ecorecipes/MatrixProjectionModels.jl"}
 ResilienceCore = {url = "https://github.com/ecorecipes/ResilienceCore.jl"}
+StructuredPopulationCore = {url = "https://github.com/ecorecipes/ProjectionModels.jl"}

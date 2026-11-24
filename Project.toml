@@ -14,9 +14,11 @@ ResilienceCore = "e31f93f6-99b1-4a70-b0c5-c402beffe4e1"
 StructuredPopulationCore = "33358fd2-7d60-4541-bded-caea801370e0"
 
 [weakdeps]
+DecisionAnalysis = "6a9d793e-d09c-4461-8cb4-55c12d181024"
 Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
 
 [extensions]
+MatrixCommunityModelsDecisionAnalysisExt = "DecisionAnalysis"
 MatrixCommunityModelsGraphsExt = "Graphs"
 
 [sources]
@@ -29,6 +31,7 @@ StructuredPopulationCore = {url = "https://github.com/ecorecipes/ProjectionModel
 [compat]
 CategoricalPopulationDynamics = "0.1.7"
 Catlab = "0.17"
+DecisionAnalysis = "0.1"
 Graphs = "1"
 IntegralProjectionModels = "0.2"
 LinearAlgebra = "1"

@@ -82,6 +82,11 @@ CategoricalPopulationDynamics.jl, and on Catlab.jl.
   matrix, with predation through pools that hold a value for each of 1200 predator
   classes, checked against mizer's runs and steady states; fishing, the size spectrum and
   a comparison with LeMans.
+- [Which stage to harvest, and how hard](tutorials/30_harvest_decision.md): a managed
+  community (named parameters, an action, named outcomes) and the extension for
+  DecisionAnalysis.jl: a harvest of the prey of Barraquand & Gimenez (2019) by share or by
+  quota under uncertain vital rates, the decision under several rules, and the value of
+  measuring each rate. Every number of the decision problem is illustrative.
 
 Each tutorial is a Quarto vignette, also available as
 [HTML and PDF in the repository](https://github.com/ecorecipes/MatrixCommunityModels.jl/tree/main/vignettes).
