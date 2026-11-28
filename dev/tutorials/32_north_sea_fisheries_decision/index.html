@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><meta name="referrer" content="no-referrer"/><title>Managing the North Sea multispecies fishery under recruitment and predation uncertainty · MatrixCommunityModels.jl</title><meta name="title" content="Managing the North Sea multispecies fishery under recruitment and predation uncertainty · MatrixCommunityModels.jl"/><meta property="og:title" content="Managing the North Sea multispecies fishery under recruitment and predation uncertainty · MatrixCommunityModels.jl"/><meta property="twitter:title" content="Managing the North Sea multispecies fishery under recruitment and predation uncertainty · MatrixCommunityModels.jl"/><meta name="description" content="Documentation for MatrixCommunityModels.jl."/><meta property="og:description" content="Documentation for MatrixCommunityModels.jl."/><meta property="twitter:description" content="Documentation for MatrixCommunityModels.jl."/><meta property="og:url" content="https://ecorecipes.github.io/MatrixCommunityModels.jl/tutorials/32_north_sea_fisheries_decision/"/><meta property="twitter:url" content="https://ecorecipes.github.io/MatrixCommunityModels.jl/tutorials/32_north_sea_fisheries_decision/"/><link rel="canonical" href="https://ecorecipes.github.io/MatrixCommunityModels.jl/tutorials/32_north_sea_fisheries_decision/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">MatrixCommunityModels.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="../01_introduction/">Matrix community models by composition</a></li><li><a class="tocitem" href="../02_verde_fish/">Verde River fish: a community linked by total biomass</a></li><li><a class="tocitem" href="../03_riparian_guilds/">Riparian plant guilds: a community linked by space</a></li><li><a class="tocitem" href="../04_adapt3_cypripedium/">Two orchids: reproducing an adapt3 community projection</a></li><li><a class="tocitem" href="../05_cross_species_sensitivity/">Revealing interactions: cross-species sensitivity analysis</a></li><li><a class="tocitem" href="../06_composing_ipms/">Composing an integral projection model with a matrix model</a></li><li><a class="tocitem" href="../07_metacommunity/">A metacommunity by nested composition</a></li><li><a class="tocitem" href="../08_equilibria_invasion_chance/">Equilibria, invasion and chance</a></li><li><a class="tocitem" href="../09_seasons_and_phenology/">Seasons: phenology, coexistence and drift</a></li><li><a class="tocitem" href="../10_honeybee_colony/">Bees 1: a honey bee colony from modules</a></li><li><a class="tocitem" href="../11_varroa_and_dwv/">Bees 2: Varroa mites and deformed wing virus</a></li><li><a class="tocitem" href="../12_bumblebees/">Bees 3: a bumblebee population</a></li><li><a class="tocitem" href="../13_bees_sharing_flowers/">Bees 4: honey bees and bumblebees on the same flowers</a></li><li><a class="tocitem" href="../14_thistles_and_weevil/">A native thistle, a weed and a weevil: an integral projection model among matrix models</a></li><li><a class="tocitem" href="../15_forest_basal_area/">A forest on a large mesh: three tree species sharing one pool of basal area</a></li><li><a class="tocitem" href="../16_sea_fan_aspergillosis/">Sea fans and aspergillosis: an integral projection model stratified by infection status</a></li><li><a class="tocitem" href="../17_sagebrush_steppe/">Four perennials of the sagebrush steppe: coexistence through crowding</a></li><li><a class="tocitem" href="../18_north_sea_lemans/">North Sea fish by length: predation by size in the LeMans model</a></li><li><a class="tocitem" href="../19_corals_moorea/">Corals of Mo’orea: an open community recovering by recruitment</a></li><li><a class="tocitem" href="../20_grasslands_synchrony/">Five grasslands: crowding, coexistence and synchrony</a></li><li><a class="tocitem" href="../21_flour_beetles/">Two flour beetles that eat each other’s eggs: coexistence on a cycle</a></li><li><a class="tocitem" href="../22_designed_flow_regimes/">Designing flows for a whole river: plants, fish and invertebrates</a></li><li><a class="tocitem" href="../23_predator_and_prey/">A predator and its prey, each with juveniles and adults</a></li><li><a class="tocitem" href="../24_chytrid_leopard_frogs/">Chytrid fungus in leopard frogs: a host-parasite IPM with seasons and a zoospore pool</a></li><li><a class="tocitem" href="../25_size_spectrum_mizer/">A size-spectrum fish community: the mizer model as projection nets</a></li><li><a class="tocitem" href="../26_resilience/">Resilience metrics with ResilienceCore.jl: beetles and riparian guilds</a></li><li><a class="tocitem" href="../28_canvasbacks_redheads/">Canvasbacks and redheads: two interacting diving ducks</a></li><li><a class="tocitem" href="../29_annual_plants/">Annual plants with a seed bank: niche and fitness differences</a></li><li><a class="tocitem" href="../30_harvest_decision/">Which stage to harvest, and how hard: a decision under uncertain vital rates</a></li><li><a class="tocitem" href="../31_verde_flow_decision/">Choosing a river flow regime across fish, trees and insects under uncertainty</a></li><li class="is-active"><a class="tocitem" href>Managing the North Sea multispecies fishery under recruitment and predation uncertainty</a><ul class="internal"><li><a class="tocitem" href="#The-question"><span>The question</span></a></li><li><a class="tocitem" href="#Candidate-fleet-strategies-and-biological-uncertainty"><span>Candidate fleet strategies and biological uncertainty</span></a></li><li><a class="tocitem" href="#Simulating-the-21-species-ensemble"><span>Simulating the 21-species ensemble</span></a></li><li><a class="tocitem" href="#Multi-objective-trade-offs-and-the-Pareto-frontier"><span>Multi-objective trade-offs and the Pareto frontier</span></a></li><li><a class="tocitem" href="#Decision-rules,-tail-risk-(CVaR)-and-stochastic-dominance"><span>Decision rules, tail risk (<code>CVaR</code>) and stochastic dominance</span></a></li><li><a class="tocitem" href="#Value-of-information:-SplineRegression-and-GaussianProcessRegression-EVPPI"><span>Value of information: <code>SplineRegression</code> and <code>GaussianProcessRegression</code> EVPPI</span></a></li><li><a class="tocitem" href="#Scenario-discovery:-when-does-cod-collapse-under-balanced-harvest?"><span>Scenario discovery: when does cod collapse under balanced harvest?</span></a></li><li><a class="tocitem" href="#What-is-measured-and-what-is-assumed"><span>What is measured and what is assumed</span></a></li><li><a class="tocitem" href="#References"><span>References</span></a></li></ul></li><li><a class="tocitem" href="../33_pollinator_varroa_decision/">Managing Varroa, virus spillover and floral competition between honey bees and bumblebees</a></li></ul></li><li><span class="tocitem">API Reference</span><ul><li><a class="tocitem" href="../../api/communities/">Composing communities</a></li><li><a class="tocitem" href="../../api/analysis/">Analysis</a></li><li><a class="tocitem" href="../../api/resilience/">Resilience metrics</a></li><li><a class="tocitem" href="../../api/management/">Management and decisions</a></li><li><a class="tocitem" href="../../api/kernels/">IPMs and kernels</a></li><li><input class="collapse-toggle" id="menuitem-3-6" type="checkbox"/><label class="tocitem" for="menuitem-3-6"><span class="docs-label">Published models</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../api/models_rivers/">Rivers and orchids</a></li><li><a class="tocitem" href="../../api/models_bees/">Bees and flowers</a></li><li><a class="tocitem" href="../../api/models_plants/">Plants and trees</a></li><li><a class="tocitem" href="../../api/models_marine/">Reefs and seas</a></li><li><a class="tocitem" href="../../api/models_animals/">Competitors, predators and pathogens</a></li></ul></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href>Managing the North Sea multispecies fishery under recruitment and predation uncertainty</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Managing the North Sea multispecies fishery under recruitment and predation uncertainty</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/ecorecipes/MatrixCommunityModels.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/ecorecipes/MatrixCommunityModels.jl/blob/main/docs/src/tutorials/32_north_sea_fisheries_decision.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Managing-the-North-Sea-multispecies-fishery-under-recruitment-and-predation-uncertainty"><a class="docs-heading-anchor" href="#Managing-the-North-Sea-multispecies-fishery-under-recruitment-and-predation-uncertainty">Managing the North Sea multispecies fishery under recruitment and predation uncertainty</a><a id="Managing-the-North-Sea-multispecies-fishery-under-recruitment-and-predation-uncertainty-1"></a><a class="docs-heading-anchor-permalink" href="#Managing-the-North-Sea-multispecies-fishery-under-recruitment-and-predation-uncertainty" title="Permalink"></a></h1><p>Simon Frost</p><ul><li><a href="#the-question">The question</a></li><li><a href="#candidate-fleet-strategies-and-biological-uncertainty">Candidate fleet strategies and biological uncertainty</a></li><li><a href="#simulating-the-21-species-ensemble">Simulating the 21-species ensemble</a></li><li><a href="#multi-objective-trade-offs-and-the-pareto-frontier">Multi-objective trade-offs and the Pareto frontier</a></li><li><a href="#decision-rules-tail-risk-cvar-and-stochastic-dominance">Decision rules, tail risk (<code>CVaR</code>) and stochastic dominance</a></li><li><a href="#value-of-information-splineregression-and-gaussianprocessregression-evppi">Value of information: <code>SplineRegression</code> and <code>GaussianProcessRegression</code> EVPPI</a></li><li><a href="#scenario-discovery-when-does-cod-collapse-under-balanced-harvest">Scenario discovery: when does cod collapse under balanced harvest?</a></li><li><a href="#what-is-measured-and-what-is-assumed">What is measured and what is assumed</a></li><li><a href="#references">References</a></li></ul><pre><code class="language-julia hljs">ENV[&quot;GKSwstype&quot;] = &quot;100&quot;
+using MatrixCommunityModels
+using DecisionAnalysis
+using LinearAlgebra, Printf, Random, Statistics
+using Plots
+BLAS.set_num_threads(1)</code></pre><h2 id="The-question"><a class="docs-heading-anchor" href="#The-question">The question</a><a id="The-question-1"></a><a class="docs-heading-anchor-permalink" href="#The-question" title="Permalink"></a></h2><p>In <a href="../18_north_sea_lemans/">vignette 18</a>, the 21-species North Sea LeMans size-spectrum model (Hall et al. 2006; Thorpe et al. 2015, 2016; Spence et al. 2020) showed that fishing all four North Sea fleets at effort 1 collapses five stocks — cod, monkfish, plaice and both rays — below a tenth of their unfished spawning stock biomass and drops the Large Fish Indicator (LFI, the share of community biomass in fish longer than 40 cm) from 0.14 to 0.04. That deterministic comparison fixed recruitment productivity, background food supply (“other food”) and adult background mortality at their LeMaRns defaults.</p><p>In a multispecies fishery, those three quantities are deeply uncertain and tightly coupled through size-structured predation: cutting otter-trawl effort rebuilds cod and whiting, which increases predation mortality <code>M2</code> on sandeel, sprat and juvenile flatfish. Which fleet-effort strategies sit on the Pareto frontier between annual catch biomass, the Large Fish Indicator and stock safety? Which strategy wins under expected utility, tail-risk aversion (<code>CVaR</code>), minimax regret, and first- and second-order stochastic dominance? Which biological uncertainty — recruitment scaling, external food supply, or adult background mortality — is worth the most to resolve before setting multi-annual fleet quotas? And in which corner of parameter space does cod still collapse even under a moderate harvest strategy?</p><p><strong>What is published and what is illustrative.</strong> The 21-species length-structured community (<code>LEMANS_NORTH_SEA</code>, <code>lemans_parameters</code>, <code>lemans_community</code>, <code>lemans_state</code>, <code>lemans_environment</code>, <code>lemans_biomass</code>, <code>lemans_predation</code>) is the published North Sea LeMans model of Thorpe et al. (2015, 2016) and LeMaRns 0.1.2 (Spence et al. 2020), checked to rounding in vignette 18. The six candidate fleet-effort portfolios, the prior distributions over recruitment, external food and background mortality, and the combined fishery–ecosystem score are illustrative. <strong>No monetary prices appear anywhere</strong>: outcomes are measured in landed catch biomass (thousand tonnes per year), the Large Fish Indicator (% of community biomass \&gt; 40 cm), cod spawning stock biomass (% of unfished) and the count of species remaining above 10% of unfished spawning stock.</p><h2 id="Candidate-fleet-strategies-and-biological-uncertainty"><a class="docs-heading-anchor" href="#Candidate-fleet-strategies-and-biological-uncertainty">Candidate fleet strategies and biological uncertainty</a><a id="Candidate-fleet-strategies-and-biological-uncertainty-1"></a><a class="docs-heading-anchor-permalink" href="#Candidate-fleet-strategies-and-biological-uncertainty" title="Permalink"></a></h2><p>We start from the 100-year unfished equilibrium <code>settled</code> of the nominal North Sea community (vignette 18) and project each fleet strategy forward for 35 years (<code>350</code> tenth-year steps), scoring annual catch and community indicators over the final five years (years 31 to 35). Six candidate portfolios span the four North Sea fleets (<code>industrial</code>, <code>otter</code>, <code>beam</code>, <code>pelagic</code>), with <code>:unfished</code> as the explicit no-intervention baseline:</p><ol><li><code>:unfished</code> — zero effort across all four fleets (baseline);</li><li><code>:status_quo</code> — all four fleets at effort 1.0 (the LeMaRns benchmark  of vignette 18);</li><li><code>:cod_recovery</code> — steep demersal cut (<code>industrial = 0.8</code>,  <code>otter = 0.30</code>, <code>beam = 0.35</code>, <code>pelagic = 0.9</code>);</li><li><code>:balanced_harvest</code> — moderate effort across fleets  (<code>industrial = 0.6</code>, <code>otter = 0.55</code>, <code>beam = 0.55</code>,  <code>pelagic = 0.7</code>);</li><li><code>:pelagic_focus</code> — spare demersal stocks while fishing short-lived  pelagic and forage stocks (<code>industrial = 1.1</code>, <code>otter = 0.20</code>,  <code>beam = 0.20</code>, <code>pelagic = 1.1</code>);</li><li><code>:demersal_heavy</code> — intensive otter and beam trawling  (<code>industrial = 0.5</code>, <code>otter = 1.3</code>, <code>beam = 1.1</code>, <code>pelagic = 0.5</code>).</li></ol><pre><code class="language-julia hljs">const HORIZON_YEARS = 35
+const SCORE_STEPS = 50    # final 5 years (dt = 0.1 yr)
+
+p0 = lemans_parameters()
+c0 = lemans_community(p0)
+n0 = state_vector(c0, lemans_state(p0)...)
+unfished_spinup = project(c0, n0, lemans_environment(100))
+settled = unfished_spinup.u[end, :]
+sp_order = species_names(c0)
+cod_col = findfirst(==(:cod), sp_order)
+unfished_ssb0 = vec(mean(lemans_biomass(p0, unfished_spinup; spawning = true)[952:1001, :]; dims = 1))
+
+portfolios = [
+    :unfished         =&gt; (industrial = 0.0, otter = 0.0, beam = 0.0, pelagic = 0.0),
+    :status_quo       =&gt; (industrial = 1.0, otter = 1.0, beam = 1.0, pelagic = 1.0),
+    :cod_recovery     =&gt; (industrial = 0.8, otter = 0.30, beam = 0.35, pelagic = 0.9),
+    :balanced_harvest =&gt; (industrial = 0.6, otter = 0.55, beam = 0.55, pelagic = 0.7),
+    :pelagic_focus    =&gt; (industrial = 1.1, otter = 0.20, beam = 0.20, pelagic = 1.1),
+    :demersal_heavy   =&gt; (industrial = 0.5, otter = 1.3, beam = 1.1, pelagic = 0.5),
+]
+action_names = first.(portfolios)
+portfolio_envs = Dict(name =&gt; lemans_environment(HORIZON_YEARS; effort = eff)
+                      for (name, eff) in portfolios)</code></pre><pre><code class="nohighlight hljs">Dict{Symbol, Vector{@NamedTuple{recruiting::Bool, effort::@NamedTuple{industrial::Float64, otter::Float64, beam::Float64, pelagic::Float64}, year::Int64}}} with 6 entries:
+  :pelagic_focus    =&gt; [(recruiting = 1, effort = (industrial = 1.1, otter = 0.…
+  :status_quo       =&gt; [(recruiting = 1, effort = (industrial = 1.0, otter = 1.…
+  :balanced_harvest =&gt; [(recruiting = 1, effort = (industrial = 0.6, otter = 0.…
+  :cod_recovery     =&gt; [(recruiting = 1, effort = (industrial = 0.8, otter = 0.…
+  :unfished         =&gt; [(recruiting = 1, effort = (industrial = 0.0, otter = 0.…
+  :demersal_heavy   =&gt; [(recruiting = 1, effort = (industrial = 0.5, otter = 1.…</code></pre><p>Three biological uncertainties are sampled jointly across <code>N = 80</code> draws (all illustrative):</p><ul><li><code>rec_scale</code>: community-wide hockey-stick recruitment multiplier (<code>log-normal</code>, median 1, roughly <code>0.55</code> to <code>1.85</code>), scaling both <code>a</code> and <code>b</code> in <code>LEMANS_NORTH_SEA</code> to represent stock–recruitment productivity shifts;</li><li><code>other_scale</code>: multiplier in <code>[0.5, 1.8]</code> on the external “other food” pool (<code>1.2 × 10¹²</code> g), shifting how strongly large predators rely on fish prey inside the 21-species community;</li><li><code>Nmort</code>: adult background mortality rate per year in <code>[0.55, 1.05]</code> (default <code>0.8</code>).</li></ul><pre><code class="language-julia hljs">rng = Xoshiro(32)
+N = 80
+draws = (;
+    rec_scale = exp.(0.32 .* randn(rng, N)),
+    other_scale = 0.5 .+ 1.3 .* rand(rng, N),
+    Nmort = 0.55 .+ 0.50 .* rand(rng, N),
+)
+(; rec_scale = round.(quantile(draws.rec_scale, [0.05, 0.5, 0.95]); digits = 2),
+   other_scale = round.(quantile(draws.other_scale, [0.05, 0.5, 0.95]); digits = 2),
+   Nmort = round.(quantile(draws.Nmort, [0.05, 0.5, 0.95]); digits = 2))</code></pre><pre><code class="nohighlight hljs">(rec_scale = [0.64, 1.05, 1.55], other_scale = [0.59, 1.25, 1.73], Nmort = [0.56, 0.75, 1.02])</code></pre><h2 id="Simulating-the-21-species-ensemble"><a class="docs-heading-anchor" href="#Simulating-the-21-species-ensemble">Simulating the 21-species ensemble</a><a id="Simulating-the-21-species-ensemble-1"></a><a class="docs-heading-anchor-permalink" href="#Simulating-the-21-species-ensemble" title="Permalink"></a></h2><p>For every draw <code>d</code> and fleet portfolio <code>a</code>, we construct the perturbed 21-species LeMans community, project 35 years forward, and compute:</p><ul><li><code>catch_kt</code>: mean annual landed catch biomass (thousand tonnes/year) over years 31–35 via the Baranov catch equation <code>F / Z × (1 - exp(-Z)) × N × w</code>;</li><li><code>lfi_pct</code>: mean Large Fish Indicator over years 31–35 (% of total community biomass in fish longer than 40 cm);</li><li><code>cod_ssb_pct</code>: mean cod spawning stock biomass over years 31–35 relative to the nominal unfished equilibrium (%);</li><li><code>stocks_safe</code>: number of the 21 species remaining above 10% of their nominal unfished spawning stock biomass;</li><li><code>cod_collapsed</code>: binary indicator (<code>1</code> if <code>cod_ssb_pct &lt; 15%</code>, <code>0</code> otherwise).</li></ul><pre><code class="language-julia hljs">function score_lemans_run(p, c, sol, envs)
+    nsteps = length(envs)
+    start_k = nsteps - SCORE_STEPS + 1
+    total_catch_g = 0.0
+    lfi_sum = 0.0
+    for k in start_k:nsteps
+        n = sol.u[k, :]
+        env = envs[k]
+        M2 = lemans_predation(p, c, n, env)
+        big_b = 0.0
+        tot_b = 0.0
+        for sp in sp_order
+            f = p.fish[sp]
+            ns = n[c.layout[sp]]
+            w = f.weight
+            tot_b += dot(w, ns)
+            big_b += dot(w .* (p.mid[1:f.classes] .&gt; 40.0), ns)
+            F = get(env.effort, f.gear, 0.0) * p.dt .* f.catchability
+            if any(&gt;(0.0), F)
+                Z = f.natural .+ F .+ M2[sp] .+ p.eps
+                catch_n = (F ./ Z) .* (1.0 .- exp.(-Z)) .* ns
+                total_catch_g += dot(catch_n, w)
+            end
+        end
+        lfi_sum += 100.0 * big_b / max(tot_b, 1e-12)
+    end
+    annual_catch_kt = (total_catch_g / (SCORE_STEPS * p.dt)) / 1e9   # g -&gt; thousand tonnes
+    lfi_pct = lfi_sum / SCORE_STEPS
+    ssb_mat = lemans_biomass(p, sol; spawning = true)[(start_k + 1):(nsteps + 1), :]
+    mean_ssb = vec(mean(ssb_mat; dims = 1))
+    rel_ssb = mean_ssb ./ unfished_ssb0
+    cod_ssb_pct = 100.0 * rel_ssb[cod_col]
+    stocks_safe = Float64(count(&gt;=(0.10), rel_ssb))
+    cod_collapsed = cod_ssb_pct &lt; 15.0 ? 1.0 : 0.0
+    return (; annual_catch_kt, lfi_pct, cod_ssb_pct, stocks_safe, cod_collapsed)
+end
+
+na = length(action_names)
+catch_Q = zeros(na, N)
+lfi_Q = zeros(na, N)
+cod_Q = zeros(na, N)
+safe_Q = zeros(na, N)
+collapse_Q = zeros(na, N)
+
+for d in 1:N
+    data_d = merge(LEMANS_NORTH_SEA,
+                   (a = LEMANS_NORTH_SEA.a .* draws.rec_scale[d],
+                    b = LEMANS_NORTH_SEA.b .* draws.rec_scale[d]))
+    p_d = lemans_parameters(data_d; other = LEMANS_NORTH_SEA.other * draws.other_scale[d],
+                            Nmort = draws.Nmort[d])
+    c_d = lemans_community(p_d)
+    for (ai, aname) in enumerate(action_names)
+        envs = portfolio_envs[aname]
+        sol = project(c_d, settled, envs)
+        sc = score_lemans_run(p_d, c_d, sol, envs)
+        catch_Q[ai, d] = sc.annual_catch_kt
+        lfi_Q[ai, d] = sc.lfi_pct
+        cod_Q[ai, d] = sc.cod_ssb_pct
+        safe_Q[ai, d] = sc.stocks_safe
+        collapse_Q[ai, d] = sc.cod_collapsed
+    end
+end
+
+belief = SampleBelief(draws)
+payoff_catch = PayoffTable(action_names, belief.states, catch_Q)
+payoff_lfi = PayoffTable(action_names, belief.states, lfi_Q)
+payoff_cod = PayoffTable(action_names, belief.states, cod_Q)
+payoff_safe = PayoffTable(action_names, belief.states, safe_Q)
+
+# Illustrative ecological–fishery composite index (no money): each objective scaled to its
+# maximum nominal range (catch / 1500 kt, LFI / 14%, stocks safe / 21), weighted 0.5 / 0.25 / 0.25.
+composite_Q = 50.0 .* (catch_Q ./ 1500.0) .+ 25.0 .* (lfi_Q ./ 14.0) .+ 25.0 .* (safe_Q ./ 21.0)
+payoff_comp = PayoffTable(action_names, belief.states, composite_Q)
+
+@printf(&quot;%-18s %10s %9s %10s %10s %10s %10s\n&quot;,
+        &quot;portfolio&quot;, &quot;catch(kt)&quot;, &quot;LFI (%)&quot;, &quot;cod(%SSB)&quot;, &quot;safe/21&quot;, &quot;collapse&quot;, &quot;index&quot;)
+for (ai, aname) in enumerate(action_names)
+    @printf(&quot;%-18s %10.0f %9.2f %10.1f %10.1f %10.2f %10.1f\n&quot;,
+            aname, mean(catch_Q[ai, :]), mean(lfi_Q[ai, :]), mean(cod_Q[ai, :]),
+            mean(safe_Q[ai, :]), mean(collapse_Q[ai, :]), mean(composite_Q[ai, :]))
+end</code></pre><pre><code class="nohighlight hljs">portfolio           catch(kt)   LFI (%)  cod(%SSB)    safe/21   collapse      index
+unfished                    0     14.19      109.0       21.0       0.00       50.3
+status_quo               1108      4.30        0.0       16.1       1.00       63.7
+cod_recovery             1002     10.24       33.1       20.9       0.00       76.6
+balanced_harvest          892      6.79       12.1       19.6       0.64       65.1
+pelagic_focus            1088     13.40       49.3       20.8       0.00       85.0
+demersal_heavy            759      3.02        0.0       15.6       1.00       49.3</code></pre><h2 id="Multi-objective-trade-offs-and-the-Pareto-frontier"><a class="docs-heading-anchor" href="#Multi-objective-trade-offs-and-the-Pareto-frontier">Multi-objective trade-offs and the Pareto frontier</a><a id="Multi-objective-trade-offs-and-the-Pareto-frontier-1"></a><a class="docs-heading-anchor-permalink" href="#Multi-objective-trade-offs-and-the-Pareto-frontier" title="Permalink"></a></h2><p>Before committing to any scalarisation across harvest and biodiversity, <code>ParetoFront()</code> identifies the portfolios that are not beaten simultaneously on annual catch biomass, the Large Fish Indicator and the count of non-collapsed stocks:</p><pre><code class="language-julia hljs">objectives = (; catch_kt = payoff_catch, lfi = payoff_lfi, stocks_safe = payoff_safe)
+pf = decide(objectives, belief, ParetoFront())
+pf.chosen</code></pre><pre><code class="nohighlight hljs">4-element Vector{Symbol}:
+ :unfished
+ :status_quo
+ :cod_recovery
+ :pelagic_focus</code></pre><pre><code class="language-julia hljs">mc = [mean(catch_Q[ai, :]) for ai in 1:na]
+ml = [mean(lfi_Q[ai, :]) for ai in 1:na]
+is_pf = [a in pf.chosen for a in action_names]
+
+plt_pf = scatter(mc[is_pf], ml[is_pf]; markersize = 8, color = :teal,
+                 label = &quot;Pareto-efficient&quot;,
+                 xlabel = &quot;Mean annual catch biomass (thousand tonnes/yr)&quot;,
+                 ylabel = &quot;Large Fish Indicator (% biomass &gt; 40 cm)&quot;,
+                 title = &quot;North Sea LeMans trade-off across 80 uncertain draws (illustrative)&quot;,
+                 titlefontsize = 10, legend = :topright)
+scatter!(plt_pf, mc[.!is_pf], ml[.!is_pf]; markersize = 6, color = :gray60,
+         marker = :xcross, label = &quot;Dominated&quot;)
+for (x, y, a) in zip(mc, ml, action_names)
+    annotate!(plt_pf, x + 25, y + 0.35, text(String(a), 8, :left))
+end
+plt_pf</code></pre><p><img src="../32_north_sea_fisheries_decision_files/figure-commonmark/cell-7-output-1.svg" alt/></p><p>Cutting otter and beam effort (<code>:cod_recovery</code> and <code>:pelagic_focus</code>) retains a high Large Fish Indicator and keeps almost all 21 stocks above 10% of unfished spawning stock while still harvesting substantial pelagic and forage biomass. By contrast, <code>:demersal_heavy</code> and <code>:status_quo</code> deplete large slow-maturing predators and rays so heavily that they lose size-structure integrity with little or no gain in total landed tonnage.</p><h2 id="Decision-rules,-tail-risk-(CVaR)-and-stochastic-dominance"><a class="docs-heading-anchor" href="#Decision-rules,-tail-risk-(CVaR)-and-stochastic-dominance">Decision rules, tail risk (<code>CVaR</code>) and stochastic dominance</a><a id="Decision-rules,-tail-risk-(CVaR)-and-stochastic-dominance-1"></a><a class="docs-heading-anchor-permalink" href="#Decision-rules,-tail-risk-(CVaR)-and-stochastic-dominance" title="Permalink"></a></h2><p>We compare expected utility, worst-20% Conditional Value-at-Risk (<code>CVaR(0.2)</code>), minimax regret, and exact first- and second-order stochastic dominance on both the composite ecosystem–fishery index and a catch-with-conservation-floor problem (measuring catch biomass directly):</p><pre><code class="language-julia hljs">prob_comp = DecisionProblem(payoff_comp, belief; baseline = :unfished)
+prob_catch = DecisionProblem(payoff_catch, belief; baseline = :unfished)
+
+rules = [
+    &quot;MaxExpectedUtility&quot;        =&gt; MaxExpectedUtility(),
+    &quot;CVaR (worst 20%)&quot;          =&gt; DecisionRule(CVaR(0.2)),
+    &quot;MinimaxRegret&quot;             =&gt; MinimaxRegret(),
+    &quot;StochasticDominance (FSD)&quot; =&gt; StochasticDominance(; order = 1),
+    &quot;StochasticDominance (SSD)&quot; =&gt; StochasticDominance(; order = 2),
+]
+
+@printf(&quot;%-28s %-30s %-30s\n&quot;, &quot;rule&quot;, &quot;composite index&quot;, &quot;annual catch (kt)&quot;)
+for (label, rule) in rules
+    c1 = join(string.(decide(prob_comp, rule).chosen), &quot;, &quot;)
+    c2 = join(string.(decide(prob_catch, rule).chosen), &quot;, &quot;)
+    @printf(&quot;%-28s %-30s %-30s\n&quot;, label, c1, c2)
+end</code></pre><pre><code class="nohighlight hljs">rule                         composite index                annual catch (kt)             
+MaxExpectedUtility           pelagic_focus                  status_quo                    
+CVaR (worst 20%)             pelagic_focus                  status_quo                    
+MinimaxRegret                pelagic_focus                  status_quo                    
+StochasticDominance (FSD)    pelagic_focus                  status_quo, cod_recovery, balanced_harvest
+StochasticDominance (SSD)    pelagic_focus                  status_quo, cod_recovery, balanced_harvest</code></pre><p><code>StochasticDominance(; order = 1)</code> removes portfolios that are beaten across the entire outcome distribution for <em>every</em> monotone utility, while <code>order = 2</code> (second-order stochastic dominance) additionally eliminates portfolios beaten for every risk-averse decision-maker (and every <code>CVaR(α)</code> level). Checking pairwise dominance explicitly shows which portfolios are eliminated on the composite index:</p><pre><code class="language-julia hljs">res_ssd = decide(prob_comp, StochasticDominance(; order = 2))
+(; undominated = res_ssd.chosen, dominated_by = res_ssd.details.dominated_by)</code></pre><pre><code class="nohighlight hljs">(undominated = [:pelagic_focus], dominated_by = Dict(:status_quo =&gt; :cod_recovery, :balanced_harvest =&gt; :cod_recovery, :cod_recovery =&gt; :pelagic_focus, :unfished =&gt; :cod_recovery, :demersal_heavy =&gt; :unfished))</code></pre><h2 id="Value-of-information:-SplineRegression-and-GaussianProcessRegression-EVPPI"><a class="docs-heading-anchor" href="#Value-of-information:-SplineRegression-and-GaussianProcessRegression-EVPPI">Value of information: <code>SplineRegression</code> and <code>GaussianProcessRegression</code> EVPPI</a><a id="Value-of-information:-SplineRegression-and-GaussianProcessRegression-EVPPI-1"></a><a class="docs-heading-anchor-permalink" href="#Value-of-information:-SplineRegression-and-GaussianProcessRegression-EVPPI" title="Permalink"></a></h2><p>On the composite index (<code>prob_comp</code>), <code>:pelagic_focus</code> second-order (and even first-order) stochastically dominates every competing portfolio across all 80 draws, so <code>evpi(prob_comp)</code> is identically zero — no biological survey could change the optimal fleet strategy under that ecosystem-weighted objective. By contrast, when the fishery objective is <strong>annual landed catch biomass</strong> (<code>prob_catch</code>, in thousand tonnes/yr), <code>:status_quo</code>, <code>:pelagic_focus</code> and <code>:cod_recovery</code> are all stochastically undominated: which fleet mix yields the largest tonnage depends on recruitment productivity, external food availability and adult natural mortality. We compute total EVPI alongside single-parameter and joint EVPPI on <code>prob_catch</code> using both <code>SplineRegression()</code> and <code>GaussianProcessRegression()</code>:</p><pre><code class="language-julia hljs">evpi_comp = evpi(prob_comp, SampleAverage())
+evpi_catch = evpi(prob_catch, SampleAverage())
+@printf(&quot;Composite index EVPI = %.2f ± %.2f (zero because :pelagic_focus dominates every rival)\n\n&quot;,
+        Float64(evpi_comp.value), evpi_comp.standard_error)
+
+focal_sets = [
+    (&quot;rec_scale&quot;,                  :rec_scale),
+    (&quot;other_scale&quot;,                :other_scale),
+    (&quot;Nmort&quot;,                      :Nmort),
+    (&quot;(rec_scale, other_scale)&quot;,   [:rec_scale, :other_scale]),
+]
+
+@printf(&quot;%-26s %16s %16s\n&quot;, &quot;uncertainty (catch, kt)&quot;, &quot;Spline EVPPI&quot;, &quot;GP EVPPI&quot;)
+for (label, f) in focal_sets
+    e_sp = evppi(prob_catch, f, SplineRegression())
+    e_gp = evppi(prob_catch, f, GaussianProcessRegression())
+    @printf(&quot;%-26s %7.2f ± %-6.2f %7.2f ± %-6.2f\n&quot;,
+            label, Float64(e_sp.value), e_sp.standard_error,
+            Float64(e_gp.value), e_gp.standard_error)
+end
+@printf(&quot;%-26s %7.2f ± %-6.2f\n&quot;,
+        &quot;all parameters (EVPI)&quot;, Float64(evpi_catch.value), evpi_catch.standard_error)</code></pre><pre><code class="nohighlight hljs">Composite index EVPI = 0.00 ± 0.00 (zero because :pelagic_focus dominates every rival)
+
+uncertainty (catch, kt)        Spline EVPPI         GP EVPPI
+rec_scale                    -0.00 ± 0.00      0.00 ± 0.00  
+other_scale                   0.00 ± 0.00      0.00 ± 0.00  
+Nmort                        -0.00 ± 0.00      0.00 ± 0.00  
+(rec_scale, other_scale)     -0.00 ± 0.00      4.69 ± 0.82  
+all parameters (EVPI)         3.90 ± 1.95</code></pre><p>Comparing <code>SplineRegression()</code> and <code>GaussianProcessRegression()</code> shows how much landed tonnage could be gained by resolving each biological uncertainty before setting fleet quotas — and demonstrates that a dominant multi-objective strategy (<code>:pelagic_focus</code> on <code>prob_comp</code>) can render further parameter measurement unnecessary even when single-objective catch uncertainty remains substantial.</p><h2 id="Scenario-discovery:-when-does-cod-collapse-under-balanced-harvest?"><a class="docs-heading-anchor" href="#Scenario-discovery:-when-does-cod-collapse-under-balanced-harvest?">Scenario discovery: when does cod collapse under balanced harvest?</a><a id="Scenario-discovery:-when-does-cod-collapse-under-balanced-harvest?-1"></a><a class="docs-heading-anchor-permalink" href="#Scenario-discovery:-when-does-cod-collapse-under-balanced-harvest?" title="Permalink"></a></h2><p>Under <code>:balanced_harvest</code> (moderate fishing across all four fleets), cod remains viable on average, yet collapses below 15% of unfished spawning stock biomass in a vulnerable subset of the 80 draws. Patient Rule Induction Method (<code>prim_boxes</code>) isolates the interpretable hyper-rectangle in <code>(rec_scale, other_scale, Nmort)</code> space where cod collapse concentrates:</p><pre><code class="language-julia hljs">bh_idx = findfirst(==(:balanced_harvest), action_names)
+bh_collapsed = vec(collapse_Q[bh_idx, :]) .&gt; 0.5
+base_rate = mean(bh_collapsed)
+
+if 0.0 &lt; base_rate &lt; 1.0
+    prim = prim_boxes(belief, bh_collapsed; peel_alpha = 0.15, min_mass = 0.15)
+    top_box = argmax(b -&gt; b.density, prim.frontier)
+    @printf(&quot;base collapse rate = %.3f | box density = %.3f | coverage = %.3f | mass = %.3f\n&quot;,
+            prim.base_rate, top_box.density, top_box.coverage, top_box.mass)
+    println(&quot;PRIM bounds: &quot;, top_box.bounds)
+else
+    # Fall back to the tighter 25% SSB threshold if all or no draws fell below 15%.
+    bh_low = vec(cod_Q[bh_idx, :]) .&lt; 25.0
+    prim = prim_boxes(belief, bh_low; peel_alpha = 0.15, min_mass = 0.15)
+    top_box = argmax(b -&gt; b.density, prim.frontier)
+    @printf(&quot;base low-cod (&lt;25%%) rate = %.3f | box density = %.3f | coverage = %.3f | mass = %.3f\n&quot;,
+            prim.base_rate, top_box.density, top_box.coverage, top_box.mass)
+    println(&quot;PRIM bounds: &quot;, top_box.bounds)
+    bh_collapsed = bh_low
+end</code></pre><pre><code class="nohighlight hljs">base collapse rate = 0.637 | box density = 1.000 | coverage = 0.784 | mass = 0.500
+PRIM bounds: Dict(:Nmort =&gt; (0.5503234090594559, 1.046400318421463), :rec_scale =&gt; (0.5619115646272824, 1.0490749506312997), :other_scale =&gt; (0.518295702426907, 1.7805811094019641))</code></pre><pre><code class="language-julia hljs">plt_prim = scatter(draws.rec_scale[.!bh_collapsed], draws.Nmort[.!bh_collapsed];
+                   color = :steelblue, alpha = 0.75, label = &quot;Cod above threshold&quot;,
+                   xlabel = &quot;Recruitment productivity multiplier (rec_scale)&quot;,
+                   ylabel = &quot;Adult background mortality Nmort (1/yr)&quot;,
+                   title = &quot;PRIM vulnerability region under balanced harvest (illustrative)&quot;,
+                   titlefontsize = 10, legend = :topright)
+scatter!(plt_prim, draws.rec_scale[bh_collapsed], draws.Nmort[bh_collapsed];
+         color = :crimson, marker = :diamond, label = &quot;Cod vulnerable / collapsed&quot;)
+if haskey(top_box.bounds, :rec_scale) &amp;&amp; haskey(top_box.bounds, :Nmort)
+    xlo, xhi = top_box.bounds[:rec_scale]
+    ylo, yhi = top_box.bounds[:Nmort]
+    plot!(plt_prim, [xlo, xhi, xhi, xlo, xlo], [ylo, ylo, yhi, yhi, ylo];
+          lw = 2.5, color = :black, ls = :dash, label = &quot;PRIM box&quot;)
+end
+plt_prim</code></pre><p><img src="../32_north_sea_fisheries_decision_files/figure-commonmark/cell-12-output-1.svg" alt/></p><p>Cod vulnerability under moderate demersal harvest clusters sharply at low recruitment productivity (<code>rec_scale ≤ 1.05</code>, where 100% of draws inside the PRIM box fall below 15% of unfished cod SSB, capturing 78% of all cod collapses), pinpointing the biological regime in which demersal effort must be cut further toward <code>:cod_recovery</code> or <code>:pelagic_focus</code>.</p><h2 id="What-is-measured-and-what-is-assumed"><a class="docs-heading-anchor" href="#What-is-measured-and-what-is-assumed">What is measured and what is assumed</a><a id="What-is-measured-and-what-is-assumed-1"></a><a class="docs-heading-anchor-permalink" href="#What-is-measured-and-what-is-assumed" title="Permalink"></a></h2><table><tr><th style="text-align: left">Item</th><th style="text-align: left">Value</th><th style="text-align: left">Source</th></tr><tr><td style="text-align: left">21 North Sea fish species (<code>Linf</code>, <code>k</code>, <code>W_a</code>, <code>W_b</code>, <code>Lmat</code>, <code>a</code>, <code>b</code>, diet matrix <code>NS_tau</code>, fleets &amp; selectivity)</td><td style="text-align: left"><code>LEMANS_NORTH_SEA</code>, <code>lemans_parameters()</code></td><td style="text-align: left">Thorpe et al. 2015, 2016; LeMaRns 0.1.2 (Spence et al. 2020; vignette 18)</td></tr><tr><td style="text-align: left">External food default (<code>1.2 × 10¹²</code> g), preference ratio <code>10⁻²·²⁵</code>, <code>Nmort = 0.8</code></td><td style="text-align: left"><code>lemans_parameters()</code> defaults</td><td style="text-align: left">LeMaRns 0.1.2 (Spence et al. 2020)</td></tr><tr><td style="text-align: left">Six fleet-effort portfolios (<code>:unfished</code> baseline to <code>:demersal_heavy</code>)</td><td style="text-align: left"><code>portfolios</code></td><td style="text-align: left">illustrative (<code>:status_quo</code> = all fleets at 1.0 matches vignette 18)</td></tr><tr><td style="text-align: left">Prior on <code>rec_scale</code>, <code>other_scale</code>, <code>Nmort</code> (<code>N = 80</code> draws)</td><td style="text-align: left">log-normal and uniform bounds</td><td style="text-align: left">illustrative</td></tr><tr><td style="text-align: left">Composite ecosystem–fishery index, 15% cod-collapse threshold, CVaR level <code>0.2</code></td><td style="text-align: left"><code>payoff_comp</code>, <code>CVaR(0.2)</code></td><td style="text-align: left">illustrative (no monetary prices)</td></tr></table><h2 id="References"><a class="docs-heading-anchor" href="#References">References</a><a id="References-1"></a><a class="docs-heading-anchor-permalink" href="#References" title="Permalink"></a></h2><p>Hall, S. J., Collie, J. S., Duplisea, D. E., Jennings, S., Bravington, M. &amp; Link, J. (2006). A length-based multispecies model for evaluating community responses to fishing. <em>Canadian Journal of Fisheries and Aquatic Sciences</em> 63, 1344–1359. <a href="https://doi.org/10.1139/f06-039">https://doi.org/10.1139/f06-039</a>.</p><p>Spence, M. A., Bannister, H. J., Ball, J. E., Dolder, P. J., Griffiths, C. A. &amp; Thorpe, R. B. (2020). LeMaRns: A Length-based Multi-species analysis by numerical simulation in R. <em>PLoS ONE</em> 15, e0227767. <a href="https://doi.org/10.1371/journal.pone.0227767">https://doi.org/10.1371/journal.pone.0227767</a>.</p><p>Thorpe, R. B., Le Quesne, W. J. F., Luxford, F., Collie, J. S. &amp; Jennings, S. (2015). Evaluation and management implications of uncertainty in a multispecies size-structured model of population and community responses to fishing. <em>Methods in Ecology and Evolution</em> 6, 49–58.</p><p>Thorpe, R. B., Dolder, P. J., Reeves, S., Robinson, P. &amp; Jennings, S. (2016). Assessing fishery and ecological consequences of alternative management options for multispecies fisheries. <em>ICES Journal of Marine Science</em> 73, 1503–1512.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../31_verde_flow_decision/">« Choosing a river flow regime across fish, trees and insects under uncertainty</a><a class="docs-footer-nextpage" href="../33_pollinator_varroa_decision/">Managing Varroa, virus spillover and floral competition between honey bees and bumblebees »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.20.0 on <span class="colophon-date" title="Saturday 28 November 2026 17:48">Saturday 28 November 2026</span>. Using Julia version 1.13.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

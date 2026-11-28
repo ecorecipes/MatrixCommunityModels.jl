@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><meta name="referrer" content="no-referrer"/><title>Managing Varroa, virus spillover and floral competition between honey bees and bumblebees · MatrixCommunityModels.jl</title><meta name="title" content="Managing Varroa, virus spillover and floral competition between honey bees and bumblebees · MatrixCommunityModels.jl"/><meta property="og:title" content="Managing Varroa, virus spillover and floral competition between honey bees and bumblebees · MatrixCommunityModels.jl"/><meta property="twitter:title" content="Managing Varroa, virus spillover and floral competition between honey bees and bumblebees · MatrixCommunityModels.jl"/><meta name="description" content="Documentation for MatrixCommunityModels.jl."/><meta property="og:description" content="Documentation for MatrixCommunityModels.jl."/><meta property="twitter:description" content="Documentation for MatrixCommunityModels.jl."/><meta property="og:url" content="https://ecorecipes.github.io/MatrixCommunityModels.jl/tutorials/33_pollinator_varroa_decision/"/><meta property="twitter:url" content="https://ecorecipes.github.io/MatrixCommunityModels.jl/tutorials/33_pollinator_varroa_decision/"/><link rel="canonical" href="https://ecorecipes.github.io/MatrixCommunityModels.jl/tutorials/33_pollinator_varroa_decision/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">MatrixCommunityModels.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="../01_introduction/">Matrix community models by composition</a></li><li><a class="tocitem" href="../02_verde_fish/">Verde River fish: a community linked by total biomass</a></li><li><a class="tocitem" href="../03_riparian_guilds/">Riparian plant guilds: a community linked by space</a></li><li><a class="tocitem" href="../04_adapt3_cypripedium/">Two orchids: reproducing an adapt3 community projection</a></li><li><a class="tocitem" href="../05_cross_species_sensitivity/">Revealing interactions: cross-species sensitivity analysis</a></li><li><a class="tocitem" href="../06_composing_ipms/">Composing an integral projection model with a matrix model</a></li><li><a class="tocitem" href="../07_metacommunity/">A metacommunity by nested composition</a></li><li><a class="tocitem" href="../08_equilibria_invasion_chance/">Equilibria, invasion and chance</a></li><li><a class="tocitem" href="../09_seasons_and_phenology/">Seasons: phenology, coexistence and drift</a></li><li><a class="tocitem" href="../10_honeybee_colony/">Bees 1: a honey bee colony from modules</a></li><li><a class="tocitem" href="../11_varroa_and_dwv/">Bees 2: Varroa mites and deformed wing virus</a></li><li><a class="tocitem" href="../12_bumblebees/">Bees 3: a bumblebee population</a></li><li><a class="tocitem" href="../13_bees_sharing_flowers/">Bees 4: honey bees and bumblebees on the same flowers</a></li><li><a class="tocitem" href="../14_thistles_and_weevil/">A native thistle, a weed and a weevil: an integral projection model among matrix models</a></li><li><a class="tocitem" href="../15_forest_basal_area/">A forest on a large mesh: three tree species sharing one pool of basal area</a></li><li><a class="tocitem" href="../16_sea_fan_aspergillosis/">Sea fans and aspergillosis: an integral projection model stratified by infection status</a></li><li><a class="tocitem" href="../17_sagebrush_steppe/">Four perennials of the sagebrush steppe: coexistence through crowding</a></li><li><a class="tocitem" href="../18_north_sea_lemans/">North Sea fish by length: predation by size in the LeMans model</a></li><li><a class="tocitem" href="../19_corals_moorea/">Corals of Mo’orea: an open community recovering by recruitment</a></li><li><a class="tocitem" href="../20_grasslands_synchrony/">Five grasslands: crowding, coexistence and synchrony</a></li><li><a class="tocitem" href="../21_flour_beetles/">Two flour beetles that eat each other’s eggs: coexistence on a cycle</a></li><li><a class="tocitem" href="../22_designed_flow_regimes/">Designing flows for a whole river: plants, fish and invertebrates</a></li><li><a class="tocitem" href="../23_predator_and_prey/">A predator and its prey, each with juveniles and adults</a></li><li><a class="tocitem" href="../24_chytrid_leopard_frogs/">Chytrid fungus in leopard frogs: a host-parasite IPM with seasons and a zoospore pool</a></li><li><a class="tocitem" href="../25_size_spectrum_mizer/">A size-spectrum fish community: the mizer model as projection nets</a></li><li><a class="tocitem" href="../26_resilience/">Resilience metrics with ResilienceCore.jl: beetles and riparian guilds</a></li><li><a class="tocitem" href="../28_canvasbacks_redheads/">Canvasbacks and redheads: two interacting diving ducks</a></li><li><a class="tocitem" href="../29_annual_plants/">Annual plants with a seed bank: niche and fitness differences</a></li><li><a class="tocitem" href="../30_harvest_decision/">Which stage to harvest, and how hard: a decision under uncertain vital rates</a></li><li><a class="tocitem" href="../31_verde_flow_decision/">Choosing a river flow regime across fish, trees and insects under uncertainty</a></li><li><a class="tocitem" href="../32_north_sea_fisheries_decision/">Managing the North Sea multispecies fishery under recruitment and predation uncertainty</a></li><li class="is-active"><a class="tocitem" href>Managing Varroa, virus spillover and floral competition between honey bees and bumblebees</a><ul class="internal"><li><a class="tocitem" href="#The-question"><span>The question</span></a></li><li><a class="tocitem" href="#Management-actions-and-parametric-uncertainty"><span>Management actions and parametric uncertainty</span></a></li><li><a class="tocitem" href="#Disease-utility-(InfectionUtility),-multi-attribute-utility-and-the-Pareto-front"><span>Disease utility (<code>InfectionUtility</code>), multi-attribute utility and the Pareto front</span></a></li><li><a class="tocitem" href="#Which-biological-uncertainty-matters-most-(evppi)?"><span>Which biological uncertainty matters most (<code>evppi</code>)?</span></a></li><li><a class="tocitem" href="#Pre-treatment-mite-wash-surveillance-across-apiaries-(survey_or_act)"><span>Pre-treatment mite-wash surveillance across apiaries (<code>survey_or_act</code>)</span></a></li><li><a class="tocitem" href="#Structural-ambiguity-across-the-four-floral-competition-couplings"><span>Structural ambiguity across the four floral-competition couplings</span></a></li><li><a class="tocitem" href="#What-is-measured-and-what-is-assumed"><span>What is measured and what is assumed</span></a></li><li><a class="tocitem" href="#References"><span>References</span></a></li></ul></li></ul></li><li><span class="tocitem">API Reference</span><ul><li><a class="tocitem" href="../../api/communities/">Composing communities</a></li><li><a class="tocitem" href="../../api/analysis/">Analysis</a></li><li><a class="tocitem" href="../../api/resilience/">Resilience metrics</a></li><li><a class="tocitem" href="../../api/management/">Management and decisions</a></li><li><a class="tocitem" href="../../api/kernels/">IPMs and kernels</a></li><li><input class="collapse-toggle" id="menuitem-3-6" type="checkbox"/><label class="tocitem" for="menuitem-3-6"><span class="docs-label">Published models</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../api/models_rivers/">Rivers and orchids</a></li><li><a class="tocitem" href="../../api/models_bees/">Bees and flowers</a></li><li><a class="tocitem" href="../../api/models_plants/">Plants and trees</a></li><li><a class="tocitem" href="../../api/models_marine/">Reefs and seas</a></li><li><a class="tocitem" href="../../api/models_animals/">Competitors, predators and pathogens</a></li></ul></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href>Managing Varroa, virus spillover and floral competition between honey bees and bumblebees</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Managing Varroa, virus spillover and floral competition between honey bees and bumblebees</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/ecorecipes/MatrixCommunityModels.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/ecorecipes/MatrixCommunityModels.jl/blob/main/docs/src/tutorials/33_pollinator_varroa_decision.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Managing-Varroa,-virus-spillover-and-floral-competition-between-honey-bees-and-bumblebees"><a class="docs-heading-anchor" href="#Managing-Varroa,-virus-spillover-and-floral-competition-between-honey-bees-and-bumblebees">Managing Varroa, virus spillover and floral competition between honey bees and bumblebees</a><a id="Managing-Varroa,-virus-spillover-and-floral-competition-between-honey-bees-and-bumblebees-1"></a><a class="docs-heading-anchor-permalink" href="#Managing-Varroa,-virus-spillover-and-floral-competition-between-honey-bees-and-bumblebees" title="Permalink"></a></h1><p>Simon Frost</p><ul><li><a href="#the-question">The question</a></li><li><a href="#management-actions-and-parametric-uncertainty">Management actions and parametric uncertainty</a></li><li><a href="#disease-utility-infectionutility-multi-attribute-utility-and-the-pareto-front">Disease utility (<code>InfectionUtility</code>), multi-attribute utility and the Pareto front</a></li><li><a href="#which-biological-uncertainty-matters-most-evppi">Which biological uncertainty matters most (<code>evppi</code>)?</a></li><li><a href="#pre-treatment-mite-wash-surveillance-across-apiaries-survey_or_act">Pre-treatment mite-wash surveillance across apiaries (<code>survey_or_act</code>)</a></li><li><a href="#structural-ambiguity-across-the-four-floral-competition-couplings">Structural ambiguity across the four floral-competition couplings</a></li><li><a href="#what-is-measured-and-what-is-assumed">What is measured and what is assumed</a></li><li><a href="#references">References</a></li></ul><pre><code class="language-julia hljs">ENV[&quot;GKSwstype&quot;] = &quot;100&quot;
+using MatrixCommunityModels
+using DecisionAnalysis
+using Printf, Random, Statistics
+using Plots</code></pre><h2 id="The-question"><a class="docs-heading-anchor" href="#The-question">The question</a><a id="The-question-1"></a><a class="docs-heading-anchor-permalink" href="#The-question" title="Permalink"></a></h2><p>In <a href="../13_bees_sharing_flowers/">vignettes 10 to 13</a>, a honey bee colony (<em>Apis mellifera</em>), <em>Varroa destructor</em> mites, deformed wing virus (DWV) and a wild bumblebee population (<em>Bombus terrestris</em>) were composed through two pools: shared floral nectar and pollen, and infectious virus left on flowers. That work left two kinds of uncertainty open for a landscape manager:</p><ol><li><strong>Parametric uncertainty</strong> over winter mite burden, miticide  efficacy under resistance, virus deposition rate on flowers, and  whether DWV elevates bumblebee worker mortality (<code>infected_hazard</code>  in <code>BUMBLEBEE_PARAMETERS</code>, where empirical evidence conflicts);</li><li><strong>Deep structural uncertainty</strong> over <em>how</em> honey bees and bumblebees  share flowers — vignette 13 showed that the four couplings of  <code>floral_competition</code> (<code>:scramble</code>, <code>:standing_crop</code>, <code>:partitioned</code>,  <code>:preemptive</code>) predict sharply different bumblebee outcomes from the  exact same two species models.</li></ol><p>Here we turn that composed pollinator community into a multi-objective decision analysis in <code>DecisionAnalysis.jl</code>. Should a landscape manager apply autumn miticide, cap apiary density, sow wildflower margins, or combine interventions? How does the ranking change when infected honey bees are penalised (<code>InfectionUtility</code>) or weighted alongside wild bumblebee queens (<code>AdditiveUtility</code> and <code>ParetoFront</code>)? Which uncertain biological parameter is worth the most to measure (<code>evppi</code>)? When should beekeepers run a mite-wash survey before treating (<code>survey_or_act</code>)? And how does structural ambiguity across the four floral-competition models affect the optimal choice under <code>GammaMaximin</code>, <code>EAdmissible</code> and <code>SmoothAmbiguity</code>?</p><p><strong>What is published and what is illustrative.</strong> The species life cycles and default parameters (<code>honeybee</code>, <code>varroa</code>, <code>bumblebee</code>, <code>floral_competition</code>, <code>flower_transmission</code>) come from HoPoMo (Schmickl &amp; Crailsheim 2007), BEEHAVE (Becher et al. 2014), Bumble-BEEHAVE (Becher et al. 2018), Martin (1998) and the floral supply measurements of Hicks et al. (2016) and Baude et al. (2016), as documented in vignettes 10–13. The five landscape actions, the parametric prior draws, the effort ratios for mite-wash surveillance, and the pollinator utility weights are illustrative. <strong>No monetary prices appear anywhere</strong>: outcomes are measured in uninfected and infected honey bee workers, hibernating bumblebee queens per km², and inspection-effort units.</p><h2 id="Management-actions-and-parametric-uncertainty"><a class="docs-heading-anchor" href="#Management-actions-and-parametric-uncertainty">Management actions and parametric uncertainty</a><a id="Management-actions-and-parametric-uncertainty-1"></a><a class="docs-heading-anchor-permalink" href="#Management-actions-and-parametric-uncertainty" title="Permalink"></a></h2><p>We simulate a 3-year daily trajectory (<code>1,095</code> days) of the coupled <code>honeybee + varroa + bumblebee</code> community with DWV transmission enabled (<code>virus = true</code>), starting on 1 January from <code>10,000</code> honey bee workers, <code>25</code> kg honey, <code>100</code> hibernating bumblebee queens per km² and an initial winter mite burden <code>mites0</code> (15% viral). Five candidate management actions are compared against <code>:no_intervention</code> (the explicit baseline: 4 hives/km², untreated, farmland baseline forage of 3 kg sugar and 3 kg pollen per km² per day):</p><ol><li><code>:no_intervention</code> — 4 hives/km², no miticide, baseline farmland  forage (baseline);</li><li><code>:autumn_miticide</code> — 4 hives/km², 40-day autumn miticide  (<code>days 270..309</code>, daily phoretic mite mortality <code>miticide_eff</code>);</li><li><code>:cap_hives</code> — cap apiary density to 1.5 hives/km², no miticide,  baseline forage;</li><li><code>:floral_strips</code> — 4 hives/km², no miticide, wildflower margins  doubling nectar and pollen supply (<code>6 kg/km²/day</code>) and flower count  (<code>10⁷/km²</code>) and extending forage to day 300;</li><li><code>:integrated</code> — 2.0 hives/km² + autumn miticide (<code>miticide_eff</code>) +  wildflower margins (<code>5 kg/km²/day</code>, <code>8 × 10⁶</code> flowers/km², season  ending day 295).</li></ol><pre><code class="language-julia hljs">const YEARS = 3
+const DAYS = 365 * YEARS
+const SUMMER_Y3 = (365 * 2 + 170):(365 * 2 + 230)
+
+action_names = [:no_intervention, :autumn_miticide, :cap_hives, :floral_strips, :integrated]
+
+function run_pollinator(action::Symbol, θ; mode::Symbol = :scramble, refuge::Real = 0.05)
+    hives, treated, peak_supply, flower_count, finish_day = if action === :no_intervention
+        (4.0, false, 3000.0, 5.0e6, 280)
+    elseif action === :autumn_miticide
+        (4.0, true, 3000.0, 5.0e6, 280)
+    elseif action === :cap_hives
+        (1.5, false, 3000.0, 5.0e6, 280)
+    elseif action === :floral_strips
+        (4.0, false, 6000.0, 1.0e7, 300)
+    else # :integrated
+        (2.0, true, 5000.0, 8.0e6, 295)
+    end
+    sup = floral_supply(peak_supply; finish = finish_day)
+    forage = floral_competition(mode; nectar = sup, pollen = sup, hives = hives,
+                                refuge = refuge)
+    flowers = flower_transmission(; flowers = floral_supply(flower_count; finish = finish_day),
+                                  hives = hives, deposit = 0.02 * θ.deposit_scale)
+    tr = treated ? (day -&gt; 270 &lt;= day &lt; 310 ? θ.miticide_eff : 0.0) : (day -&gt; 0.0)
+    bb_par = merge(BUMBLEBEE_PARAMETERS, (infected_hazard = θ.infected_hazard,))
+    c = community(honeybee(; virus = true, forage = forage, flowers = flowers),
+                  varroa(; virus = true, treatment = tr),
+                  bumblebee(; virus = true, parameters = bb_par, forage = forage,
+                            flowers = flowers),
+                  forage.species...)
+    n0 = honeybee_state(c; mites = θ.mites0, viral = 0.15, queens = 100)
+    sol = project(c, n0, 1:DAYS)
+
+    hb_healthy = mean(stage_total(sol, :honeybee, [:hive_healthy, :forager_healthy])[SUMMER_Y3])
+    hb_infected = mean(stage_total(sol, :honeybee,
+                                   [:hive_infected, :forager_infected,
+                                    :hive_carrier, :forager_carrier])[SUMMER_Y3])
+    bb_queens = stage_total(sol, :bumblebee, :hibernating)[end]
+    bb_inf_peak = maximum(stage_total(sol, :bumblebee, :infected_worker)[(365 * 2 + 1):end])
+    return (; hb_healthy, hb_infected, bb_queens, bb_inf_peak)
+end</code></pre><pre><code class="nohighlight hljs">run_pollinator (generic function with 1 method)</code></pre><p>Four uncertain parameters are drawn across <code>N = 36</code> parameter sets under the default <code>:scramble</code> competition model (all illustrative):</p><ul><li><code>mites0</code>: initial winter phoretic mite load per colony, uniform in <code>[150, 450]</code>;</li><li><code>deposit_scale</code>: virus spillover intensity multiplier on flowers, log-normal around 1 (roughly <code>0.4</code> to <code>2.5</code>);</li><li><code>infected_hazard</code>: ratio of mortality of DWV-infected to healthy bumblebee workers, uniform in <code>[1.0, 2.2]</code>;</li><li><code>miticide_eff</code>: daily phoretic mite mortality under autumn treatment, uniform in <code>[0.06, 0.14]</code>.</li></ul><pre><code class="language-julia hljs">rng = Xoshiro(33)
+N = 36
+draws = (;
+    mites0 = 150.0 .+ 300.0 .* rand(rng, N),
+    deposit_scale = exp.(0.45 .* randn(rng, N)),
+    infected_hazard = 1.0 .+ 1.2 .* rand(rng, N),
+    miticide_eff = 0.06 .+ 0.08 .* rand(rng, N),
+)
+
+na = length(action_names)
+hb_healthy_Q = zeros(na, N)
+hb_infected_Q = zeros(na, N)
+bb_queens_Q = zeros(na, N)
+bb_inf_Q = zeros(na, N)
+
+for d in 1:N
+    θ = (mites0 = draws.mites0[d], deposit_scale = draws.deposit_scale[d],
+         infected_hazard = draws.infected_hazard[d], miticide_eff = draws.miticide_eff[d])
+    for (ai, act) in enumerate(action_names)
+        sc = run_pollinator(act, θ; mode = :scramble)
+        hb_healthy_Q[ai, d] = sc.hb_healthy
+        hb_infected_Q[ai, d] = sc.hb_infected
+        bb_queens_Q[ai, d] = sc.bb_queens
+        bb_inf_Q[ai, d] = sc.bb_inf_peak
+    end
+end
+
+# Assemble an OutcomeTable directly from the 36 × 5 live model runs.
+runs = [(; draw = d, action = act, replicate = 1,
+         hb_healthy = hb_healthy_Q[ai, d], hb_infected = hb_infected_Q[ai, d],
+         bb_queens = bb_queens_Q[ai, d], bb_inf_peak = bb_inf_Q[ai, d])
+        for d in 1:N for (ai, act) in enumerate(action_names)]
+param_tbl = [(; draw = d, mites0 = draws.mites0[d], deposit_scale = draws.deposit_scale[d],
+              infected_hazard = draws.infected_hazard[d], miticide_eff = draws.miticide_eff[d])
+             for d in 1:N]
+ot = OutcomeTable(runs; outcomes = [:hb_healthy, :hb_infected, :bb_queens, :bb_inf_peak],
+                  parameters = param_tbl, actions = action_names)
+belief = SampleBelief(ot)
+
+@printf(&quot;%-18s %11s %11s %11s %11s\n&quot;,
+        &quot;action&quot;, &quot;HB healthy&quot;, &quot;HB virus&quot;, &quot;BB queens&quot;, &quot;BB inf peak&quot;)
+for (ai, act) in enumerate(action_names)
+    @printf(&quot;%-18s %11.0f %11.0f %11.1f %11.1f\n&quot;,
+            act, mean(hb_healthy_Q[ai, :]), mean(hb_infected_Q[ai, :]),
+            mean(bb_queens_Q[ai, :]), mean(bb_inf_Q[ai, :]))
+end</code></pre><pre><code class="nohighlight hljs">action              HB healthy    HB virus   BB queens BB inf peak
+no_intervention           2045       18150       388.4       101.6
+autumn_miticide          31984        1373       399.9         3.6
+cap_hives                 2046       18151       395.5        49.7
+floral_strips             2046       18151       394.1        62.4
+integrated               31988        1374       400.6         1.2</code></pre><h2 id="Disease-utility-(InfectionUtility),-multi-attribute-utility-and-the-Pareto-front"><a class="docs-heading-anchor" href="#Disease-utility-(InfectionUtility),-multi-attribute-utility-and-the-Pareto-front">Disease utility (<code>InfectionUtility</code>), multi-attribute utility and the Pareto front</a><a id="Disease-utility-(InfectionUtility),-multi-attribute-utility-and-the-Pareto-front-1"></a><a class="docs-heading-anchor-permalink" href="#Disease-utility-(InfectionUtility),-multi-attribute-utility-and-the-Pareto-front" title="Permalink"></a></h2><p>Following the infectious-disease convention of <code>DecisionAnalysis.jl</code>, we evaluate the honey bee colony with <code>InfectionUtility(; uninfected = :hb_healthy, infected = :hb_infected, weight = w)</code> — counting uninfected adults minus <code>w</code> times infected/carrier adults — at <code>w = 0</code>, <code>w = 1</code> and <code>w = 3</code>. Then we combine uninfected honey bees and wild bumblebee queens via <code>AdditiveUtility</code> (normalising each taxon cleanly onto <code>[0, 1]</code> without inventing prices) and check the <code>ParetoFront</code> across both bee guilds:</p><pre><code class="language-julia hljs">for w in (0.0, 1.0, 3.0)
+    pt = payoff_table(ot, InfectionUtility(; uninfected = :hb_healthy, infected = :hb_infected, weight = w))
+    pr = DecisionProblem(pt, belief; baseline = :no_intervention)
+    res = decide(pr, MaxExpectedUtility())
+    @printf(&quot;InfectionUtility (w = %.1f): best = %-18s (expected utility = %8.0f workers)\n&quot;,
+            w, res.chosen[1], maximum(Float64.(aggregate(Expectation(), pr))))
+end</code></pre><pre><code class="nohighlight hljs">InfectionUtility (w = 0.0): best = integrated         (expected utility =    31988 workers)
+InfectionUtility (w = 1.0): best = integrated         (expected utility =    30614 workers)
+InfectionUtility (w = 3.0): best = integrated         (expected utility =    27865 workers)</code></pre><pre><code class="language-julia hljs">u_pollinators = AdditiveUtility(
+    [LinearUtility(:hb_healthy; worst = 0.0, best = 20_000.0),
+     LinearUtility(:bb_queens; worst = 0.0, best = 200.0)];
+    weights = [0.5, 0.5],
+)
+payoff_poll = payoff_table(ot, u_pollinators)
+prob_poll = DecisionProblem(payoff_poll, belief; baseline = :no_intervention)
+
+payoff_hb = payoff_table(ot, InfectionUtility(; uninfected = :hb_healthy, infected = :hb_infected, weight = 1.0))
+payoff_bb = payoff_table(ot, IndividualsUtility(:bb_queens))
+pf = decide((; honeybees = payoff_hb, bumblebees = payoff_bb), belief, ParetoFront())
+
+@printf(&quot;Additive pollinator index best: %s | Pareto front: %s\n&quot;,
+        decide(prob_poll, MaxExpectedUtility()).chosen[1],
+        join(string.(pf.chosen), &quot;, &quot;))</code></pre><pre><code class="nohighlight hljs">Additive pollinator index best: integrated | Pareto front: integrated</code></pre><pre><code class="language-julia hljs">mh = [mean(Float64.(payoff_hb.Q[ai, :])) for ai in 1:na]
+mb = [mean(bb_queens_Q[ai, :]) for ai in 1:na]
+is_pf = [a in pf.chosen for a in action_names]
+
+plt_pf = scatter(mh[is_pf], mb[is_pf]; markersize = 8, color = :darkorange,
+                 label = &quot;Pareto-efficient&quot;,
+                 xlabel = &quot;Honey bee net healthy workers (uninfected − infected, yr 3 summer)&quot;,
+                 ylabel = &quot;Bumblebee hibernating queens / km² (end yr 3)&quot;,
+                 title = &quot;Honey bee vs. bumblebee trade-off across 36 draws (illustrative)&quot;,
+                 titlefontsize = 10, legend = :bottomright)
+scatter!(plt_pf, mh[.!is_pf], mb[.!is_pf]; markersize = 6, color = :gray60,
+         marker = :xcross, label = &quot;Dominated&quot;)
+for (x, y, a) in zip(mh, mb, action_names)
+    annotate!(plt_pf, x + 250, y + 2.5, text(String(a), 8, :left))
+end
+plt_pf</code></pre><p><img src="../33_pollinator_varroa_decision_files/figure-commonmark/cell-7-output-1.svg" alt/></p><p>Miticide alone rescues the honey bee colony and clears DWV from flowers, yet leaves four hives per km² drawing down farmland nectar and pollen; capping hives or sowing wildflower strips relieves floral competition for bumblebees, while <code>:integrated</code> balances both guilds simultaneously.</p><h2 id="Which-biological-uncertainty-matters-most-(evppi)?"><a class="docs-heading-anchor" href="#Which-biological-uncertainty-matters-most-(evppi)?">Which biological uncertainty matters most (<code>evppi</code>)?</a><a id="Which-biological-uncertainty-matters-most-(evppi)?-1"></a><a class="docs-heading-anchor-permalink" href="#Which-biological-uncertainty-matters-most-(evppi)?" title="Permalink"></a></h2><p>When the full <code>:integrated</code> package is feasible, it beats every single-intervention option across all 36 draws, so <code>evpi(prob_poll)</code> is zero — no biological measurement is needed to recommend combining hive management, miticide and wildflower strips. When miticide is unavailable (for example, around treatment-free apiaries, restricting feasible actions to <code>[:no_intervention, :cap_hives, :floral_strips]</code>), managers must choose between capping hive density and planting wildflower strips to protect wild bumblebees. Using both <code>SplineRegression()</code> and <code>GaussianProcessRegression()</code>, we quantify EVPI and single-parameter EVPPI on the treatment-free bumblebee conservation objective (<code>bb_queens</code>):</p><pre><code class="language-julia hljs">evpi_poll = evpi(prob_poll, SampleAverage())
+@printf(&quot;Unrestricted pollinator index EVPI = %.4f ± %.4f (zero because :integrated dominates)\n\n&quot;,
+        Float64(evpi_poll.value), evpi_poll.standard_error)
+
+prob_bb_organic = DecisionProblem(payoff_bb, belief;
+                                  feasible = [:no_intervention, :cap_hives, :floral_strips],
+                                  baseline = :no_intervention)
+evpi_bb = evpi(prob_bb_organic, SampleAverage())
+@printf(&quot;%-20s %16s %16s\n&quot;, &quot;parameter (BB queens)&quot;, &quot;Spline EVPPI&quot;, &quot;GP EVPPI&quot;)
+for par in (:mites0, :deposit_scale, :infected_hazard)
+    e1 = evppi(prob_bb_organic, par, SplineRegression())
+    e2 = evppi(prob_bb_organic, par, GaussianProcessRegression())
+    @printf(&quot;%-20s %7.3f ± %-6.3f %7.3f ± %-6.3f\n&quot;,
+            par, Float64(e1.value), e1.standard_error,
+            Float64(e2.value), e2.standard_error)
+end
+@printf(&quot;%-20s %7.3f ± %-6.3f\n&quot;, &quot;all (EVPI)&quot;, Float64(evpi_bb.value), evpi_bb.standard_error)</code></pre><pre><code class="nohighlight hljs">Unrestricted pollinator index EVPI = -0.0000 ± 0.0000 (zero because :integrated dominates)
+
+parameter (BB queens)     Spline EVPPI         GP EVPPI
+mites0                 0.000 ± 0.000   -0.000 ± 0.000 
+deposit_scale          0.000 ± 0.000    0.000 ± 0.000 
+infected_hazard        0.006 ± 0.003    0.000 ± 0.003 
+all (EVPI)             0.003 ± 0.003</code></pre><h2 id="Pre-treatment-mite-wash-surveillance-across-apiaries-(survey_or_act)"><a class="docs-heading-anchor" href="#Pre-treatment-mite-wash-surveillance-across-apiaries-(survey_or_act)">Pre-treatment mite-wash surveillance across apiaries (<code>survey_or_act</code>)</a><a id="Pre-treatment-mite-wash-surveillance-across-apiaries-(survey_or_act)-1"></a><a class="docs-heading-anchor-permalink" href="#Pre-treatment-mite-wash-surveillance-across-apiaries-(survey_or_act)" title="Permalink"></a></h2><p>Before applying autumn miticide across a network of six apiary sites, a beekeeper can either treat immediately (costing <code>6</code> apiary effort-hours per site) or run an alcohol-wash mite count first (costing <code>1</code> effort-hour, with sensitivity <code>d_i</code> and zero false positives above the treatment threshold) and treat only sites testing high-mite. Because effort is measured in <strong>beekeeper hours</strong> (no monetary valuation), <code>survey_or_act</code> compares value (expected colony workers saved per effort-hour) directly and <code>select_under_budget(; method = :exact)</code> allocates a seasonal budget of <code>20</code> effort-hours across the six apiaries:</p><pre><code class="language-julia hljs"># Illustrative 6-apiary network: (name, prior_high_mite, sensitivity, workers_saved_if_high)
+apiaries = [
+    (:meadow_north,  0.15, 0.85, 8_500.0),
+    (:orchard_east,  0.30, 0.85, 9_500.0),
+    (:hedgerow_west, 0.55, 0.80, 10_000.0),
+    (:arable_south,  0.75, 0.85, 9_000.0),
+    (:heath_ridge,   0.25, 0.90, 11_000.0),
+    (:valley_farm,   0.90, 0.80, 10_500.0),
+]
+
+units = map(apiaries) do (nm, p_hi, sens, gain)
+    Q = PayoffTable([:no_treatment, :treat], [:low_mite, :high_mite],
+                    [16_000.0  16_000.0 - gain;
+                     16_000.0  16_000.0])
+    pr = DecisionProblem(Q, [1.0 - p_hi, p_hi]; baseline = :no_treatment)
+    ex = Experiment([1.0  1.0 - sens;
+                     0.0  sens]; signals = [:below_thresh, :above_thresh],
+                    states = [:low_mite, :high_mite])
+    survey_or_act(pr, ex; action_costs = [:no_treatment =&gt; 0.0, :treat =&gt; 6.0],
+                  survey_cost = 1.0)
+end
+
+@printf(&quot;%-15s %6s %9s %10s %10s %12s\n&quot;,
+        &quot;apiary&quot;, &quot;prior&quot;, &quot;choice&quot;, &quot;exp hours&quot;, &quot;workers&quot;, &quot;workers/hr&quot;)
+for ((nm, p_hi, _, _), u) in zip(apiaries, units)
+    @printf(&quot;%-15s %6.2f %9s %10.2f %10.0f %12.0f\n&quot;,
+            nm, p_hi, u.choice, u.cost, u.value, u.cost_effectiveness)
+end
+
+sel_exact = select_under_budget(units, 20.0; option = :chosen, method = :exact)
+sel_never = select_under_budget(units, 20.0; option = :act_now, method = :exact)
+@printf(&quot;\nBudget 20 effort-hours — survey-or-act exact: %.0f workers saved (%.2f hrs, sites %s)\n&quot;,
+        sel_exact.value, sel_exact.cost, join(string.(first.(apiaries[sel_exact.selected])), &quot;, &quot;))
+@printf(&quot;Budget 20 effort-hours — never-survey exact:  %.0f workers saved (%.2f hrs, sites %s)\n&quot;,
+        sel_never.value, sel_never.cost, join(string.(first.(apiaries[sel_never.selected])), &quot;, &quot;))</code></pre><pre><code class="nohighlight hljs">apiary           prior    choice  exp hours    workers   workers/hr
+meadow_north      0.15    survey       1.77       1084          614
+orchard_east      0.30    survey       2.53       2422          958
+hedgerow_west     0.55    survey       3.64       4400         1209
+arable_south      0.75    survey       4.82       5738         1189
+heath_ridge       0.25    survey       2.35       2475         1053
+valley_farm       0.90   act_now       6.00       9450         1575
+
+Budget 20 effort-hours — survey-or-act exact: 24485 workers saved (19.34 hrs, sites orchard_east, hedgerow_west, arable_south, heath_ridge, valley_farm)
+Budget 20 effort-hours — never-survey exact:  21700 workers saved (18.00 hrs, sites hedgerow_west, arable_south, valley_farm)</code></pre><p>Low- and moderate-risk apiaries (<code>p_hi ≤ 0.75</code>) pass the exact survey-first condition <code>d C (1 - p) &gt; M</code> (Lean <code>survey_first_iff</code>), saving effort-hours on low-mite hives so the fixed 20-hour budget protects strictly more workers than treating blindly.</p><h2 id="Structural-ambiguity-across-the-four-floral-competition-couplings"><a class="docs-heading-anchor" href="#Structural-ambiguity-across-the-four-floral-competition-couplings">Structural ambiguity across the four floral-competition couplings</a><a id="Structural-ambiguity-across-the-four-floral-competition-couplings-1"></a><a class="docs-heading-anchor-permalink" href="#Structural-ambiguity-across-the-four-floral-competition-couplings" title="Permalink"></a></h2><p>Finally, we confront the deepest uncertainty highlighted in vignette 13: we do not know whether honey bees and bumblebees interact via <code>:scramble</code>, <code>:standing_crop</code>, <code>:partitioned</code> or <code>:preemptive</code> competition (here with <code>refuge = 0.05</code> for short-tongued <em>B. terrestris</em>). We evaluate all five actions under all four structural couplings across four ecological regimes (<code>mites0 ∈ {180, 380}</code> × <code>infected_hazard ∈ {1.0, 2.0}</code>, with <code>deposit_scale = 1.0</code> and <code>miticide_eff = 0.11</code>), yielding 16 structural–ecological states and four rival structural prior distributions (one concentrated on each competition model).</p><p>To demonstrate credal-set simplification, we include two interior mixtures alongside the four pure-model priors and call <code>prune_generators</code> before comparing <code>GammaMaximin</code>, <code>AlphaMaxmin(0.5)</code>, <code>EAdmissible</code> and <code>SmoothAmbiguity(λ)</code> (Klibanoff–Marinacci–Mukerji):</p><pre><code class="language-julia hljs">modes = [:scramble, :standing_crop, :partitioned, :preemptive]
+regimes = [
+    (label = :lowM_lowH,   mites0 = 180.0, deposit_scale = 1.0, infected_hazard = 1.0, miticide_eff = 0.11),
+    (label = :lowM_highH,  mites0 = 180.0, deposit_scale = 1.0, infected_hazard = 2.0, miticide_eff = 0.11),
+    (label = :highM_lowH,  mites0 = 380.0, deposit_scale = 1.0, infected_hazard = 1.0, miticide_eff = 0.11),
+    (label = :highM_highH, mites0 = 380.0, deposit_scale = 1.0, infected_hazard = 2.0, miticide_eff = 0.11),
+]
+
+struct_states = [Symbol(m, :_, r.label) for m in modes for r in regimes]
+Q_struct = zeros(na, length(struct_states))
+for (mi, m) in enumerate(modes), (ri, r) in enumerate(regimes)
+    col = (mi - 1) * length(regimes) + ri
+    for (ai, act) in enumerate(action_names)
+        sc = run_pollinator(act, r; mode = m, refuge = 0.05)
+        # Same normalised 0–100 multi-taxon index (uninfected honey bees + bumblebee queens)
+        Q_struct[ai, col] = 50.0 * clamp(sc.hb_healthy / 20_000.0, 0.0, 1.0) +
+                            50.0 * clamp(sc.bb_queens / 200.0, 0.0, 1.0)
+    end
+end
+
+# Four pure-model priors (uniform over the 4 ecological regimes within each coupling)
+# plus two interior mixtures that are redundant convex combinations.
+pure_priors = map(1:4) do mi
+    w = zeros(length(struct_states))
+    w[((mi - 1) * 4 + 1):(mi * 4)] .= 0.25
+    return w
+end
+redundant_1 = 0.5 .* pure_priors[1] .+ 0.5 .* pure_priors[2]
+redundant_2 = 0.25 .* (pure_priors[1] .+ pure_priors[2] .+ pure_priors[3] .+ pure_priors[4])
+
+credal_raw = CredalSet(struct_states, vcat(pure_priors, [redundant_1, redundant_2]))
+credal_min = prune_generators(credal_raw)
+println(&quot;Generators before pruning: &quot;, length(credal_raw.points),
+        &quot; -&gt; after prune_generators: &quot;, length(credal_min.points))
+
+pt_struct = PayoffTable(action_names, struct_states, Q_struct)
+prob_struct = DecisionProblem(pt_struct, credal_min; baseline = :no_intervention)
+
+@printf(&quot;\n%-24s %s\n&quot;, &quot;rule&quot;, &quot;chosen action(s)&quot;)
+for (lbl, rule) in [
+    (&quot;GammaMaximin&quot;,          GammaMaximin()),
+    (&quot;AlphaMaxmin (α=0.5)&quot;,   DecisionRule(AlphaMaxmin(0.5))),
+    (&quot;EAdmissible&quot;,           EAdmissible()),
+    (&quot;SmoothAmbiguity (0.05)&quot;, DecisionRule(SmoothAmbiguity(0.05))),
+    (&quot;SmoothAmbiguity (0.30)&quot;, DecisionRule(SmoothAmbiguity(0.30))),
+    (&quot;SmoothAmbiguity (1.00)&quot;, DecisionRule(SmoothAmbiguity(1.00))),
+]
+    @printf(&quot;%-24s %s\n&quot;, lbl, join(string.(decide(prob_struct, rule).chosen), &quot;, &quot;))
+end</code></pre><pre><code class="nohighlight hljs">Generators before pruning: 6 -&gt; after prune_generators: 4
+
+rule                     chosen action(s)
+GammaMaximin             integrated
+AlphaMaxmin (α=0.5)      integrated
+EAdmissible              autumn_miticide, integrated
+SmoothAmbiguity (0.05)   integrated
+SmoothAmbiguity (0.30)   integrated
+SmoothAmbiguity (1.00)   integrated</code></pre><pre><code class="language-julia hljs"># Plot expected multi-taxon score under each of the four structural competition couplings
+# alongside the SmoothAmbiguity certainty equivalent as ambiguity aversion λ increases.
+lambdas = [0.001, 0.02, 0.05, 0.1, 0.2, 0.4, 0.8, 1.5]
+plt_amb = plot(; xlabel = &quot;Ambiguity aversion λ (SmoothAmbiguity)&quot;,
+               ylabel = &quot;Certainty-equivalent pollinator index (0–100)&quot;,
+               title = &quot;Ambiguity over the 4 floral-competition couplings (illustrative)&quot;,
+               titlefontsize = 10, legend = :bottomright)
+for (ai, act) in enumerate(action_names)
+    vals_λ = [Float64(aggregate(SmoothAmbiguity(λ), prob_struct)[ai]) for λ in lambdas]
+    plot!(plt_amb, lambdas, vals_λ; lw = 2, marker = :circle, ms = 3, label = String(act))
+end
+plt_amb</code></pre><p><img src="../33_pollinator_varroa_decision_files/figure-commonmark/cell-11-output-1.svg" alt/></p><p>Pruning the two interior mixtures leaves the exact four-vertex credal set unchanged (backed by Lean <code>prune_redundant_lowerExpectedUtility</code> and <code>prune_redundant_isEAdmissible</code>), while <code>SmoothAmbiguity(λ)</code> traces the continuous bridge from the uniform model-averaged expectation (<span>$\lambda \to 0^+$</span>) toward the worst-case competition coupling (<code>GammaMaximin</code>, <span>$\lambda \to \infty$</span>, Lean <code>smoothAmbiguityMap_bounds</code>).</p><h2 id="What-is-measured-and-what-is-assumed"><a class="docs-heading-anchor" href="#What-is-measured-and-what-is-assumed">What is measured and what is assumed</a><a id="What-is-measured-and-what-is-assumed-1"></a><a class="docs-heading-anchor-permalink" href="#What-is-measured-and-what-is-assumed" title="Permalink"></a></h2><table><tr><th style="text-align: left">Item</th><th style="text-align: left">Value</th><th style="text-align: left">Source</th></tr><tr><td style="text-align: left">Honey bee colony (<code>HONEYBEE_PARAMETERS</code>), <em>Varroa</em> (<code>VARROA_PARAMETERS</code>) and DWV transmission</td><td style="text-align: left"><code>honeybee()</code>, <code>varroa()</code></td><td style="text-align: left">HoPoMo (Schmickl &amp; Crailsheim 2007); BEEHAVE (Becher et al. 2014); Martin (1998); vignettes 10–11</td></tr><tr><td style="text-align: left">Bumblebee life cycle (<code>BUMBLEBEE_PARAMETERS</code>)</td><td style="text-align: left"><code>bumblebee()</code></td><td style="text-align: left">Bumble-BEEHAVE (Becher et al. 2018); vignette 12</td></tr><tr><td style="text-align: left">Four floral-competition couplings and baseline farmland supply (3 kg/km²/day)</td><td style="text-align: left"><code>floral_competition</code>, <code>floral_supply</code></td><td style="text-align: left">Hicks et al. (2016); Baude et al. (2016); vignette 13</td></tr><tr><td style="text-align: left">Flower-borne DWV deposition &amp; acquisition defaults</td><td style="text-align: left"><code>flower_transmission()</code></td><td style="text-align: left">illustrative rates calibrated in vignette 13</td></tr><tr><td style="text-align: left">Five management actions, <code>N = 36</code> parametric draws, utility weights and 6-apiary effort hours</td><td style="text-align: left"><code>action_names</code>, <code>draws</code>, <code>apiaries</code></td><td style="text-align: left">illustrative (no monetary prices)</td></tr></table><h2 id="References"><a class="docs-heading-anchor" href="#References">References</a><a id="References-1"></a><a class="docs-heading-anchor-permalink" href="#References" title="Permalink"></a></h2><p>Baude, M. et al. (2016). Historical nectar assessment reveals the fall and rise of floral resources in Britain. <em>Nature</em> 530, 85–88.</p><p>Becher, M. A. et al. (2014). BEEHAVE: a systems model of honeybee colony dynamics and foraging to explore multifactorial causes of colony failure. <em>Journal of Applied Ecology</em> 51, 470–482.</p><p>Becher, M. A. et al. (2018). Bumble-BEEHAVE: a systems model for exploring multifactorial causes of bumblebee decline at individual, colony, population and community level. <em>Journal of Applied Ecology</em> 55, 2790–2801.</p><p>Hicks, D. M. et al. (2016). Food for pollinators: quantifying the nectar and pollen resources of urban flower meadows. <em>PLoS ONE</em> 11, e0158117.</p><p>Martin, S. J. (1998). A population model for the ectoparasitic mite <em>Varroa jacobsoni</em> in honey bee (<em>Apis mellifera</em>) colonies. <em>Ecological Modelling</em> 109, 267–281.</p><p>Schmickl, T. &amp; Crailsheim, K. (2007). HoPoMo: A model of honeybee intracolonial population dynamics and resource management. <em>Ecological Modelling</em> 204, 219–245.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../32_north_sea_fisheries_decision/">« Managing the North Sea multispecies fishery under recruitment and predation uncertainty</a><a class="docs-footer-nextpage" href="../../api/communities/">Composing communities »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.20.0 on <span class="colophon-date" title="Saturday 28 November 2026 17:48">Saturday 28 November 2026</span>. Using Julia version 1.13.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
