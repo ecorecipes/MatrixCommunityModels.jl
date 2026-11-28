@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><meta name="referrer" content="no-referrer"/><title>Choosing a river flow regime across fish, trees and insects under uncertainty · MatrixCommunityModels.jl</title><meta name="title" content="Choosing a river flow regime across fish, trees and insects under uncertainty · MatrixCommunityModels.jl"/><meta property="og:title" content="Choosing a river flow regime across fish, trees and insects under uncertainty · MatrixCommunityModels.jl"/><meta property="twitter:title" content="Choosing a river flow regime across fish, trees and insects under uncertainty · MatrixCommunityModels.jl"/><meta name="description" content="Documentation for MatrixCommunityModels.jl."/><meta property="og:description" content="Documentation for MatrixCommunityModels.jl."/><meta property="twitter:description" content="Documentation for MatrixCommunityModels.jl."/><meta property="og:url" content="https://ecorecipes.github.io/MatrixCommunityModels.jl/tutorials/31_verde_flow_decision/"/><meta property="twitter:url" content="https://ecorecipes.github.io/MatrixCommunityModels.jl/tutorials/31_verde_flow_decision/"/><link rel="canonical" href="https://ecorecipes.github.io/MatrixCommunityModels.jl/tutorials/31_verde_flow_decision/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">MatrixCommunityModels.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="../01_introduction/">Matrix community models by composition</a></li><li><a class="tocitem" href="../02_verde_fish/">Verde River fish: a community linked by total biomass</a></li><li><a class="tocitem" href="../03_riparian_guilds/">Riparian plant guilds: a community linked by space</a></li><li><a class="tocitem" href="../04_adapt3_cypripedium/">Two orchids: reproducing an adapt3 community projection</a></li><li><a class="tocitem" href="../05_cross_species_sensitivity/">Revealing interactions: cross-species sensitivity analysis</a></li><li><a class="tocitem" href="../06_composing_ipms/">Composing an integral projection model with a matrix model</a></li><li><a class="tocitem" href="../07_metacommunity/">A metacommunity by nested composition</a></li><li><a class="tocitem" href="../08_equilibria_invasion_chance/">Equilibria, invasion and chance</a></li><li><a class="tocitem" href="../09_seasons_and_phenology/">Seasons: phenology, coexistence and drift</a></li><li><a class="tocitem" href="../10_honeybee_colony/">Bees 1: a honey bee colony from modules</a></li><li><a class="tocitem" href="../11_varroa_and_dwv/">Bees 2: Varroa mites and deformed wing virus</a></li><li><a class="tocitem" href="../12_bumblebees/">Bees 3: a bumblebee population</a></li><li><a class="tocitem" href="../13_bees_sharing_flowers/">Bees 4: honey bees and bumblebees on the same flowers</a></li><li><a class="tocitem" href="../14_thistles_and_weevil/">A native thistle, a weed and a weevil: an integral projection model among matrix models</a></li><li><a class="tocitem" href="../15_forest_basal_area/">A forest on a large mesh: three tree species sharing one pool of basal area</a></li><li><a class="tocitem" href="../16_sea_fan_aspergillosis/">Sea fans and aspergillosis: an integral projection model stratified by infection status</a></li><li><a class="tocitem" href="../17_sagebrush_steppe/">Four perennials of the sagebrush steppe: coexistence through crowding</a></li><li><a class="tocitem" href="../18_north_sea_lemans/">North Sea fish by length: predation by size in the LeMans model</a></li><li><a class="tocitem" href="../19_corals_moorea/">Corals of Mo’orea: an open community recovering by recruitment</a></li><li><a class="tocitem" href="../20_grasslands_synchrony/">Five grasslands: crowding, coexistence and synchrony</a></li><li><a class="tocitem" href="../21_flour_beetles/">Two flour beetles that eat each other’s eggs: coexistence on a cycle</a></li><li><a class="tocitem" href="../22_designed_flow_regimes/">Designing flows for a whole river: plants, fish and invertebrates</a></li><li><a class="tocitem" href="../23_predator_and_prey/">A predator and its prey, each with juveniles and adults</a></li><li><a class="tocitem" href="../24_chytrid_leopard_frogs/">Chytrid fungus in leopard frogs: a host-parasite IPM with seasons and a zoospore pool</a></li><li><a class="tocitem" href="../25_size_spectrum_mizer/">A size-spectrum fish community: the mizer model as projection nets</a></li><li><a class="tocitem" href="../26_resilience/">Resilience metrics with ResilienceCore.jl: beetles and riparian guilds</a></li><li><a class="tocitem" href="../28_canvasbacks_redheads/">Canvasbacks and redheads: two interacting diving ducks</a></li><li><a class="tocitem" href="../29_annual_plants/">Annual plants with a seed bank: niche and fitness differences</a></li><li><a class="tocitem" href="../30_harvest_decision/">Which stage to harvest, and how hard: a decision under uncertain vital rates</a></li><li class="is-active"><a class="tocitem" href>Choosing a river flow regime across fish, trees and insects under uncertainty</a><ul class="internal"><li><a class="tocitem" href="#The-question"><span>The question</span></a></li><li><a class="tocitem" href="#Flow-regimes-and-uncertain-conditions"><span>Flow regimes and uncertain conditions</span></a></li><li><a class="tocitem" href="#Running-the-fish-community-through-ManagedCommunity"><span>Running the fish community through <code>ManagedCommunity</code></span></a></li><li><a class="tocitem" href="#Multi-objective-trade-offs-and-the-Pareto-front"><span>Multi-objective trade-offs and the Pareto front</span></a></li><li><a class="tocitem" href="#Comparing-decision-rules-on-the-river-index-and-native-fish"><span>Comparing decision rules on the river index and native fish</span></a></li><li><a class="tocitem" href="#Value-of-information-and-certainty-equivalent-EVPI"><span>Value of information and certainty-equivalent EVPI</span></a></li><li><a class="tocitem" href="#Scenario-discovery:-when-does-the-natural-regime-fail-native-fish?"><span>Scenario discovery: when does the natural regime fail native fish?</span></a></li><li><a class="tocitem" href="#What-is-measured-and-what-is-assumed"><span>What is measured and what is assumed</span></a></li><li><a class="tocitem" href="#References"><span>References</span></a></li></ul></li></ul></li><li><span class="tocitem">API Reference</span><ul><li><a class="tocitem" href="../../api/communities/">Composing communities</a></li><li><a class="tocitem" href="../../api/analysis/">Analysis</a></li><li><a class="tocitem" href="../../api/resilience/">Resilience metrics</a></li><li><a class="tocitem" href="../../api/management/">Management and decisions</a></li><li><a class="tocitem" href="../../api/kernels/">IPMs and kernels</a></li><li><input class="collapse-toggle" id="menuitem-3-6" type="checkbox"/><label class="tocitem" for="menuitem-3-6"><span class="docs-label">Published models</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../api/models_rivers/">Rivers and orchids</a></li><li><a class="tocitem" href="../../api/models_bees/">Bees and flowers</a></li><li><a class="tocitem" href="../../api/models_plants/">Plants and trees</a></li><li><a class="tocitem" href="../../api/models_marine/">Reefs and seas</a></li><li><a class="tocitem" href="../../api/models_animals/">Competitors, predators and pathogens</a></li></ul></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href>Choosing a river flow regime across fish, trees and insects under uncertainty</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Choosing a river flow regime across fish, trees and insects under uncertainty</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/ecorecipes/MatrixCommunityModels.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/ecorecipes/MatrixCommunityModels.jl/blob/main/docs/src/tutorials/31_verde_flow_decision.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Choosing-a-river-flow-regime-across-fish,-trees-and-insects-under-uncertainty"><a class="docs-heading-anchor" href="#Choosing-a-river-flow-regime-across-fish,-trees-and-insects-under-uncertainty">Choosing a river flow regime across fish, trees and insects under uncertainty</a><a id="Choosing-a-river-flow-regime-across-fish,-trees-and-insects-under-uncertainty-1"></a><a class="docs-heading-anchor-permalink" href="#Choosing-a-river-flow-regime-across-fish,-trees-and-insects-under-uncertainty" title="Permalink"></a></h1><p>Simon Frost</p><ul><li><a href="#the-question">The question</a></li><li><a href="#flow-regimes-and-uncertain-conditions">Flow regimes and uncertain conditions</a></li><li><a href="#running-the-fish-community-through-managedcommunity">Running the fish community through <code>ManagedCommunity</code></a></li><li><a href="#multi-objective-trade-offs-and-the-pareto-front">Multi-objective trade-offs and the Pareto front</a></li><li><a href="#comparing-decision-rules-on-the-river-index-and-native-fish">Comparing decision rules on the river index and native fish</a></li><li><a href="#value-of-information-and-certainty-equivalent-evpi">Value of information and certainty-equivalent EVPI</a></li><li><a href="#scenario-discovery-when-does-the-natural-regime-fail-native-fish">Scenario discovery: when does the natural regime fail native fish?</a></li><li><a href="#what-is-measured-and-what-is-assumed">What is measured and what is assumed</a></li><li><a href="#references">References</a></li></ul><pre><code class="language-julia hljs">ENV[&quot;GKSwstype&quot;] = &quot;100&quot;
+using MatrixCommunityModels
+using DecisionAnalysis
+using Printf, Random, Statistics
+using Plots</code></pre><h2 id="The-question"><a class="docs-heading-anchor" href="#The-question">The question</a><a id="The-question-1"></a><a class="docs-heading-anchor-permalink" href="#The-question" title="Permalink"></a></h2><p>Below a dam on a dryland river, managers can choose how often to release spring floods, whether to allow drought years between them, and whether to pair flow releases with mechanical removal of non-native predatory fish. In <a href="../22_designed_flow_regimes/">vignette 22</a>, the four flow regimes of Tonkin et al. (2021) revealed a sharp three-way trade-off on the upper Verde River: an annual spring flood maximises native fish biomass but replaces cottonwood with willow; a flood every six years preceded by a drought maximises cottonwood but collapses native fish; four small pulses a year favour winged aquatic invertebrates while starving both fish and trees; and the natural regime sits in the middle of all three.</p><p>That comparison held carrying capacity, future drought frequency and riparian flood mortality fixed. In practice none of those is known cleanly, and managers must weigh native fish against riparian cottonwood and winged insects at the same time. Which flow regime lies on the Pareto frontier? Which regime wins under expected utility, tail-risk aversion, minimax regret, stochastic dominance or ambiguity over future climate? What would it be worth to resolve uncertainty about carrying capacity versus future drought frequency before committing to a flow schedule? And under what conditions does the natural regime fail native fish?</p><p><strong>What is published and what is illustrative.</strong> The three ecological community models (<code>verde_fish_model</code> of Rogosch et al. 2019, <code>riparian_model</code> of Lytle et al. 2017 and <code>flow_invertebrates</code> of McMullen et al. 2017 / Tonkin et al. 2021) and the four benchmark regimes (<code>tonkin_scenario</code>) are the published models reproduced in vignettes 2, 3 and 22. The intermediate flood frequencies, the non-native removal option, the prior distributions over ecological and hydrological uncertainty, and the decision utilities are illustrative. No monetary cost appears anywhere: outcomes are measured in native fish biomass (as a percentage of nominal carrying capacity <code>K = 47 660</code> g), non-seedling cottonwood cover (% of riparian space) and mean winged-invertebrate abundance (% of maximum carrying capacity).</p><h2 id="Flow-regimes-and-uncertain-conditions"><a class="docs-heading-anchor" href="#Flow-regimes-and-uncertain-conditions">Flow regimes and uncertain conditions</a><a id="Flow-regimes-and-uncertain-conditions-1"></a><a class="docs-heading-anchor-permalink" href="#Flow-regimes-and-uncertain-conditions" title="Permalink"></a></h2><p>We compare eight candidate management regimes over a 60-year horizon (scoring years 11 to 60, after the ten-year transient used by Tonkin et al. 2021), with the natural upper Verde River hydrograph (<code>:natural</code>) as the baseline:</p><ol><li><code>:natural</code> — the historical Paulden year-type sequence (baseline);</li><li><code>:fish_annual</code> — the fish prescription of Tonkin et al. (spring  flood every year);</li><li><code>:flood_2yr</code> — a spring flood every second year (no imposed  drought);</li><li><code>:flood_3yr</code> — a spring flood every third year, with a drought in  the year before it;</li><li><code>:flood_4yr</code> — a spring flood every fourth year, with a drought in  the year before it;</li><li><code>:plants_6yr</code> — the riparian prescription (spring flood every sixth  year, drought before);</li><li><code>:inverts_pulses</code> — the invertebrate prescription (four 50 m³/s  pulses a year, no large floods);</li><li><code>:natural_remove</code> — the natural hydrograph paired with annual  removal of 30% of non-native smallmouth bass (<code>:MIDO</code>) and green  sunfish (<code>:LECY</code>).</li></ol><pre><code class="language-julia hljs">const HORIZON = 60
+const K_NOMINAL = 47660.0
+const NATIVE_FISH = (:CACL, :GIRO, :CAIN)
+const NONNATIVE_FISH = (:LECY, :MIDO, :CYLU, :AMNA)
+
+nat_base = tonkin_scenario(:natural; years = HORIZON, invertebrate_years = 15)
+fsh_base = tonkin_scenario(:fish; years = HORIZON, invertebrate_years = 15)
+plt_base = tonkin_scenario(:plants; years = HORIZON, invertebrate_years = 15)
+inv_base = tonkin_scenario(:invertebrates; years = HORIZON, invertebrate_years = 15)
+
+function cyclic_envs(k::Int; drought_before::Bool = true, years::Int = HORIZON)
+    flood = [mod(y, k) == 0 ? 1 : 0 for y in 1:years]
+    drought = [drought_before &amp;&amp; k &gt; 1 &amp;&amp; mod(y + 1, k) == 0 ? 1 : 0 for y in 1:years]
+    fish = [(SP_highflood = flood[y], SU_highflood = 0, medflood = 0, drought = drought[y],
+             nonevent = 1 - flood[y] - drought[y]) for y in 1:years]
+    riparian = [(year = y, flood = Float64(flood[y]), drought = Float64(drought[y]),
+                 nonflood = flood[y] + drought[y] == 1 ? 0.0 : 1.0,
+                 cprop = 0.9, tprop = 0.4, decline = 1.0, tdecline = 1.0) for y in 1:years]
+    return (; fish, riparian)
+end
+
+cyc2 = cyclic_envs(2; drought_before = false)
+cyc3 = cyclic_envs(3; drought_before = true)
+cyc4 = cyclic_envs(4; drought_before = true)
+
+regime_fish_envs = Dict(
+    :natural =&gt; nat_base.fish,
+    :fish_annual =&gt; fsh_base.fish,
+    :flood_2yr =&gt; cyc2.fish,
+    :flood_3yr =&gt; cyc3.fish,
+    :flood_4yr =&gt; cyc4.fish,
+    :plants_6yr =&gt; plt_base.fish,
+    :inverts_pulses =&gt; inv_base.fish,
+    :natural_remove =&gt; nat_base.fish,
+)
+regime_rip_envs = Dict(
+    :natural =&gt; nat_base.riparian,
+    :fish_annual =&gt; fsh_base.riparian,
+    :flood_2yr =&gt; cyc2.riparian,
+    :flood_3yr =&gt; cyc3.riparian,
+    :flood_4yr =&gt; cyc4.riparian,
+    :plants_6yr =&gt; plt_base.riparian,
+    :inverts_pulses =&gt; inv_base.riparian,
+    :natural_remove =&gt; nat_base.riparian,
+)
+regime_labels = [:natural, :fish_annual, :flood_2yr, :flood_3yr, :flood_4yr,
+                 :plants_6yr, :inverts_pulses, :natural_remove]</code></pre><pre><code class="nohighlight hljs">8-element Vector{Symbol}:
+ :natural
+ :fish_annual
+ :flood_2yr
+ :flood_3yr
+ :flood_4yr
+ :plants_6yr
+ :inverts_pulses
+ :natural_remove</code></pre><p>Three sources of uncertainty are drawn together across <code>N = 200</code> parameter sets (all illustrative, apart from the initial adult fish biomass draws which come from the negative binomial distributions <code>TONKIN_FISH_INITIAL</code> of Tonkin et al. 2021):</p><ul><li><code>K_scale</code>: fish carrying capacity multiplier (log-normal, median 1, roughly 0.6 to 1.7), capturing reach-scale productivity uncertainty;</li><li><code>drought_shift</code>: extra drying probability in <code>[0, 0.45]</code>, which converts that share of scheduled non-event years into drought years under climate warming;</li><li><code>cottonwood_S_scale</code>: multiplier in <code>[0.8, 1.2]</code> on stage-specific cottonwood flood mortality in <code>RIPARIAN_GUILDS</code>;</li><li><code>init_seed</code>: integer seed selecting one independent initial fish biomass vector from <code>tonkin_fish_start</code>.</li></ul><pre><code class="language-julia hljs">rng = Xoshiro(31)
+N = 200
+draws = (;
+    K_scale = exp.(0.25 .* randn(rng, N)),
+    drought_shift = 0.45 .* rand(rng, N),
+    cottonwood_S_scale = 0.8 .+ 0.4 .* rand(rng, N),
+    init_seed = collect(1:N),
+)
+(; K_scale = round.(quantile(draws.K_scale, [0.05, 0.5, 0.95]); digits = 2),
+   drought_shift = round.(quantile(draws.drought_shift, [0.05, 0.5, 0.95]); digits = 2),
+   cottonwood_S_scale = round.(quantile(draws.cottonwood_S_scale, [0.05, 0.5, 0.95]); digits = 2))</code></pre><pre><code class="nohighlight hljs">(K_scale = [0.63, 0.99, 1.51], drought_shift = [0.02, 0.23, 0.42], cottonwood_S_scale = [0.83, 1.0, 1.19])</code></pre><h2 id="Running-the-fish-community-through-ManagedCommunity"><a class="docs-heading-anchor" href="#Running-the-fish-community-through-ManagedCommunity">Running the fish community through <code>ManagedCommunity</code></a><a id="Running-the-fish-community-through-ManagedCommunity-1"></a><a class="docs-heading-anchor-permalink" href="#Running-the-fish-community-through-ManagedCommunity" title="Permalink"></a></h2><p><code>ManagedCommunity</code> wraps <code>verde_fish_model</code> with its uncertain carrying capacity, initial biomass draw and climate-shifted drought years. Flow regimes enter as <code>environment</code> interventions and non-native removal enters as <code>remove = [:MIDO =&gt; 0.3, :LECY =&gt; 0.3]</code>. DecisionAnalysis.jl’s <code>outcomes</code> driver evaluates every regime on every draw.</p><pre><code class="language-julia hljs">function apply_drought_shift(envs, shift::Float64, seed::Int)
+    shift &lt;= 0.0 &amp;&amp; return envs
+    r = Xoshiro(10_000 + seed)
+    return map(envs) do e
+        if e.nonevent == 1 &amp;&amp; rand(r) &lt; shift
+            (SP_highflood = 0, SU_highflood = 0, medflood = 0, drought = 1, nonevent = 0)
+        else
+            e
+        end
+    end
+end
+
+function build_fish(θ)
+    vm = verde_fish_model(; K = K_NOMINAL * θ.K_scale)
+    n0 = tonkin_fish_start(Xoshiro(Int(θ.init_seed)))
+    envs = apply_drought_shift(nat_base.fish, θ.drought_shift, Int(θ.init_seed))
+    return (community = vm.community, n0 = n0, envs = envs)
+end
+
+function fish_outcomes(run)
+    tr = run.trajectory
+    native_pct = mean(100 .* sum(tr[sp][11:end, 2] .+ tr[sp][11:end, 3] for sp in NATIVE_FISH) ./ K_NOMINAL)
+    nonnative_pct = mean(100 .* sum(tr[sp][11:end, 2] .+ tr[sp][11:end, 3] for sp in NONNATIVE_FISH) ./ K_NOMINAL)
+    native_share = native_pct / max(native_pct + nonnative_pct, 1e-12)
+    collapsed = native_pct &lt; 15.0 ? 1.0 : 0.0
+    # Local linearisation at the final state under a non-event year (ResilienceCore)
+    J = linearise(tr.community, tr.u[end, :],
+                  (SP_highflood = 0, SU_highflood = 0, medflood = 0, drought = 0, nonevent = 1);
+                  check = false)
+    react = MatrixCommunityModels.ResilienceCore.reactivity(J)
+    return (; native_fish = native_pct, nonnative_fish = nonnative_pct,
+            native_share = 100 * native_share, collapsed, reactivity = react)
+end
+
+managed_fish = ManagedCommunity(build_fish;
+    parameters = (K_scale = 1.0, drought_shift = 0.0, cottonwood_S_scale = 1.0, init_seed = 1),
+    outcomes = fish_outcomes)
+
+function env_action(regime::Symbol)
+    base = regime_fish_envs[regime]
+    return (; parameters = (; _regime = regime),
+              environment = (t, env) -&gt; begin
+                  e = base[t]
+                  # Keep any drought shift already realised on non-event years
+                  e.nonevent == 1 &amp;&amp; env.drought == 1 ?
+                      (SP_highflood = 0, SU_highflood = 0, medflood = 0, drought = 1, nonevent = 0) : e
+              end)
+end
+
+actions = [
+    :natural =&gt; (;),
+    :fish_annual =&gt; env_action(:fish_annual),
+    :flood_2yr =&gt; env_action(:flood_2yr),
+    :flood_3yr =&gt; env_action(:flood_3yr),
+    :flood_4yr =&gt; env_action(:flood_4yr),
+    :plants_6yr =&gt; env_action(:plants_6yr),
+    :inverts_pulses =&gt; env_action(:inverts_pulses),
+    :natural_remove =&gt; (; remove = [:MIDO =&gt; 0.3, :LECY =&gt; 0.3]),
+]
+
+fish_table = outcomes(managed_fish, actions, draws; replicates = 1, seed = 31)
+run_counts(fish_table)</code></pre><pre><code class="nohighlight hljs">(runs = 1600, ok = 1600, failed = 0, absent = 0)</code></pre><p>For the riparian cottonwood and winged-invertebrate objectives on the exact same 200 draws and regimes, we project <code>riparian_model</code> (scaling cottonwood flood mortality by <code>cottonwood_S_scale</code> and applying the same drought shifts) and <code>flow_invertebrates</code>:</p><pre><code class="language-julia hljs">bugs = flow_invertebrates()
+inv_scores = Dict{Symbol, Float64}()
+for (reg, scen) in ((:natural, nat_base), (:fish_annual, fsh_base), (:plants_6yr, plt_base),
+                    (:inverts_pulses, inv_base), (:natural_remove, nat_base))
+    sol = project(bugs, scen.invertebrate_n0, scen.invertebrates)
+    inv_scores[reg] = mean((sol[:mayfly][3652:end, 1] .+ sol[:dragonfly][3652:end, 1]) ./ 2)
+end
+for (reg, every) in ((:flood_2yr, 365 * 2), (:flood_3yr, 365 * 3), (:flood_4yr, 365 * 4))
+    envs = invertebrate_flows(flood_pulses(every, 700 * 0.35, 365 * 15)...)
+    sol = project(bugs, nat_base.invertebrate_n0, envs)
+    inv_scores[reg] = mean((sol[:mayfly][3652:end, 1] .+ sol[:dragonfly][3652:end, 1]) ./ 2)
+end
+
+function apply_rip_drought(envs, shift::Float64, seed::Int)
+    shift &lt;= 0.0 &amp;&amp; return envs
+    r = Xoshiro(10_000 + seed)
+    return map(envs) do e
+        if e.flood == 0.0 &amp;&amp; e.drought == 0.0 &amp;&amp; rand(r) &lt; shift
+            merge(e, (drought = 1.0, nonflood = 0.0))
+        else
+            e
+        end
+    end
+end
+
+cottonwood_Q = zeros(length(regime_labels), N)
+invert_Q = zeros(length(regime_labels), N)
+for d in 1:N
+    c_old = RIPARIAN_GUILDS.C
+    c_new = merge(c_old, (S = clamp.(c_old.S .* draws.cottonwood_S_scale[d], 0.0, 0.999),))
+    guilds_d = merge(RIPARIAN_GUILDS, (C = c_new,))
+    rm = riparian_model(; guilds = guilds_d)
+    for (ai, reg) in enumerate(regime_labels)
+        renvs = apply_rip_drought(regime_rip_envs[reg], draws.drought_shift[d], draws.init_seed[d])
+        sol = project(rm.community, nat_base.riparian_n0, renvs)
+        cot = [100 * 350 * sum(sol[:C][k, s] / RIPARIAN_GUILDS.C.den[s] for s in 2:6) / rm.K
+               for k in 11:(HORIZON + 1)]
+        cottonwood_Q[ai, d] = mean(cot)
+        invert_Q[ai, d] = inv_scores[reg]
+    end
+end
+
+belief = SampleBelief(fish_table)
+payoff_fish = payoff_table(fish_table, IndividualsUtility(:native_fish))
+payoff_cot = PayoffTable(regime_labels, belief.states, cottonwood_Q)
+payoff_inv = PayoffTable(regime_labels, belief.states, invert_Q)
+# Equal-weight multi-taxon index (each target already on a 0–100 percentage scale)
+payoff_river = PayoffTable(regime_labels, belief.states,
+                           (Float64.(payoff_fish.Q) .+ cottonwood_Q .+ invert_Q) ./ 3)
+
+@printf(&quot;%-16s %10s %10s %10s %10s %10s\n&quot;,
+        &quot;regime&quot;, &quot;fish (%K)&quot;, &quot;cotton(%)&quot;, &quot;inverts&quot;, &quot;mean-3&quot;, &quot;collapse&quot;)
+for (ai, reg) in enumerate(regime_labels)
+    col_idx = findfirst(==(:collapsed), outcome_names(fish_table))
+    @printf(&quot;%-16s %10.1f %10.1f %10.1f %10.1f %10.2f\n&quot;,
+            reg, mean(Float64.(payoff_fish.Q[ai, :])), mean(cottonwood_Q[ai, :]),
+            mean(invert_Q[ai, :]), mean(Float64.(payoff_river.Q[ai, :])),
+            mean(fish_table.values[ai, :, 1, col_idx]))
+end</code></pre><pre><code class="nohighlight hljs">regime            fish (%K)  cotton(%)    inverts     mean-3   collapse
+natural                40.4       38.2       52.0       43.5       0.09
+fish_annual            70.3        6.6       46.2       41.0       0.00
+flood_2yr              41.1       39.1       43.4       41.2       0.09
+flood_3yr               6.0       49.1       41.2       32.1       0.95
+flood_4yr               6.8       45.1       41.2       31.0       0.93
+plants_6yr              7.7       47.2       41.2       32.0       0.86
+inverts_pulses          9.6        6.8       72.8       29.8       0.79
+natural_remove         45.1       38.2       52.0       45.1       0.04</code></pre><h2 id="Multi-objective-trade-offs-and-the-Pareto-front"><a class="docs-heading-anchor" href="#Multi-objective-trade-offs-and-the-Pareto-front">Multi-objective trade-offs and the Pareto front</a><a id="Multi-objective-trade-offs-and-the-Pareto-front-1"></a><a class="docs-heading-anchor-permalink" href="#Multi-objective-trade-offs-and-the-Pareto-front" title="Permalink"></a></h2><p>Treating native fish, cottonwood and winged invertebrates as three separate objectives in <code>DecisionAnalysis</code> immediately isolates the Pareto-efficient regimes without choosing arbitrary weights first:</p><pre><code class="language-julia hljs">objectives = (; native_fish = payoff_fish, cottonwood = payoff_cot, invertebrates = payoff_inv)
+pf = decide(objectives, belief, ParetoFront())
+pf.chosen</code></pre><pre><code class="nohighlight hljs">7-element Vector{Symbol}:
+ :fish_annual
+ :flood_2yr
+ :flood_3yr
+ :flood_4yr
+ :plants_6yr
+ :inverts_pulses
+ :natural_remove</code></pre><pre><code class="language-julia hljs">mean_fish = [mean(Float64.(payoff_fish.Q[ai, :])) for ai in eachindex(regime_labels)]
+mean_cot = [mean(cottonwood_Q[ai, :]) for ai in eachindex(regime_labels)]
+mean_inv = [mean(invert_Q[ai, :]) for ai in eachindex(regime_labels)]
+is_pareto = [r in pf.chosen for r in regime_labels]
+
+plt = scatter(mean_fish[is_pareto], mean_cot[is_pareto]; markersize = 8, color = :teal,
+              label = &quot;Pareto-efficient&quot;, xlabel = &quot;Mean native fish biomass (% of K)&quot;,
+              ylabel = &quot;Mean non-seedling cottonwood (% of space)&quot;,
+              title = &quot;Verde River flow regimes across 200 uncertain draws (illustrative)&quot;,
+              titlefontsize = 10, legend = :topright)
+scatter!(plt, mean_fish[.!is_pareto], mean_cot[.!is_pareto]; markersize = 6, color = :gray60,
+         marker = :xcross, label = &quot;Dominated&quot;)
+for (x, y, r) in zip(mean_fish, mean_cot, regime_labels)
+    annotate!(plt, x + 0.8, y + 1.2, text(String(r), 8, :left))
+end
+plt</code></pre><p><img src="../31_verde_flow_decision_files/figure-commonmark/cell-8-output-1.svg" alt/></p><p>Notice how <code>:natural_remove</code> pushes the natural hydrograph upwards in native fish biomass without sacrificing cottonwood or aquatic invertebrates, while <code>:flood_2yr</code> and <code>:flood_3yr</code> trace intermediate compromise points between the two extremes of Tonkin et al. (2021).</p><h2 id="Comparing-decision-rules-on-the-river-index-and-native-fish"><a class="docs-heading-anchor" href="#Comparing-decision-rules-on-the-river-index-and-native-fish">Comparing decision rules on the river index and native fish</a><a id="Comparing-decision-rules-on-the-river-index-and-native-fish-1"></a><a class="docs-heading-anchor-permalink" href="#Comparing-decision-rules-on-the-river-index-and-native-fish" title="Permalink"></a></h2><p>Next we compare five rules on both the three-taxon equal-weight index (<code>prob_river</code>) and native fish alone (<code>prob_fish</code>), including second-order stochastic dominance (<code>StochasticDominance(; order = 2)</code>) and Klibanoff–Marinacci–Mukerji smooth ambiguity (<code>SmoothAmbiguity</code>) across two climate priors (a wet-skewed prior weighting low <code>drought_shift</code> draws and a dry-skewed prior weighting high <code>drought_shift</code> draws):</p><pre><code class="language-julia hljs">prob_river = DecisionProblem(payoff_river, belief; baseline = :natural)
+prob_fish = DecisionProblem(payoff_fish, belief; baseline = :natural)
+
+rules = [
+    &quot;MaxExpectedUtility&quot; =&gt; MaxExpectedUtility(),
+    &quot;CVaR (worst 20%)&quot; =&gt; DecisionRule(CVaR(0.2)),
+    &quot;MinimaxRegret&quot; =&gt; MinimaxRegret(),
+    &quot;StochasticDominance (SSD)&quot; =&gt; StochasticDominance(; order = 2),
+]
+@printf(&quot;%-28s %-28s %-28s\n&quot;, &quot;rule&quot;, &quot;three-taxon index&quot;, &quot;native fish only&quot;)
+for (label, rule) in rules
+    c_r = join(string.(decide(prob_river, rule).chosen), &quot;, &quot;)
+    c_f = join(string.(decide(prob_fish, rule).chosen), &quot;, &quot;)
+    @printf(&quot;%-28s %-28s %-28s\n&quot;, label, c_r, c_f)
+end</code></pre><pre><code class="nohighlight hljs">rule                         three-taxon index            native fish only            
+MaxExpectedUtility           natural_remove               fish_annual                 
+CVaR (worst 20%)             natural_remove               fish_annual                 
+MinimaxRegret                fish_annual                  fish_annual                 
+StochasticDominance (SSD)    natural_remove               fish_annual</code></pre><p>To evaluate ambiguity aversion over future hydrology, we build a <code>CredalSet</code> from two weighted priors over the 200 draws — one concentrating probability on low <code>drought_shift</code> (near-historical climate) and one on high <code>drought_shift</code> (drier climate) — and compare <code>GammaMaximin()</code> with <code>DecisionRule(SmoothAmbiguity(0.15))</code>:</p><pre><code class="language-julia hljs">wet_w = [draws.drought_shift[d] &lt; 0.225 ? 2.0 : 0.5 for d in 1:N]
+dry_w = [draws.drought_shift[d] &gt;= 0.225 ? 2.0 : 0.5 for d in 1:N]
+wet_w ./= sum(wet_w)
+dry_w ./= sum(dry_w)
+credal = CredalSet(belief.states, [wet_w, dry_w])
+prob_ambig = DecisionProblem(payoff_river, credal; baseline = :natural)
+(gamma_maximin = decide(prob_ambig, GammaMaximin()).chosen,
+ smooth_ambiguity = decide(prob_ambig, DecisionRule(SmoothAmbiguity(0.15))).chosen)</code></pre><pre><code class="nohighlight hljs">(gamma_maximin = [:natural_remove], smooth_ambiguity = [:natural_remove])</code></pre><h2 id="Value-of-information-and-certainty-equivalent-EVPI"><a class="docs-heading-anchor" href="#Value-of-information-and-certainty-equivalent-EVPI">Value of information and certainty-equivalent EVPI</a><a id="Value-of-information-and-certainty-equivalent-EVPI-1"></a><a class="docs-heading-anchor-permalink" href="#Value-of-information-and-certainty-equivalent-EVPI" title="Permalink"></a></h2><p>How much would it be worth (in three-taxon index points, or in native fish <code>% K</code>) to know carrying capacity, future drought shift or cottonwood flood mortality before setting the flow regime? We also compute the certainty-equivalent EVPI (<code>ce_evpi</code>) for a risk-averse manager (<code>ExponentialUtility(:river_index; risk_aversion = 0.05)</code>):</p><pre><code class="language-julia hljs">evpi_river = evpi(prob_river, SampleAverage())
+evpi_fish = evpi(prob_fish, SampleAverage())
+ce_river = ce_evpi(prob_river, ExponentialUtility(:river_index; risk_aversion = 0.05))
+focal = (:K_scale, :drought_shift, :cottonwood_S_scale)
+
+@printf(&quot;%-22s %12s %12s\n&quot;, &quot;uncertainty&quot;, &quot;river index&quot;, &quot;native fish&quot;)
+for name in focal
+    er = evppi(prob_river, name)
+    ef = evppi(prob_fish, name)
+    @printf(&quot;%-22s %6.2f ± %-4.2f %6.2f ± %-4.2f\n&quot;,
+            name, Float64(er.value), er.standard_error, Float64(ef.value), ef.standard_error)
+end
+@printf(&quot;%-22s %6.2f ± %-4.2f %6.2f ± %-4.2f\n&quot;,
+        &quot;all (EVPI)&quot;, Float64(evpi_river.value), evpi_river.standard_error,
+        Float64(evpi_fish.value), evpi_fish.standard_error)
+@printf(&quot;%-22s %12.2f\n&quot;, &quot;CE-EVPI (CARA 0.05)&quot;, Float64(ce_river.value))</code></pre><pre><code class="nohighlight hljs">uncertainty             river index  native fish
+K_scale                  0.05 ± 0.10   0.00 ± 0.00
+drought_shift            0.00 ± 0.00   0.00 ± 0.00
+cottonwood_S_scale      -0.00 ± 0.00   0.00 ± 0.00
+all (EVPI)               0.82 ± 0.14   0.00 ± 0.00
+CE-EVPI (CARA 0.05)            0.83</code></pre><h2 id="Scenario-discovery:-when-does-the-natural-regime-fail-native-fish?"><a class="docs-heading-anchor" href="#Scenario-discovery:-when-does-the-natural-regime-fail-native-fish?">Scenario discovery: when does the natural regime fail native fish?</a><a id="Scenario-discovery:-when-does-the-natural-regime-fail-native-fish?-1"></a><a class="docs-heading-anchor-permalink" href="#Scenario-discovery:-when-does-the-natural-regime-fail-native-fish?" title="Permalink"></a></h2><p>Under the baseline <code>:natural</code> hydrograph, native fish drop below 15% of nominal carrying capacity in a subset of the 200 draws. Patient Rule Induction Method (<code>prim_boxes</code>) finds the interpretable hyper-rectangle in <code>(K_scale, drought_shift, cottonwood_S_scale)</code> space where collapse is concentrated:</p><pre><code class="language-julia hljs">nat_idx = findfirst(==(:natural), action_labels(fish_table))
+col_idx = findfirst(==(:collapsed), outcome_names(fish_table))
+nat_collapsed = vec(fish_table.values[nat_idx, :, 1, col_idx]) .&gt; 0.5
+prim = prim_boxes(belief, nat_collapsed; peel_alpha = 0.15, min_mass = 0.15)
+top_box = argmax(b -&gt; b.density, prim.frontier)
+(base_collapse_rate = round(prim.base_rate; digits = 3),
+ box_collapse_density = round(top_box.density; digits = 3),
+ box_coverage = round(top_box.coverage; digits = 3),
+ box_mass = round(top_box.mass; digits = 3),
+ bounds = top_box.bounds)</code></pre><pre><code class="nohighlight hljs">(base_collapse_rate = 0.09, box_collapse_density = 0.448, box_coverage = 0.722, box_mass = 0.145, bounds = Dict(:cottonwood_S_scale =&gt; (0.8001205902530144, 1.1995402632173442), :drought_shift =&gt; (0.2533088730035887, 0.44883520149788825), :init_seed =&gt; (45.0, 200.0), :K_scale =&gt; (0.5257601576346292, 0.9083381537350731)))</code></pre><pre><code class="language-julia hljs">plt = scatter(draws.drought_shift[.!nat_collapsed], draws.K_scale[.!nat_collapsed];
+              color = :steelblue, alpha = 0.7, label = &quot;Native fish ≥ 15% K&quot;,
+              xlabel = &quot;Extra drought probability (drought_shift)&quot;,
+              ylabel = &quot;Carrying-capacity multiplier (K_scale)&quot;,
+              title = &quot;PRIM vulnerability box under the natural hydrograph (illustrative)&quot;,
+              titlefontsize = 10, legend = :topright)
+scatter!(plt, draws.drought_shift[nat_collapsed], draws.K_scale[nat_collapsed];
+         color = :crimson, marker = :diamond, label = &quot;Native fish &lt; 15% K&quot;)
+if haskey(top_box.bounds, :drought_shift) &amp;&amp; haskey(top_box.bounds, :K_scale)
+    xlo, xhi = top_box.bounds[:drought_shift]
+    ylo, yhi = top_box.bounds[:K_scale]
+    plot!(plt, [xlo, xhi, xhi, xlo, xlo], [ylo, ylo, yhi, yhi, ylo];
+          lw = 2.5, color = :black, ls = :dash, label = &quot;PRIM box&quot;)
+end
+plt</code></pre><p><img src="../31_verde_flow_decision_files/figure-commonmark/cell-13-output-1.svg" alt/></p><h2 id="What-is-measured-and-what-is-assumed"><a class="docs-heading-anchor" href="#What-is-measured-and-what-is-assumed">What is measured and what is assumed</a><a id="What-is-measured-and-what-is-assumed-1"></a><a class="docs-heading-anchor-permalink" href="#What-is-measured-and-what-is-assumed" title="Permalink"></a></h2><table><tr><th style="text-align: left">Item</th><th style="text-align: left">Value</th><th style="text-align: left">Source</th></tr><tr><td style="text-align: left">Verde River fish community (7 species, vital rates, year-type modifiers, <code>K = 47 660</code> g)</td><td style="text-align: left"><code>verde_fish_model()</code></td><td style="text-align: left">Rogosch et al. 2019 (vignette 2)</td></tr><tr><td style="text-align: left">Initial adult fish biomass draws</td><td style="text-align: left"><code>TONKIN_FISH_INITIAL</code> (<code>tonkin_fish_start</code>)</td><td style="text-align: left">Tonkin et al. 2021 (vignette 22)</td></tr><tr><td style="text-align: left">Riparian plant guilds (5 guilds, 6 stages)</td><td style="text-align: left"><code>riparian_model()</code>, <code>RIPARIAN_GUILDS</code></td><td style="text-align: left">Lytle et al. 2017 (vignette 3)</td></tr><tr><td style="text-align: left">Aquatic invertebrates (mayfly, dragonfly, ostracod)</td><td style="text-align: left"><code>flow_invertebrates()</code>, <code>FLOW_INVERTEBRATES</code></td><td style="text-align: left">McMullen et al. 2017 / Tonkin et al. 2021 (vignette 22)</td></tr><tr><td style="text-align: left">Four benchmark regimes (<code>:natural</code>, <code>:fish_annual</code>, <code>:plants_6yr</code>, <code>:inverts_pulses</code>)</td><td style="text-align: left"><code>tonkin_scenario</code></td><td style="text-align: left">Tonkin et al. 2021</td></tr><tr><td style="text-align: left">Intermediate flood cycles (<code>:flood_2yr</code>, <code>:flood_3yr</code>, <code>:flood_4yr</code>) and 30% non-native removal</td><td style="text-align: left"><code>cyclic_envs</code>, <code>remove = [:MIDO =&gt; 0.3, :LECY =&gt; 0.3]</code></td><td style="text-align: left">illustrative</td></tr><tr><td style="text-align: left">Prior on <code>K_scale</code>, <code>drought_shift</code>, <code>cottonwood_S_scale</code> (200 draws)</td><td style="text-align: left">log-normal and uniform bounds</td><td style="text-align: left">illustrative</td></tr><tr><td style="text-align: left">Equal-weight three-taxon river index, 15% collapse threshold, CARA 0.05 and climate credal priors</td><td style="text-align: left"><code>payoff_river</code>, <code>ExponentialUtility(:river_index; risk_aversion = 0.05)</code>, <code>CredalSet</code></td><td style="text-align: left">illustrative</td></tr></table><h2 id="References"><a class="docs-heading-anchor" href="#References">References</a><a id="References-1"></a><a class="docs-heading-anchor-permalink" href="#References" title="Permalink"></a></h2><p>Lytle, D. A., Merritt, D. M., Tonkin, J. D., Olden, J. D. &amp; Reynolds, L. V. (2017). Linking river flow regimes to riparian plant guilds: a community-wide modeling approach. <em>Ecological Applications</em> 27, 1338–1350.</p><p>McMullen, L. E., De Leenheer, P., Tonkin, J. D. &amp; Lytle, D. A. (2017). High mortality and enhanced recovery: modelling the countervailing effects of disturbance on population dynamics. <em>Ecology Letters</em> 20, 1566–1575.</p><p>Rogosch, J. S., Tonkin, J. D., Lytle, D. A., Merritt, D. M., Reynolds, L. V. &amp; Olden, J. D. (2019). Increasing drought favors nonnative fishes in a dryland river: evidence from a multispecies demographic model. <em>Ecosphere</em> 10, e02681.</p><p>Tonkin, J. D., Olden, J. D., Merritt, D. M., Reynolds, L. V., Rogosch, J. S. &amp; Lytle, D. A. (2021). Designing flow regimes to support entire river ecosystems. <em>Frontiers in Ecology and the Environment</em> 19, 326–333. <a href="https://doi.org/10.1002/fee.2348">https://doi.org/10.1002/fee.2348</a>.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../30_harvest_decision/">« Which stage to harvest, and how hard: a decision under uncertain vital rates</a><a class="docs-footer-nextpage" href="../../api/communities/">Composing communities »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.20.0 on <span class="colophon-date" title="Saturday 28 November 2026 04:49">Saturday 28 November 2026</span>. Using Julia version 1.13.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
