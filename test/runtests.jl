@@ -36,11 +36,11 @@ if lowercase(get(ENV, "MCM_LONG_TESTS", "false")) in ("true", "1", "yes")
 end
 
 # The DecisionAnalysis.jl adapter (ext/MatrixCommunityModelsDecisionAnalysisExt.jl) is tested in an
-# environment of its own, test/decision_analysis, in a second process: DecisionAnalysis.jl needs
-# Julia 1.12, so it cannot be a test dependency of a package that supports 1.11. The tests are
-# skipped below 1.12, with MCM_DECISION_TESTS=false, and (as a broken test, with a warning) when
-# DecisionAnalysis.jl cannot be installed.
-if VERSION >= v"1.12" && lowercase(get(ENV, "MCM_DECISION_TESTS", "true")) in ("true", "1", "yes")
+# environment of its own, test/decision_analysis, in a second process so DecisionAnalysis.jl stays a
+# weak dependency rather than an `[extras]` entry. The tests can be skipped with
+# MCM_DECISION_TESTS=false, and are marked broken (with a warning) if DecisionAnalysis.jl cannot
+# be installed.
+if lowercase(get(ENV, "MCM_DECISION_TESTS", "true")) in ("true", "1", "yes")
     @testset "DecisionAnalysis adapter (own environment)" begin
         project = joinpath(@__DIR__, "decision_analysis")
         julia = Base.julia_cmd()

@@ -52,7 +52,7 @@ simulation loop.
   `parameters` or the `environment`) and named outcomes; `project` runs it, deterministic or
   with demographic stochasticity. With
   [DecisionAnalysis.jl](https://github.com/ecorecipes/DecisionAnalysis.jl) loaded (a weak
-  dependency, Julia 1.12 or later), an extension gives its adapter verbs methods, so that
+  dependency), an extension gives its adapter verbs methods, so that
   `outcomes(m, actions, draws; replicates, seed)` runs the community over parameter draws,
   actions and replicates with common random numbers, ready for payoff tables, decision rules
   and the value of information.
@@ -121,19 +121,19 @@ simulation loop.
 ## Installation
 
 The package and its ecorecipes dependencies are not registered. Its `Project.toml` names
-their GitHub URLs, so this is enough (Julia 1.11 or later):
+their GitHub URLs, so this is enough (Julia 1.13 or later):
 
 ```julia
 using Pkg
 Pkg.add(url = "https://github.com/ecorecipes/MatrixCommunityModels.jl")
 ```
 
-The decision-analysis extension (see vignette 30) needs Julia 1.12 or later and two more
-unregistered packages; without them the rest of the package is unaffected:
+The decision-analysis extension (see vignettes 30–33) uses
+[DecisionAnalysis.jl](https://github.com/ecorecipes/DecisionAnalysis.jl) as a weak dependency;
+without it the rest of the package is unaffected:
 
 ```julia
-Pkg.add([PackageSpec(url = "https://github.com/ecorecipes/FiniteKernels.jl"),
-         PackageSpec(url = "https://github.com/ecorecipes/DecisionAnalysis.jl")])
+Pkg.add(url = "https://github.com/ecorecipes/DecisionAnalysis.jl")
 ```
 
 ## Quick start
@@ -239,8 +239,8 @@ chytrid runs over 529 weeks, the seeded ensembles of the vignettes) are left out
 for: `MCM_LONG_TESTS=true julia --project -e 'using Pkg; Pkg.test()'` runs them after the
 main suite. They also run every week on GitHub Actions (`LongTests.yml`).
 The DecisionAnalysis.jl extension is tested in an environment of its own
-(`test/decision_analysis`), which `Pkg.test()` runs in a second process on Julia 1.12 or
-later; `MCM_DECISION_TESTS=false` leaves it out.
+(`test/decision_analysis`), which `Pkg.test()` runs in a second process;
+`MCM_DECISION_TESTS=false` leaves it out.
 
 ## Data and licences
 
