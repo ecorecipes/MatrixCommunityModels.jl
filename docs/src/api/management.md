@@ -51,7 +51,9 @@ Pkg.add([PackageSpec(url = "https://github.com/ecorecipes/FiniteKernels.jl"),
 ```
 
 The tutorial "Which stage to harvest, and how hard" takes a harvest decision from the model
-to the value of measuring a vital rate.
+to the value of measuring a vital rate, and "Choosing a river flow regime across fish,
+trees and insects under uncertainty" applies multi-objective Pareto analysis, deep-uncertainty
+rules, certainty-equivalent VOI and PRIM scenario discovery to Verde River flow regimes.
 
 ```@autodocs
 Modules = [MatrixCommunityModels]
