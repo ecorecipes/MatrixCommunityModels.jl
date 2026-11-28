@@ -87,6 +87,18 @@ CategoricalPopulationDynamics.jl, and on Catlab.jl.
   DecisionAnalysis.jl: a harvest of the prey of Barraquand & Gimenez (2019) by share or by
   quota under uncertain vital rates, the decision under several rules, and the value of
   measuring each rate. Every number of the decision problem is illustrative.
+- [Choosing a river flow regime across fish, trees and insects under uncertainty](tutorials/31_verde_flow_decision.md):
+  environmental flow regimes on the Verde River across native fish, riparian cottonwood
+  and aquatic invertebrates under hydrological and carrying-capacity uncertainty
+  (`ParetoFront`, `StochasticDominance`, `SmoothAmbiguity`, `ce_evpi`, `prim_boxes`).
+- [Managing the North Sea multispecies fishery under recruitment and predation uncertainty](tutorials/32_north_sea_fisheries_decision.md):
+  six fleet-effort portfolios on the 21-species North Sea LeMans size-spectrum model
+  (`ParetoFront`, `CVaR`, FSD/SSD `StochasticDominance`, `SplineRegression` and
+  `GaussianProcessRegression` EVPPI, `prim_boxes` cod-collapse discovery).
+- [Managing Varroa, virus spillover and floral competition between honey bees and bumblebees](tutorials/33_pollinator_varroa_decision.md):
+  miticide treatment, apiary density caps and wildflower strips in the coupled bee–mite–virus
+  community (`InfectionUtility`, `AdditiveUtility`, `ParetoFront`, `survey_or_act`, EVPPI,
+  `CredalSet`, `prune_generators`, `SmoothAmbiguity` over all four floral-competition couplings).
 
 Each tutorial is a Quarto vignette, also available as
 [HTML and PDF in the repository](https://github.com/ecorecipes/MatrixCommunityModels.jl/tree/main/vignettes).
